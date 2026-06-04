@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# local tooling / editor
+.claude/
+.vscode/
+*.log
+
+# OS cruft
+.DS_Store
