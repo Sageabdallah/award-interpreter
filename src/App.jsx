@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   FileSpreadsheet, ScrollText, UploadCloud, X, ArrowRight, Loader2, Check,
   ChevronDown, Download, RotateCcw, AlertTriangle, Sparkles, Clock, Banknote,
-  Layers, BadgeCheck, Pencil, FileText,
+  Layers, BadgeCheck, Pencil, FileText, Library, Scale, ArrowLeft, CalendarClock,
+  Mail, Send, CheckCircle2,
 } from 'lucide-react'
 
 /* ────────────────────────────────────────────────────────────────────────────
    Award Interpreter — Axi·WFM
-   Single-file React frontend. Three stages on one screen each:
-     1) Upload  2) Processing  3) Results
-   File uploads capture filename + size only — no real parsing happens here.
+   Single-file React frontend. Four stages on one screen each:
+     1) Upload  2) Processing  3) Timesheet  4) Results
+   The award library is built in; the interpreter selects the applicable award
+   per employee. File uploads capture filename + size only — no real parsing.
    ──────────────────────────────────────────────────────────────────────────── */
 
 /* ── palette / type ──────────────────────────────────────────────────────── */
@@ -54,11 +56,23 @@ const confLabel = (c) => (c >= 90 ? 'High' : c >= 70 ? 'Moderate' : 'Low')
 /* ── pipeline steps (Stage 2) ────────────────────────────────────────────── */
 const STEPS = [
   { label: 'Parsing timesheet entries', detail: 'Normalising shift records, breaks and span of hours across 6 employees' },
-  { label: 'Extracting award clauses', detail: 'Indexing MA000009 — Hospitality Industry (General) Award 2020' },
-  { label: 'Matching classifications', detail: 'Mapping role duties → classification levels via the interpretation rule set' },
+  { label: 'Loading award library', detail: 'Indexing 6 modern awards — MA000009, MA000016, MA000119, MA000003, MA000058, MA000002' },
+  { label: 'Matching each employee to an award', detail: 'Selecting the applicable award per role; flagging cross-award candidates for review' },
   { label: 'Calculating penalties & allowances', detail: 'Applying weekend, evening, overtime, casual and public-holiday loadings' },
   { label: 'Generating recommendations', detail: 'Scoring confidence and compiling cited clause references per employee' },
 ]
+
+/* ── award library (built in — the interpreter picks the applicable one) ──── */
+const AWARDS = [
+  { code: 'MA000009', name: 'Hospitality Industry (General) Award', short: 'Hospitality' },
+  { code: 'MA000016', name: 'Security Services Industry Award', short: 'Security' },
+  { code: 'MA000119', name: 'Restaurant Industry Award', short: 'Restaurant' },
+  { code: 'MA000003', name: 'Fast Food Industry Award', short: 'Fast Food' },
+  { code: 'MA000058', name: 'Registered & Licensed Clubs Award', short: 'Clubs' },
+  { code: 'MA000002', name: 'Clerks—Private Sector Award', short: 'Clerks' },
+]
+const awardName = (code) => AWARDS.find((a) => a.code === code)?.name || code
+const awardShort = (code) => AWARDS.find((a) => a.code === code)?.short || code
 
 /* ── mock data — six employees, The Wharf Tavern (fictional Sydney pub) ───── */
 const EMPLOYEES = [
@@ -220,6 +234,90 @@ const EMPLOYEES = [
     flags: ['Review casual conversion eligibility (cl. 11.6)'],
   },
 ]
+
+/* ── timesheet shift data (Stage 3) — The Wharf Tavern, transcribed from the
+   sample timesheet. Per-employee hours sum to each employee's `hours`. ────── */
+const TIMESHEET_META = {
+  payPeriod: 'Mon 4 May 2026 – Sun 17 May 2026',
+  business: 'The Wharf Tavern Pty Ltd',
+  generated: '4 Jun 2026',
+}
+
+/* default recipient for the "pay dispersed" confirmation email (editable in
+   the UI; swap for the real mailbox when provided). */
+const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
+const SHIFTS = [
+  // Sarah Chen — 42.5
+  { emp: 'sarah', date: '05/05', day: 'Tue', start: '16:00', finish: '00:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'sarah', date: '07/05', day: 'Thu', start: '17:00', finish: '00:00', brk: 30, hours: 6.5, notes: '' },
+  { emp: 'sarah', date: '09/05', day: 'Sat', start: '18:00', finish: '02:00', brk: 30, hours: 7.5, notes: 'Finishes after midnight' },
+  { emp: 'sarah', date: '10/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 30, hours: 6.0, notes: '' },
+  { emp: 'sarah', date: '14/05', day: 'Thu', start: '16:00', finish: '00:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'sarah', date: '16/05', day: 'Sat', start: '18:00', finish: '02:00', brk: 30, hours: 7.5, notes: 'Finishes after midnight' },
+  // Marcus Okafor — 38.0
+  { emp: 'marcus', date: '04/05', day: 'Mon', start: '10:00', finish: '16:00', brk: 30, hours: 5.5, notes: 'Commenced 14 Apr 2026' },
+  { emp: 'marcus', date: '06/05', day: 'Wed', start: '10:00', finish: '15:30', brk: 30, hours: 5.0, notes: '' },
+  { emp: 'marcus', date: '08/05', day: 'Fri', start: '16:00', finish: '22:00', brk: 30, hours: 5.5, notes: '' },
+  { emp: 'marcus', date: '11/05', day: 'Mon', start: '10:00', finish: '16:00', brk: 30, hours: 5.5, notes: '' },
+  { emp: 'marcus', date: '13/05', day: 'Wed', start: '10:00', finish: '15:00', brk: 30, hours: 4.5, notes: '' },
+  { emp: 'marcus', date: '15/05', day: 'Fri', start: '15:00', finish: '22:00', brk: 30, hours: 6.5, notes: '' },
+  { emp: 'marcus', date: '17/05', day: 'Sun', start: '12:00', finish: '18:00', brk: 30, hours: 5.5, notes: '' },
+  // Priya Nair — 45.0 (39 in week 1)
+  { emp: 'priya', date: '04/05', day: 'Mon', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'priya', date: '05/05', day: 'Tue', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'priya', date: '06/05', day: 'Wed', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'priya', date: '08/05', day: 'Fri', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
+  { emp: 'priya', date: '09/05', day: 'Sat', start: '10:00', finish: '19:30', brk: 30, hours: 9.0, notes: 'Week 1 total 39.0 hrs' },
+  { emp: 'priya', date: '11/05', day: 'Mon', start: '09:00', finish: '12:00', brk: 0, hours: 3.0, notes: '' },
+  { emp: 'priya', date: '12/05', day: 'Tue', start: '09:00', finish: '12:00', brk: 0, hours: 3.0, notes: '' },
+  // Tom Whitfield — 56.0 (overnight security)
+  { emp: 'tom', date: '05/05', day: 'Tue', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '07/05', day: 'Thu', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '09/05', day: 'Sat', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '10/05', day: 'Sun', start: '18:00', finish: '01:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '12/05', day: 'Tue', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '14/05', day: 'Thu', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '16/05', day: 'Sat', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
+  { emp: 'tom', date: '17/05', day: 'Sun', start: '18:00', finish: '01:30', brk: 30, hours: 7.0, notes: '' },
+  // Aisha Banerjee — 31.0
+  { emp: 'aisha', date: '04/05', day: 'Mon', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
+  { emp: 'aisha', date: '06/05', day: 'Wed', start: '06:00', finish: '11:00', brk: 30, hours: 4.5, notes: 'Pre-7am start' },
+  { emp: 'aisha', date: '09/05', day: 'Sat', start: '07:00', finish: '13:00', brk: 30, hours: 5.5, notes: '' },
+  { emp: 'aisha', date: '11/05', day: 'Mon', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
+  { emp: 'aisha', date: '13/05', day: 'Wed', start: '06:00', finish: '11:00', brk: 30, hours: 4.5, notes: 'Pre-7am start' },
+  { emp: 'aisha', date: '15/05', day: 'Fri', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
+  // Daniel Petrov — 35.0 (casual functions)
+  { emp: 'daniel', date: '08/05', day: 'Fri', start: '18:00', finish: '23:00', brk: 0, hours: 5.0, notes: '' },
+  { emp: 'daniel', date: '09/05', day: 'Sat', start: '17:00', finish: '23:00', brk: 0, hours: 6.0, notes: '' },
+  { emp: 'daniel', date: '10/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 0, hours: 6.5, notes: '' },
+  { emp: 'daniel', date: '15/05', day: 'Fri', start: '18:00', finish: '23:00', brk: 0, hours: 5.0, notes: '' },
+  { emp: 'daniel', date: '16/05', day: 'Sat', start: '17:00', finish: '23:00', brk: 0, hours: 6.0, notes: '' },
+  { emp: 'daniel', date: '17/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 0, hours: 6.5, notes: '' },
+]
+const shiftsFor = (empKey) => SHIFTS.filter((s) => s.emp === empKey)
+const shiftHours = (empKey) => Math.round(shiftsFor(empKey).reduce((s, r) => s + r.hours, 0) * 10) / 10
+const TOTAL_SHIFT_HOURS = Math.round(SHIFTS.reduce((s, r) => s + r.hours, 0) * 10) / 10
+
+/* ── multi-award enrichment — the interpreter has the whole library and
+   chooses per employee. Additive: existing pay numbers are untouched. ────── */
+const EMP_IDS = { sarah: 'EMP-001', marcus: 'EMP-002', priya: 'EMP-003', tom: 'EMP-004', aisha: 'EMP-005', daniel: 'EMP-006' }
+const COVERAGE_CONF = { sarah: 99, marcus: 98, priya: 97, tom: 58, aisha: 98, daniel: 90 }
+const ALT_INTERPRETATIONS = {
+  tom: {
+    award: 'MA000016',
+    classification: 'Security Officer Level 3',
+    baseRate: 31.62,
+    estGross: 2228.5,
+    note: 'Under the Security Services Industry Award the base rate is higher and night/weekend loadings differ. If crowd control is the primary duty, MA000016 likely applies — confirm the primary award before processing pay.',
+  },
+}
+EMPLOYEES.forEach((e) => {
+  e.empId = EMP_IDS[e.id]
+  e.chosenAward = e.award
+  e.candidates = e.crossAward ? [e.award, e.crossAward] : [e.award]
+  e.coverageConfidence = COVERAGE_CONF[e.id] ?? 95
+  if (ALT_INTERPRETATIONS[e.id]) e.alt = ALT_INTERPRETATIONS[e.id]
+})
 
 /* ── global CSS (no external stylesheet) ─────────────────────────────────── */
 const GLOBAL_CSS = `
@@ -396,12 +494,48 @@ const GLOBAL_CSS = `
     display: flex; align-items: center; justify-content: space-between;
     gap: 14px; flex-wrap: wrap; }
 
+  /* award library (stage 1, card 02) */
+  .lib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lib-chip { display: flex; align-items: center; gap: 9px; border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 11px; background: var(--paper); }
+  .lib-check { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+    display: grid; place-items: center; background: rgba(91,122,92,0.14); color: var(--sage); }
+
+  /* coverage strip (stage 4) */
+  .cov-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+    border-radius: 999px; padding: 6px 13px; background: var(--card); font-size: 13px; }
+  .cov-chip .mono { font-size: 12px; }
+
+  /* timesheet stage (stage 3) */
+  .emp-group { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 18px 18px 8px; margin-bottom: 16px; }
+  .ts-head, .ts-row { display: grid; gap: 12px; align-items: center;
+    grid-template-columns: 0.9fr 0.6fr 0.7fr 0.7fr 0.7fr 0.6fr 1.8fr; }
+  .ts-head { padding: 0 10px 10px; border-bottom: 1px solid var(--line); }
+  .ts-row { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .ts-row:last-child { border-bottom: none; }
+
+  /* award comparison (stage 4, expanded) */
+  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .cmp-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--paper); }
+  .cmp-card.chosen { border-color: rgba(91,122,92,0.5); }
+  .cmp-card.alt { border-color: rgba(194,112,58,0.45); }
+
+  /* disperse bar (stage 4) + email preview (stage 5) */
+  .disperse-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    flex-wrap: wrap; margin-top: 22px; padding: 18px 22px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 16px; }
+  .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
+    background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
+
   @media (max-width: 860px) {
     .upload-grid { grid-template-columns: 1fr !important; }
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .table-scroll { overflow-x: auto; }
     .table-inner { min-width: 760px; }
     .detail-grid { grid-template-columns: 1fr !important; }
+    .cmp-grid { grid-template-columns: 1fr !important; }
+    .lib-grid { grid-template-columns: 1fr !important; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -423,7 +557,7 @@ function Background() {
 
 /* ── masthead ────────────────────────────────────────────────────────────── */
 function Masthead({ stage }) {
-  const names = { 1: 'Upload', 2: 'Processing', 3: 'Results' }
+  const names = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
   return (
     <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 46 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
@@ -438,7 +572,7 @@ function Masthead({ stage }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span className="mono" style={{ fontSize: 11, letterSpacing: '0.14em', color: COLORS.muted }}>
-          STAGE 0{stage} / 03
+          STAGE 0{stage} / 05
         </span>
         <span style={{ width: 4, height: 4, borderRadius: '50%', background: COLORS.muted }} />
         <span className="mono" style={{ fontSize: 11, letterSpacing: '0.14em', color: COLORS.ink }}>
@@ -544,20 +678,85 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
   )
 }
 
+/* ── award library panel (stage 1, card 02 — pre-loaded) ─────────────────── */
+function AwardLibrary() {
+  const inputRef = useRef(null)
+  const [custom, setCustom] = useState(null)
+  const openPicker = () => inputRef.current && inputRef.current.click()
+  const handlePick = (e) => {
+    const f = e.target.files && e.target.files[0]
+    if (f) setCustom({ name: f.name, size: f.size })
+    e.target.value = ''
+  }
+  return (
+    <div className="ucard ready">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 46, height: 46, borderRadius: 12, background: 'rgba(91,122,92,0.12)',
+            border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
+          }}>
+            <Library size={22} strokeWidth={1.6} />
+          </div>
+          <div>
+            <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Award library</div>
+            <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{AWARDS.length} modern awards loaded</div>
+          </div>
+        </div>
+        <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>02</span>
+      </div>
+
+      <div className="lib-grid">
+        {AWARDS.map((a) => (
+          <div className="lib-chip" key={a.code}>
+            <span className="lib-check"><Check size={12} strokeWidth={2.6} /></span>
+            <div style={{ minWidth: 0 }}>
+              <div className="mono" style={{ fontSize: 11.5, color: COLORS.ink }}>{a.code}</div>
+              <div style={{ fontSize: 11.5, color: COLORS.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.short}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
+        The interpreter selects the applicable award for each employee — no need to upload one.
+      </div>
+
+      <input ref={inputRef} type="file" accept=".pdf,.docx,.doc" onChange={handlePick} style={{ display: 'none' }} aria-label="Add a custom award document" />
+      {custom ? (
+        <div className="chip fade-up" style={{ marginTop: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(91,122,92,0.14)', display: 'grid', placeItems: 'center', color: COLORS.sage, flexShrink: 0 }}>
+            <Check size={16} strokeWidth={2.2} />
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{custom.name}</div>
+            <div className="mono" style={{ fontSize: 11, color: COLORS.muted }}>added to library</div>
+          </div>
+          <button className="icon-x" onClick={() => setCustom(null)} aria-label="Remove custom award"><X size={16} /></button>
+        </div>
+      ) : (
+        <button className="btn" style={{ marginTop: 12, fontSize: 13 }} onClick={openPicker}>
+          + Add a custom award
+        </button>
+      )}
+    </div>
+  )
+}
+
 /* ── stage 1: upload ─────────────────────────────────────────────────────── */
-function UploadStage({ timesheet, award, setTimesheet, setAward, onInterpret }) {
-  const ready = Boolean(timesheet && award)
+function UploadStage({ timesheet, setTimesheet, onInterpret }) {
+  const ready = Boolean(timesheet)
   return (
     <div className="fade-up">
-      <div style={{ marginBottom: 36, maxWidth: 600 }}>
+      <div style={{ marginBottom: 36, maxWidth: 620 }}>
         <div className="eyebrow" style={{ marginBottom: 14 }}>01 — Upload</div>
         <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
-          Interpret an award.
+          Interpret across awards.
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
-          Upload a pay-period timesheet and the relevant award document. The interpreter
-          suggests a classification and pay treatment for each employee — with the reasoning
-          and cited clauses laid out for review.
+          Upload a pay-period timesheet. The interpreter holds a library of modern awards and
+          selects the applicable one for each employee — with the classification, pay treatment,
+          reasoning and cited clauses laid out for review.
         </p>
       </div>
 
@@ -573,17 +772,7 @@ function UploadStage({ timesheet, award, setTimesheet, setAward, onInterpret }) 
           onFile={setTimesheet}
           onRemove={() => setTimesheet(null)}
         />
-        <UploadCard
-          index="02"
-          icon={ScrollText}
-          title="Award Document"
-          subtitle="The award or enterprise agreement"
-          accept=".pdf,.docx,.doc"
-          formats="PDF · DOCX"
-          file={award}
-          onFile={setAward}
-          onRemove={() => setAward(null)}
-        />
+        <AwardLibrary />
       </div>
 
       <div style={{ marginTop: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
@@ -595,11 +784,11 @@ function UploadStage({ timesheet, award, setTimesheet, setAward, onInterpret }) 
             transition: 'all 0.2s ease',
           }} />
           <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
-            {ready ? 'Ready to interpret' : 'Both documents required to proceed'}
+            {ready ? `Ready to interpret across ${AWARDS.length} awards` : 'Upload a timesheet to begin'}
           </span>
         </div>
         <button className="btn-primary" disabled={!ready} onClick={onInterpret}>
-          Interpret award
+          Interpret awards
           <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
@@ -638,7 +827,7 @@ function StepRow({ step, status, delay }) {
   )
 }
 
-function ProcessingStage({ timesheet, award, stepIndex }) {
+function ProcessingStage({ timesheet, stepIndex }) {
   const pct = Math.min(100, Math.round((stepIndex / STEPS.length) * 100))
   return (
     <div className="fade-up">
@@ -658,12 +847,10 @@ function ProcessingStage({ timesheet, award, stepIndex }) {
             {timesheet.name}
           </span>
         )}
-        {award && (
-          <span className="pill">
-            <ScrollText size={15} strokeWidth={1.7} color={COLORS.sage} />
-            {award.name}
-          </span>
-        )}
+        <span className="pill">
+          <Library size={15} strokeWidth={1.7} color={COLORS.sage} />
+          Award library · {AWARDS.length} awards
+        </span>
       </div>
 
       {/* progress meter */}
@@ -687,7 +874,81 @@ function ProcessingStage({ timesheet, award, stepIndex }) {
   )
 }
 
-/* ── stage 3: results ────────────────────────────────────────────────────── */
+/* ── stage 3: timesheet ──────────────────────────────────────────────────── */
+function TimesheetStage({ timesheet, onBack, onContinue }) {
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 26, maxWidth: 660 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+          Review the timesheet.
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
+          The parsed shifts behind each interpretation. Confirm the hours look right, then continue.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
+        <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{TIMESHEET_META.payPeriod}</span>
+        <span className="pill">{TIMESHEET_META.business}</span>
+        {timesheet && <span className="pill"><FileSpreadsheet size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheet.name}</span>}
+      </div>
+
+      {EMPLOYEES.map((e) => {
+        const rows = shiftsFor(e.id)
+        return (
+          <div className="emp-group" key={e.id}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{e.empId}</span>
+                <span style={{ fontSize: 15.5, fontWeight: 600 }}>{e.name}</span>
+                <span style={{ fontSize: 12.5, color: COLORS.muted }}>{e.role} · {e.employment}</span>
+              </div>
+              <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{shiftHours(e.id)} hrs</span>
+            </div>
+            <div className="table-scroll">
+              <div className="table-inner">
+                <div className="ts-head">
+                  <span className="th">Date</span><span className="th">Day</span><span className="th">Start</span>
+                  <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
+                </div>
+                {rows.map((s, i) => (
+                  <div className="ts-row" key={i}>
+                    <span className="mono" style={{ fontSize: 12.5 }}>{s.date}</span>
+                    <span style={{ fontSize: 13 }}>{s.day}</span>
+                    <span className="mono" style={{ fontSize: 12.5 }}>{s.start}</span>
+                    <span className="mono" style={{ fontSize: 12.5 }}>{s.finish}</span>
+                    <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{s.brk}m</span>
+                    <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{s.hours}</span>
+                    <span style={{ fontSize: 12.5, color: COLORS.muted }}>{s.notes}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span className="eyebrow">Grand total</span>
+          <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>{TOTAL_SHIFT_HOURS} hrs</span>
+          <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {EMPLOYEES.length} employees · {SHIFTS.length} shifts</span>
+        </div>
+        <div style={{ display: 'flex', gap: 11 }}>
+          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to upload</button>
+          <button className="btn-primary" onClick={onContinue}>
+            Continue to interpretation <ArrowRight size={18} strokeWidth={2} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ── stage 4: results ────────────────────────────────────────────────────── */
 function StatCard({ icon: Icon, label, value, caption, accent }) {
   return (
     <div style={{
@@ -845,6 +1106,39 @@ function EmployeeRow({ employee: e, isOpen, onToggle, decision, onDecide, delay 
               </div>
             </div>
 
+            {/* award comparison (cross-award candidates) */}
+            {e.alt && (
+              <div style={{ marginTop: 26 }}>
+                <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Scale size={13} strokeWidth={1.9} /> Award comparison · match confidence {e.coverageConfidence}%
+                </div>
+                <div className="cmp-grid">
+                  <div className="cmp-card chosen">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span className="mono" style={{ fontSize: 12, color: COLORS.sage }}>{e.chosenAward}</span>
+                      <span className="decision-pill" style={{ background: 'rgba(91,122,92,0.14)', color: COLORS.sage }}>Chosen</span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{awardShort(e.chosenAward)} · {e.classification}</div>
+                    <div className="leader" style={{ marginTop: 8 }}><span className="leader-label">Base rate</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.baseRate)}/hr</span></div>
+                    <div className="leader"><span className="leader-label">Estimated gross</span><span className="leader-dots" /><span className="leader-amt">{fmt(grossPay(e))}</span></div>
+                  </div>
+                  <div className="cmp-card alt">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span className="mono" style={{ fontSize: 12, color: COLORS.ochre }}>{e.alt.award}</span>
+                      <span className="decision-pill" style={{ background: 'rgba(194,112,58,0.14)', color: COLORS.ochre }}>Candidate</span>
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{awardShort(e.alt.award)} · {e.alt.classification}</div>
+                    <div className="leader" style={{ marginTop: 8 }}><span className="leader-label">Base rate</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.alt.baseRate)}/hr</span></div>
+                    <div className="leader"><span className="leader-label">Estimated gross</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.alt.estGross)}</span></div>
+                    <div className="mono" style={{ fontSize: 11, color: COLORS.ochre, marginTop: 6 }}>
+                      {e.alt.estGross > grossPay(e) ? '+' : ''}{fmt(e.alt.estGross - grossPay(e))} vs chosen
+                    </div>
+                  </div>
+                </div>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: COLORS.muted, marginTop: 12 }}>{e.alt.note}</p>
+              </div>
+            )}
+
             {/* actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 26, paddingTop: 22, borderTop: `1px solid ${COLORS.line}`, flexWrap: 'wrap' }}>
               <button
@@ -878,14 +1172,20 @@ function EmployeeRow({ employee: e, isOpen, onToggle, decision, onDecide, delay 
   )
 }
 
-function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, onReset }) {
+function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, onReset, onDisperse }) {
   const stats = useMemo(() => {
     const totalHours = EMPLOYEES.reduce((s, e) => s + e.hours, 0)
     const basePay = EMPLOYEES.reduce((s, e) => s + ordinaryPay(e), 0)
     const penalties = EMPLOYEES.reduce((s, e) => s + loadingPay(e), 0)
     const high = EMPLOYEES.filter((e) => e.confidence >= 90).length
     const pctHigh = Math.round((high / EMPLOYEES.length) * 100)
-    return { totalHours, basePay, penalties, pctHigh }
+    const chosen = {}
+    const candidateOnly = {}
+    EMPLOYEES.forEach((e) => {
+      chosen[e.chosenAward] = (chosen[e.chosenAward] || 0) + 1
+      e.candidates.forEach((c) => { if (c !== e.chosenAward) candidateOnly[c] = (candidateOnly[c] || 0) + 1 })
+    })
+    return { totalHours, basePay, penalties, pctHigh, chosen, candidateOnly }
   }, [])
 
   return (
@@ -908,6 +1208,23 @@ function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, on
             <RotateCcw size={15} strokeWidth={1.9} /> New interpretation
           </button>
         </div>
+      </div>
+
+      {/* coverage strip — which awards the interpreter selected */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
+        <span className="eyebrow" style={{ marginRight: 4 }}>Awards in play</span>
+        {Object.entries(stats.chosen).map(([code, n]) => (
+          <span className="cov-chip" key={code}>
+            <Check size={13} strokeWidth={2.4} color={COLORS.sage} />
+            <span className="mono">{code}</span> × {n}
+          </span>
+        ))}
+        {Object.entries(stats.candidateOnly).map(([code, n]) => (
+          <span className="cov-chip" key={code} style={{ borderColor: 'rgba(194,112,58,0.4)' }}>
+            <AlertTriangle size={13} strokeWidth={2} color={COLORS.ochre} />
+            <span className="mono">{code}</span> · {n} candidate{n > 1 ? 's' : ''} (review)
+          </span>
+        ))}
       </div>
 
       {/* stats */}
@@ -947,6 +1264,95 @@ function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, on
           </div>
         </div>
       </div>
+
+      {/* disperse pay → confirmation */}
+      <div className="disperse-bar">
+        <div>
+          <span className="eyebrow">Ready to disperse</span>
+          <div style={{ marginTop: 5, fontSize: 14.5 }}>
+            <span style={{ fontWeight: 600 }}>{EMPLOYEES.length} employees</span>
+            <span style={{ color: COLORS.muted }}> · {fmt(EMPLOYEES.reduce((s, e) => s + grossPay(e), 0))} total gross to disperse</span>
+          </div>
+        </div>
+        <button className="btn-primary" onClick={onDisperse}>
+          Disperse pay <ArrowRight size={18} strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ── stage 5: confirmation (pay dispersed → email) ───────────────────────── */
+function ConfirmationStage({ onBack, onReset }) {
+  const total = EMPLOYEES.reduce((s, e) => s + grossPay(e), 0)
+  const [recipient, setRecipient] = useState(CONFIRMATION_EMAIL)
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())
+
+  const subject = `Payroll dispersed — ${TIMESHEET_META.business} (${TIMESHEET_META.payPeriod})`
+  const body =
+    `This confirms that payroll has been dispersed for ${TIMESHEET_META.business}.\n\n` +
+    `Pay period: ${TIMESHEET_META.payPeriod}\n` +
+    `Employees paid: ${EMPLOYEES.length}\n` +
+    `Total gross dispersed: ${fmt(total)}\n\n` +
+    `Interpreted against the relevant modern awards (incl. MA000009). Superannuation is paid above gross.\n\n` +
+    `— Axi·WFM Award Interpreter`
+  const mailto = `mailto:${recipient.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 30, maxWidth: 640 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
+          <CheckCircle2 size={14} strokeWidth={1.9} /> 05 — Confirmation
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>Pay dispersed.</h1>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+          Payroll has been dispersed for the period. Send a confirmation to the payroll mailbox below.
+        </p>
+      </div>
+
+      {/* summary */}
+      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+        <StatCard icon={Banknote} label="Total dispersed" value={fmt(total)} caption="gross, this pay period" accent={COLORS.sage} />
+        <StatCard icon={BadgeCheck} label="Employees paid" value={`${EMPLOYEES.length}`} caption={TIMESHEET_META.business} accent={COLORS.ink} />
+        <StatCard icon={CalendarClock} label="Pay period" value="Fortnight" caption={TIMESHEET_META.payPeriod} accent={COLORS.ochre} />
+      </div>
+
+      {/* email card */}
+      <div className="panel-inner" style={{ marginBottom: 26 }}>
+        <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Mail size={13} strokeWidth={1.9} /> Confirmation email
+        </div>
+        <label style={{ display: 'block', fontSize: 12.5, color: COLORS.muted, marginBottom: 6 }}>Send confirmation to</label>
+        <input
+          type="email"
+          value={recipient}
+          onChange={(ev) => setRecipient(ev.target.value)}
+          aria-label="Confirmation email recipient"
+          style={{
+            width: '100%', maxWidth: 420, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
+            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(180,69,47,0.5)'}`,
+            borderRadius: 10, padding: '11px 13px', outline: 'none',
+          }}
+        />
+        <div className="email-preview">
+          <div style={{ fontWeight: 600, marginBottom: 6 }}>{subject}</div>
+          <div style={{ whiteSpace: 'pre-wrap', color: 'rgba(31,30,27,0.78)' }}>{body}</div>
+        </div>
+      </div>
+
+      {/* actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <a
+          className="btn-primary"
+          href={valid ? mailto : undefined}
+          aria-disabled={!valid}
+          style={!valid ? { opacity: 0.4, pointerEvents: 'none', background: 'transparent', color: COLORS.muted, borderColor: COLORS.line, boxShadow: 'none' } : {}}
+        >
+          <Send size={17} strokeWidth={2} /> Send confirmation email
+        </a>
+        <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to results</button>
+        <button className="btn" onClick={onReset}><RotateCcw size={15} strokeWidth={1.9} /> New interpretation</button>
+      </div>
     </div>
   )
 }
@@ -969,7 +1375,6 @@ function Footer() {
 export default function App() {
   const [stage, setStage] = useState(1)
   const [timesheet, setTimesheet] = useState(null)
-  const [award, setAward] = useState(null)
   const [stepIndex, setStepIndex] = useState(0)
   const [expanded, setExpanded] = useState(null)
   const [decisions, setDecisions] = useState({})
@@ -1060,7 +1465,6 @@ export default function App() {
   const handleReset = () => {
     setStage(1)
     setTimesheet(null)
-    setAward(null)
     setStepIndex(0)
     setExpanded(null)
     setDecisions({})
@@ -1075,16 +1479,21 @@ export default function App() {
         {stage === 1 && (
           <UploadStage
             timesheet={timesheet}
-            award={award}
             setTimesheet={setTimesheet}
-            setAward={setAward}
-            onInterpret={() => timesheet && award && setStage(2)}
+            onInterpret={() => timesheet && setStage(2)}
           />
         )}
         {stage === 2 && (
-          <ProcessingStage timesheet={timesheet} award={award} stepIndex={stepIndex} />
+          <ProcessingStage timesheet={timesheet} stepIndex={stepIndex} />
         )}
         {stage === 3 && (
+          <TimesheetStage
+            timesheet={timesheet}
+            onBack={() => setStage(1)}
+            onContinue={() => setStage(4)}
+          />
+        )}
+        {stage === 4 && (
           <ResultsStage
             expanded={expanded}
             setExpanded={setExpanded}
@@ -1092,7 +1501,11 @@ export default function App() {
             onDecide={handleDecide}
             onExport={handleExport}
             onReset={handleReset}
+            onDisperse={() => setStage(5)}
           />
+        )}
+        {stage === 5 && (
+          <ConfirmationStage onBack={() => setStage(4)} onReset={handleReset} />
         )}
         <Footer />
       </div>
