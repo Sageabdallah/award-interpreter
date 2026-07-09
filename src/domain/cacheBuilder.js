@@ -22,13 +22,27 @@ export async function computeCacheFingerprint(files = [], preloadedAwards = []) 
 
 // Merge pre-parsed library awards into the cache's award indexes. An uploaded
 // award WINS on a level-key collision (manual upload overrides the library).
-// preloadedAwards: array of { parsedAward, industry }.
+// preloadedAwards: array of { parsedAward, industry, source }.
 export function mergePreloadedAwards(awardsByCode, awardLevelsByKey, preloadedAwards = []) {
   const industryByCode = {}
+  // When the award document was retrieved. Not the rates' operative date, but a
+  // date on which they were current — enough to tell whether an Annual Wage
+  // Review has superseded them since. See rateValidity.js.
+  const rateSourcesByCode = {}
   for (const entry of preloadedAwards) {
     const award = entry?.parsedAward
     if (!award || !Array.isArray(award.levels) || !award.levels.length) continue
     if (entry.industry) industryByCode[award.awardCode] = entry.industry
+    if (award.amendedTo || entry.source?.fetchedAt) {
+      rateSourcesByCode[award.awardCode] = {
+        // Declared by the award document itself; the only sound basis for
+        // judging rate currency. fetchedAt is provenance, not evidence.
+        amendedTo: award.amendedTo || '',
+        variations: award.variations || [],
+        fetchedAt: entry.source?.fetchedAt || '',
+        url: entry.source?.htmlUrl || entry.source?.url || '',
+      }
+    }
     if (!awardsByCode[award.awardCode]) {
       awardsByCode[award.awardCode] = {
         awardCode: award.awardCode,
@@ -45,7 +59,7 @@ export function mergePreloadedAwards(awardsByCode, awardLevelsByKey, preloadedAw
       awardsByCode[award.awardCode].levels.push(level)
     }
   }
-  return industryByCode
+  return { industryByCode, rateSourcesByCode }
 }
 
 function dedupeComplianceRecords(records = []) {
@@ -153,7 +167,18 @@ export async function buildParsedCacheFromTexts(
 
   // Pre-loaded library awards fill in any award/level the user did not upload.
   const uploadedCodes = new Set(Object.keys(awardsByCode))
-  const industryByCode = mergePreloadedAwards(awardsByCode, awardLevelsByKey, preloadedAwards)
+  const { industryByCode, rateSourcesByCode } = mergePreloadedAwards(awardsByCode, awardLevelsByKey, preloadedAwards)
+
+  // An uploaded award declares its own amendment date too — an uploaded document
+  // overrides the library's, since it is the one the user is asking us to read.
+  if (awardData.awardCode && awardData.amendedTo) {
+    rateSourcesByCode[awardData.awardCode] = {
+      amendedTo: awardData.amendedTo,
+      variations: awardData.variations || [],
+      fetchedAt: '',
+      url: '',
+    }
+  }
 
   // Provenance per award code — drives the "Preloaded / Uploaded" badge.
   const preloadedCodes = new Set(
@@ -249,6 +274,8 @@ export async function buildParsedCacheFromTexts(
     interpretationsByCode,
     interpretationByKey,
     sourcesByCode,
+    // Uploaded awards have no entry here: their rate currency is unknowable.
+    rateSourcesByCode,
     parseWarnings,
   }
 }
