@@ -1,0 +1,45 @@
+AXI-WFM EMPLOYEE AGREEMENT REGISTER
+Banksia Grove Care & Nursing Pty Ltd
+Operative from 1 July 2026 — healthcare industry award library (preloaded)
+
+Employee: Grace Whitlam
+Employee ID: HC-001
+Award Code: MA000034
+Employee Level: Nursing assistant
+Job Role: Nursing Assistant
+Base Pay Rate: $27.65/hr
+
+Employee: Liam O'Rourke
+Employee ID: HC-002
+Award Code: MA000034
+Employee Level: Enrolled nurse
+Job Role: Enrolled Nurse
+Base Pay Rate: $30.00/hr
+
+Employee: Mei Tanaka
+Employee ID: HC-003
+Award Code: MA000034
+Employee Level: Registered nurse—level 1
+Job Role: Registered Nurse
+Base Pay Rate: $32.09/hr
+
+Employee: Sofia Marino
+Employee ID: HC-004
+Award Code: MA000034
+Employee Level: Nursing assistant
+Job Role: Nursing Assistant
+Base Pay Rate: $27.65/hr
+
+Employee: Ruth Adebayo
+Employee ID: HC-005
+Award Code: MA000018
+Employee Level: Aged care employee—general—level 4
+Job Role: Aged Care Worker
+Base Pay Rate: $31.00/hr
+
+Employee: Ahmed Hassan
+Employee ID: HC-006
+Award Code: MA000018
+Employee Level: Carer
+Job Role: Personal Carer
+Base Pay Rate: $34.42/hr

@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-06-25T06:49:28.589Z",
+  "industries": {
+    "healthcare": [
+      {
+        "code": "MA000034",
+        "title": "Nurses Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000034.pdf",
+        "levels": 21,
+        "entitlements": 231
+      },
+      {
+        "code": "MA000027",
+        "title": "Health Professionals and Support Services Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000027.pdf",
+        "levels": 20,
+        "entitlements": 200
+      },
+      {
+        "code": "MA000018",
+        "title": "Aged Care Award 2010",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000018.pdf",
+        "levels": 13,
+        "entitlements": 143
+      },
+      {
+        "code": "MA000031",
+        "title": "Medical Practitioners Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000031.pdf",
+        "levels": 12,
+        "entitlements": 120
+      },
+      {
+        "code": "MA000098",
+        "title": "Ambulance and Patient Transport Industry Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000098.pdf",
+        "levels": 20,
+        "entitlements": 200
+      },
+      {
+        "code": "MA000012",
+        "title": "Pharmacy Industry Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000012.pdf",
+        "levels": 13,
+        "entitlements": 130
+      }
+    ]
+  }
+}

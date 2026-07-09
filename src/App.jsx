@@ -1,20 +1,37 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useEffect, useReducer, useRef, useState } from 'react'
 import {
-  FileSpreadsheet, ScrollText, UploadCloud, X, ArrowRight, Loader2, Check,
-  ChevronDown, Download, RotateCcw, AlertTriangle, Sparkles, Clock, Banknote,
-  Layers, BadgeCheck, Pencil, FileText, Library, Scale, ArrowLeft, CalendarClock,
-  Mail, Send, CheckCircle2,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  Banknote,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Clock,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Layers,
+  Loader2,
+  Mail,
+  RotateCcw,
+  Scale,
+  Send,
+  Sparkles,
+  UploadCloud,
+  X,
 } from 'lucide-react'
+import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
+import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
+import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
+import { calculateTimesheetResults } from './domain/payCalculator.js'
+import { resultsToCsv } from './domain/resultAdapter.js'
+import { parseTimesheetFile } from './domain/timesheetParser.js'
+import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
 
-/* ────────────────────────────────────────────────────────────────────────────
-   Award Interpreter — Axi·WFM
-   Single-file React frontend. Four stages on one screen each:
-     1) Upload  2) Processing  3) Timesheet  4) Results
-   The award library is built in; the interpreter selects the applicable award
-   per employee. File uploads capture filename + size only — no real parsing.
-   ──────────────────────────────────────────────────────────────────────────── */
-
-/* ── palette / type ──────────────────────────────────────────────────────── */
 const COLORS = {
   paper: '#F5F1EA',
   ink: '#1F1E1B',
@@ -28,13 +45,82 @@ const COLORS = {
 const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
 const BODY = "'Inter Tight', system-ui, -apple-system, sans-serif"
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
+const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr'
+const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
+const INTERP_ROW_CAP = 40
+const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
+const PARSE_STEPS = [
+  { label: 'Hashing the document set', detail: 'Computing the cache fingerprint for the uploaded rule documents and preloaded award library' },
+  { label: 'Parsing award records', detail: 'Extracting award code, title, employee levels, rates, allowances and penalties from uploads and the preloaded industry library' },
+  { label: 'Reading employee agreements', detail: 'Mapping employees to award code, employee level, job role and agreement overrides' },
+  { label: 'Cross-referencing compliance', detail: 'Collecting non-overriding compliance notes and mismatch warnings' },
+  { label: 'Building the lookup cache', detail: 'Materialising O(1) indexes keyed by award code and employee level' },
+]
 
-/* ── table column template (shared by header + rows) ─────────────────────── */
-const GRID = '1.85fr 2.15fr 0.7fr 0.95fr 1fr 1.55fr 44px'
-
-/* ── formatting helpers ──────────────────────────────────────────────────── */
 const audFmt = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' })
-const fmt = (n) => audFmt.format(n)
+const fmt = (value) => audFmt.format(Number(value) || 0)
+
+const initialState = {
+  stage: 1,
+  industry: '',
+  documents: { award: null, compliance: null, agreement: null },
+  parsedCache: null,
+  stepIndex: 0,
+  processingError: '',
+  timesheetFile: null,
+  timesheetData: null,
+  timesheetError: '',
+  results: null,
+}
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'setDocument':
+      return {
+        ...state,
+        documents: { ...state.documents, [action.key]: action.file },
+        parsedCache: null,
+        processingError: '',
+        timesheetFile: null,
+        timesheetData: null,
+        timesheetError: '',
+        results: null,
+      }
+    case 'setIndustry':
+      // Changing the preloaded library invalidates the cache exactly like
+      // swapping a document does — same downstream state resets.
+      return {
+        ...state,
+        industry: action.industry,
+        parsedCache: null,
+        processingError: '',
+        timesheetFile: null,
+        timesheetData: null,
+        timesheetError: '',
+        results: null,
+      }
+    case 'setStage':
+      return { ...state, stage: action.stage }
+    case 'setStepIndex':
+      return { ...state, stepIndex: action.stepIndex }
+    case 'setProcessingError':
+      return { ...state, processingError: action.error }
+    case 'setParsedCache':
+      return { ...state, parsedCache: action.cache, processingError: '', stepIndex: PARSE_STEPS.length }
+    case 'setTimesheetStart':
+      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: '', results: null }
+    case 'setTimesheetSuccess':
+      return { ...state, timesheetFile: action.file, timesheetData: action.data, timesheetError: action.error || '', results: null }
+    case 'setTimesheetError':
+      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: action.error, results: null }
+    case 'setResults':
+      return { ...state, results: action.results }
+    case 'reset':
+      return initialState
+    default:
+      return state
+  }
+}
 
 const fmtSize = (bytes) => {
   if (bytes == null) return ''
@@ -43,283 +129,37 @@ const fmtSize = (bytes) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-/* derived pay figures — single source of truth so the table, breakdown and
-   CSV can never disagree. */
-const grossPay = (e) => e.breakdown.reduce((s, b) => s + b.amount, 0)
-const ordinaryPay = (e) =>
-  e.breakdown.filter((b) => b.kind === 'base').reduce((s, b) => s + b.amount, 0)
-const loadingPay = (e) =>
-  e.breakdown.filter((b) => b.kind === 'loading').reduce((s, b) => s + b.amount, 0)
-const confColor = (c) => (c >= 90 ? COLORS.sage : c >= 70 ? COLORS.ochre : COLORS.red)
-const confLabel = (c) => (c >= 90 ? 'High' : c >= 70 ? 'Moderate' : 'Low')
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/* ── pipeline steps (Stage 2) ────────────────────────────────────────────── */
-const STEPS = [
-  { label: 'Parsing timesheet entries', detail: 'Normalising shift records, breaks and span of hours across 6 employees' },
-  { label: 'Loading award library', detail: 'Indexing 6 modern awards — MA000009, MA000016, MA000119, MA000003, MA000058, MA000002' },
-  { label: 'Matching each employee to an award', detail: 'Selecting the applicable award per role; flagging cross-award candidates for review' },
-  { label: 'Calculating penalties & allowances', detail: 'Applying weekend, evening, overtime, casual and public-holiday loadings' },
-  { label: 'Generating recommendations', detail: 'Scoring confidence and compiling cited clause references per employee' },
-]
-
-/* ── award library (built in — the interpreter picks the applicable one) ──── */
-const AWARDS = [
-  { code: 'MA000009', name: 'Hospitality Industry (General) Award', short: 'Hospitality' },
-  { code: 'MA000016', name: 'Security Services Industry Award', short: 'Security' },
-  { code: 'MA000119', name: 'Restaurant Industry Award', short: 'Restaurant' },
-  { code: 'MA000003', name: 'Fast Food Industry Award', short: 'Fast Food' },
-  { code: 'MA000058', name: 'Registered & Licensed Clubs Award', short: 'Clubs' },
-  { code: 'MA000002', name: 'Clerks—Private Sector Award', short: 'Clerks' },
-]
-const awardName = (code) => AWARDS.find((a) => a.code === code)?.name || code
-const awardShort = (code) => AWARDS.find((a) => a.code === code)?.short || code
-
-/* ── mock data — six employees, The Wharf Tavern (fictional Sydney pub) ───── */
-const EMPLOYEES = [
-  {
-    id: 'sarah',
-    name: 'Sarah Chen',
-    role: 'Senior Bartender',
-    employment: 'Permanent · Full-time',
-    classification: 'Level 4 — Bar Attendant Grade 3',
-    award: 'MA000009',
-    hours: 42.5,
-    baseRate: 32.18,
-    confidence: 94,
-    superAmount: 184.48,
-    reasoning:
-      'Duties recorded across the period — cocktail and spirits service, cellar and keg management, and supervision of one junior attendant — align with Bar Attendant Grade 3 under the Hospitality Industry (General) Award. Regular Saturday and Sunday shifts plus post-midnight finishes attract weekend penalty and late-night loadings; total hours sit within the ordinary fortnightly span, so no overtime applies.',
-    breakdown: [
-      { label: 'Ordinary hours (42.5 × $32.18)', amount: 1367.65, kind: 'base' },
-      { label: 'Saturday penalty (25%)', amount: 120.68, kind: 'loading' },
-      { label: 'Sunday penalty (50%)', amount: 96.54, kind: 'loading' },
-      { label: 'Late-night loading (after midnight)', amount: 19.31, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 18', text: 'Classification definitions — Bar Attendant Grade 3' },
-      { code: 'cl. 29.2', text: 'Saturday penalty rates' },
-      { code: 'cl. 29.3', text: 'Sunday penalty rates' },
-      { code: 'cl. 29.4', text: 'Late-night / after-midnight loading' },
-    ],
-    flags: [],
-  },
-  {
-    id: 'marcus',
-    name: 'Marcus Okafor',
-    role: 'Kitchen Hand',
-    employment: 'Permanent · Part-time',
-    classification: 'Level 1 — Introductory',
-    award: 'MA000009',
-    hours: 38,
-    baseRate: 25.65,
-    confidence: 96,
-    superAmount: 122.86,
-    reasoning:
-      'General cleaning, dishwashing and food-prep assistance with no independent decision-making maps cleanly to the Introductory classification. Timesheet notes record a start date of 14 April, meaning the employee is approaching the end of the introductory period and is due to progress to Level 2.',
-    breakdown: [
-      { label: 'Ordinary hours (38 × $25.65)', amount: 974.7, kind: 'base' },
-      { label: 'Sunday penalty (50%, 5.5 hrs)', amount: 70.54, kind: 'loading' },
-      { label: 'Evening loading (after 7:00pm)', amount: 23.09, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 18', text: 'Classification definitions — Introductory level' },
-      { code: 'cl. 18.3', text: 'Progression from the Introductory classification' },
-      { code: 'cl. 29.3', text: 'Sunday penalty rates' },
-    ],
-    flags: ['Auto-progression to Level 2 due in 4 weeks'],
-  },
-  {
-    id: 'priya',
-    name: 'Priya Nair',
-    role: 'Front of House',
-    employment: 'Permanent · Full-time',
-    classification: 'Level 3 — Food & Beverage Attendant Grade 3',
-    award: 'MA000009',
-    hours: 45,
-    baseRate: 28.87,
-    confidence: 88,
-    superAmount: 158.53,
-    reasoning:
-      'Table service, ordering and till reconciliation indicate Food & Beverage Attendant Grade 3. Week 1 totalled 39 hours, so the single hour above the 38-hour ordinary week is treated as overtime at 150%. The Saturday shift also attracts a 25% weekend penalty. Week 2 (6 hours) sits well within ordinary hours.',
-    breakdown: [
-      { label: 'Ordinary hours (44 × $28.87)', amount: 1270.28, kind: 'base' },
-      { label: 'Overtime — 1 hr, week 1 (150%)', amount: 43.31, kind: 'loading' },
-      { label: 'Saturday penalty (25%)', amount: 64.96, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 18', text: 'Classification definitions — F&B Attendant Grade 3' },
-      { code: 'cl. 28', text: 'Ordinary hours of work and rostering' },
-      { code: 'cl. 33.1', text: 'Overtime — first two hours (150%)' },
-      { code: 'cl. 29.2', text: 'Saturday penalty rates' },
-    ],
-    flags: [],
-  },
-  {
-    id: 'tom',
-    name: 'Tom Whitfield',
-    role: 'Security',
-    employment: 'Permanent · Full-time',
-    classification: 'Level 2 — Security Officer',
-    award: 'MA000009',
-    crossAward: 'MA000016',
-    hours: 56,
-    baseRate: 30.42,
-    confidence: 72,
-    superAmount: 245.23,
-    reasoning:
-      'Crowd-control and venue-security duties at a licensed hospitality venue could be covered by either the Hospitality Industry (General) Award or the Security Services Industry Award (MA000016). The matcher cannot determine the primary award from the documents alone, and the higher base rate under MA000016 may apply. The roster is entirely overnight, so Saturday, Sunday and after-midnight loadings are applied across the fortnight.',
-    breakdown: [
-      { label: 'Ordinary hours (56 × $30.42)', amount: 1703.52, kind: 'base' },
-      { label: 'Saturday penalty (25%)', amount: 106.47, kind: 'loading' },
-      { label: 'Sunday penalty (50%)', amount: 212.94, kind: 'loading' },
-      { label: 'Late-night loading (after midnight)', amount: 109.51, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 4.2', text: 'Coverage and interaction with other awards' },
-      { code: 'cl. 18', text: 'Classification definitions — Security Officer Level 2' },
-      { code: 'cl. 29.2', text: 'Saturday penalty rates' },
-      { code: 'cl. 29.3', text: 'Sunday penalty rates' },
-    ],
-    flags: ['Cross-award match: confirm primary award assignment'],
-  },
-  {
-    id: 'aisha',
-    name: 'Aisha Banerjee',
-    role: 'Barista',
-    employment: 'Permanent · Part-time',
-    classification: 'Level 3 — Food & Beverage Attendant Grade 3',
-    award: 'MA000009',
-    hours: 31,
-    baseRate: 28.87,
-    confidence: 91,
-    superAmount: 109.98,
-    reasoning:
-      'Espresso preparation, milk texturing and counter service with cash handling matches Food & Beverage Attendant Grade 3. Shifts fall within the ordinary span of hours; a minor early-morning penalty applies to the pre-7am opening starts, and the single Saturday shift attracts a partial weekend loading.',
-    breakdown: [
-      { label: 'Ordinary hours (31 × $28.87)', amount: 894.97, kind: 'base' },
-      { label: 'Early-morning penalty (pre-7:00am)', amount: 21.65, kind: 'loading' },
-      { label: 'Saturday loading (partial)', amount: 39.7, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 18', text: 'Classification definitions — F&B Attendant Grade 3' },
-      { code: 'cl. 29.1', text: 'Ordinary hours — span of hours' },
-      { code: 'cl. 29.5', text: 'Early-morning penalty' },
-    ],
-    flags: [],
-  },
-  {
-    id: 'daniel',
-    name: 'Daniel Petrov',
-    role: 'Casual Function Staff',
-    employment: 'Casual',
-    classification: 'Casual — Food & Beverage Attendant (functions)',
-    award: 'MA000009',
-    hours: 35,
-    baseRate: 27.3,
-    confidence: 65,
-    superAmount: 145.2,
-    reasoning:
-      'Event-based function shifts are engaged as casual with the 25% casual loading applied, and weekend work attracts additional penalties. The engagement follows a regular, systematic Friday–Sunday pattern repeated across both weeks, which suggests the employee may meet the casual-conversion criteria. Classification confidence is low pending a review of the six-month roster history.',
-    breakdown: [
-      { label: 'Ordinary hours (35 × $27.30)', amount: 955.5, kind: 'base' },
-      { label: 'Casual loading (25%)', amount: 238.88, kind: 'loading' },
-      { label: 'Weekend penalty (Sat & Sun)', amount: 68.25, kind: 'loading' },
-    ],
-    clauses: [
-      { code: 'cl. 11.4', text: 'Casual employment — loading' },
-      { code: 'cl. 11.6', text: 'Casual conversion — eligibility' },
-      { code: 'cl. 18', text: 'Classification definitions — casual F&B' },
-      { code: 'cl. 29.3', text: 'Weekend penalty rates' },
-    ],
-    flags: ['Review casual conversion eligibility (cl. 11.6)'],
-  },
-]
-
-/* ── timesheet shift data (Stage 3) — The Wharf Tavern, transcribed from the
-   sample timesheet. Per-employee hours sum to each employee's `hours`. ────── */
-const TIMESHEET_META = {
-  payPeriod: 'Mon 4 May 2026 – Sun 17 May 2026',
-  business: 'The Wharf Tavern Pty Ltd',
-  generated: '4 Jun 2026',
+function countTimesheetMatches(parsedCache, timesheetData) {
+  if (!parsedCache || !timesheetData) return 0
+  return timesheetData.employees.reduce((count, employee) => {
+    const matchedProfile = employee.employeeId
+      ? parsedCache.employeesById[employee.employeeId] || parsedCache.employeesByName[normalizeName(employee.employeeName)]
+      : parsedCache.employeesByName[normalizeName(employee.employeeName)]
+    return count + (matchedProfile ? 1 : 0)
+  }, 0)
 }
 
-/* default recipient for the "pay dispersed" confirmation email (editable in
-   the UI; swap for the real mailbox when provided). */
-const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
-const SHIFTS = [
-  // Sarah Chen — 42.5
-  { emp: 'sarah', date: '05/05', day: 'Tue', start: '16:00', finish: '00:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'sarah', date: '07/05', day: 'Thu', start: '17:00', finish: '00:00', brk: 30, hours: 6.5, notes: '' },
-  { emp: 'sarah', date: '09/05', day: 'Sat', start: '18:00', finish: '02:00', brk: 30, hours: 7.5, notes: 'Finishes after midnight' },
-  { emp: 'sarah', date: '10/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 30, hours: 6.0, notes: '' },
-  { emp: 'sarah', date: '14/05', day: 'Thu', start: '16:00', finish: '00:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'sarah', date: '16/05', day: 'Sat', start: '18:00', finish: '02:00', brk: 30, hours: 7.5, notes: 'Finishes after midnight' },
-  // Marcus Okafor — 38.0
-  { emp: 'marcus', date: '04/05', day: 'Mon', start: '10:00', finish: '16:00', brk: 30, hours: 5.5, notes: 'Commenced 14 Apr 2026' },
-  { emp: 'marcus', date: '06/05', day: 'Wed', start: '10:00', finish: '15:30', brk: 30, hours: 5.0, notes: '' },
-  { emp: 'marcus', date: '08/05', day: 'Fri', start: '16:00', finish: '22:00', brk: 30, hours: 5.5, notes: '' },
-  { emp: 'marcus', date: '11/05', day: 'Mon', start: '10:00', finish: '16:00', brk: 30, hours: 5.5, notes: '' },
-  { emp: 'marcus', date: '13/05', day: 'Wed', start: '10:00', finish: '15:00', brk: 30, hours: 4.5, notes: '' },
-  { emp: 'marcus', date: '15/05', day: 'Fri', start: '15:00', finish: '22:00', brk: 30, hours: 6.5, notes: '' },
-  { emp: 'marcus', date: '17/05', day: 'Sun', start: '12:00', finish: '18:00', brk: 30, hours: 5.5, notes: '' },
-  // Priya Nair — 45.0 (39 in week 1)
-  { emp: 'priya', date: '04/05', day: 'Mon', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'priya', date: '05/05', day: 'Tue', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'priya', date: '06/05', day: 'Wed', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'priya', date: '08/05', day: 'Fri', start: '09:00', finish: '17:00', brk: 30, hours: 7.5, notes: '' },
-  { emp: 'priya', date: '09/05', day: 'Sat', start: '10:00', finish: '19:30', brk: 30, hours: 9.0, notes: 'Week 1 total 39.0 hrs' },
-  { emp: 'priya', date: '11/05', day: 'Mon', start: '09:00', finish: '12:00', brk: 0, hours: 3.0, notes: '' },
-  { emp: 'priya', date: '12/05', day: 'Tue', start: '09:00', finish: '12:00', brk: 0, hours: 3.0, notes: '' },
-  // Tom Whitfield — 56.0 (overnight security)
-  { emp: 'tom', date: '05/05', day: 'Tue', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '07/05', day: 'Thu', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '09/05', day: 'Sat', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '10/05', day: 'Sun', start: '18:00', finish: '01:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '12/05', day: 'Tue', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '14/05', day: 'Thu', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '16/05', day: 'Sat', start: '20:00', finish: '03:30', brk: 30, hours: 7.0, notes: '' },
-  { emp: 'tom', date: '17/05', day: 'Sun', start: '18:00', finish: '01:30', brk: 30, hours: 7.0, notes: '' },
-  // Aisha Banerjee — 31.0
-  { emp: 'aisha', date: '04/05', day: 'Mon', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
-  { emp: 'aisha', date: '06/05', day: 'Wed', start: '06:00', finish: '11:00', brk: 30, hours: 4.5, notes: 'Pre-7am start' },
-  { emp: 'aisha', date: '09/05', day: 'Sat', start: '07:00', finish: '13:00', brk: 30, hours: 5.5, notes: '' },
-  { emp: 'aisha', date: '11/05', day: 'Mon', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
-  { emp: 'aisha', date: '13/05', day: 'Wed', start: '06:00', finish: '11:00', brk: 30, hours: 4.5, notes: 'Pre-7am start' },
-  { emp: 'aisha', date: '15/05', day: 'Fri', start: '06:00', finish: '12:00', brk: 30, hours: 5.5, notes: 'Pre-7am start' },
-  // Daniel Petrov — 35.0 (casual functions)
-  { emp: 'daniel', date: '08/05', day: 'Fri', start: '18:00', finish: '23:00', brk: 0, hours: 5.0, notes: '' },
-  { emp: 'daniel', date: '09/05', day: 'Sat', start: '17:00', finish: '23:00', brk: 0, hours: 6.0, notes: '' },
-  { emp: 'daniel', date: '10/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 0, hours: 6.5, notes: '' },
-  { emp: 'daniel', date: '15/05', day: 'Fri', start: '18:00', finish: '23:00', brk: 0, hours: 5.0, notes: '' },
-  { emp: 'daniel', date: '16/05', day: 'Sat', start: '17:00', finish: '23:00', brk: 0, hours: 6.0, notes: '' },
-  { emp: 'daniel', date: '17/05', day: 'Sun', start: '12:00', finish: '18:30', brk: 0, hours: 6.5, notes: '' },
-]
-const shiftsFor = (empKey) => SHIFTS.filter((s) => s.emp === empKey)
-const shiftHours = (empKey) => Math.round(shiftsFor(empKey).reduce((s, r) => s + r.hours, 0) * 10) / 10
-const TOTAL_SHIFT_HOURS = Math.round(SHIFTS.reduce((s, r) => s + r.hours, 0) * 10) / 10
+function buildTimesheetMatchMessage(parsedCache, timesheetData) {
+  if (!parsedCache || !timesheetData?.employees?.length) return ''
+  const matchedCount = countTimesheetMatches(parsedCache, timesheetData)
+  if (matchedCount === timesheetData.employees.length) return ''
 
-/* ── multi-award enrichment — the interpreter has the whole library and
-   chooses per employee. Additive: existing pay numbers are untouched. ────── */
-const EMP_IDS = { sarah: 'EMP-001', marcus: 'EMP-002', priya: 'EMP-003', tom: 'EMP-004', aisha: 'EMP-005', daniel: 'EMP-006' }
-const COVERAGE_CONF = { sarah: 99, marcus: 98, priya: 97, tom: 58, aisha: 98, daniel: 90 }
-const ALT_INTERPRETATIONS = {
-  tom: {
-    award: 'MA000016',
-    classification: 'Security Officer Level 3',
-    baseRate: 31.62,
-    estGross: 2228.5,
-    note: 'Under the Security Services Industry Award the base rate is higher and night/weekend loadings differ. If crowd control is the primary duty, MA000016 likely applies — confirm the primary award before processing pay.',
-  },
+  const expectedNames = parsedCache.employeeProfiles
+    .slice(0, 4)
+    .map((profile) => profile.employeeName)
+    .filter(Boolean)
+    .join(', ')
+
+  if (matchedCount === 0) {
+    const cachedAwardCodes = Object.keys(parsedCache.awardsByCode || {}).join(', ')
+    return `No timesheet employees matched the cached agreement profiles. This usually means the wrong timesheet was uploaded. Expected names from the current cache include: ${expectedNames}. Cached award codes: ${cachedAwardCodes || 'none'}.`
+  }
+
+  return `${timesheetData.employees.length - matchedCount} of ${timesheetData.employees.length} timesheet employees could not be matched to the cached agreement profiles. Check that the uploaded timesheet belongs to the same document set.`
 }
-EMPLOYEES.forEach((e) => {
-  e.empId = EMP_IDS[e.id]
-  e.chosenAward = e.award
-  e.candidates = e.crossAward ? [e.award, e.crossAward] : [e.award]
-  e.coverageConfidence = COVERAGE_CONF[e.id] ?? 95
-  if (ALT_INTERPRETATIONS[e.id]) e.alt = ALT_INTERPRETATIONS[e.id]
-})
 
-/* ── global CSS (no external stylesheet) ─────────────────────────────────── */
 const GLOBAL_CSS = `
   :root {
     --paper:${COLORS.paper}; --ink:${COLORS.ink}; --ochre:${COLORS.ochre};
@@ -338,14 +178,11 @@ const GLOBAL_CSS = `
     text-rendering: optimizeLegibility;
   }
   ::selection { background: rgba(194,112,58,0.22); }
-
-  /* scrollbar */
   ::-webkit-scrollbar { width: 11px; height: 11px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: rgba(31,30,27,0.18); border-radius: 6px; border: 3px solid var(--paper); }
   ::-webkit-scrollbar-thumb:hover { background: rgba(31,30,27,0.3); }
 
-  /* keyframes */
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -354,13 +191,11 @@ const GLOBAL_CSS = `
     33% { transform: translate(28px,-26px) scale(1.07); }
     66% { transform: translate(-22px,20px) scale(0.96); }
   }
-  @keyframes pulseDot { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
 
   .fade-up { animation: fadeUp 0.55s cubic-bezier(0.2,0.7,0.2,1) both; }
   .spin { animation: spin 0.9s linear infinite; }
   .mono { font-family: var(--mono); }
 
-  /* background layer */
   .bg-grid {
     position: absolute; inset: 0;
     background-image:
@@ -384,18 +219,16 @@ const GLOBAL_CSS = `
   .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
     padding: 38px 28px 72px; min-height: 100vh; }
 
-  /* typography helpers */
   .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
     text-transform: uppercase; color: var(--muted); }
   .display { font-family: var(--serif); font-weight: 500; letter-spacing: -0.015em;
     line-height: 1.02; margin: 0; color: var(--ink); }
 
-  /* buttons */
   .btn { font-family: var(--body); font-size: 14px; font-weight: 500;
     border: 1px solid var(--line); border-radius: 11px; padding: 10px 16px;
     background: transparent; color: var(--ink); cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
-    transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease; }
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease; text-decoration: none; }
   .btn:hover { background: rgba(31,30,27,0.05); border-color: rgba(31,30,27,0.24); }
   .btn:active { transform: translateY(1px); }
 
@@ -404,14 +237,13 @@ const GLOBAL_CSS = `
     background: var(--ink); color: var(--paper); cursor: pointer;
     display: inline-flex; align-items: center; gap: 10px;
     transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
-    box-shadow: 0 10px 30px -14px rgba(31,30,27,0.6); }
+    box-shadow: 0 10px 30px -14px rgba(31,30,27,0.6); text-decoration: none; }
   .btn-primary:hover:not(:disabled) { background: var(--ochre); border-color: var(--ochre);
     box-shadow: 0 14px 34px -12px rgba(194,112,58,0.7); transform: translateY(-1px); }
   .btn-primary:active:not(:disabled) { transform: translateY(0); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed;
     box-shadow: none; background: transparent; color: var(--muted); border-color: var(--line); }
 
-  /* upload cards */
   .ucard { background: var(--card); border: 1px solid var(--line); border-radius: 18px;
     padding: 26px 26px 22px; position: relative; overflow: hidden;
     transition: border-color 0.18s ease, box-shadow 0.18s ease; }
@@ -432,7 +264,6 @@ const GLOBAL_CSS = `
     color: var(--muted); cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
   .icon-x:hover { color: var(--red); border-color: rgba(180,69,47,0.5); background: rgba(180,69,47,0.07); }
 
-  /* processing pills + steps */
   .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     border-radius: 999px; padding: 7px 14px; background: var(--card);
     font-size: 13px; color: var(--ink); }
@@ -446,7 +277,6 @@ const GLOBAL_CSS = `
   .dot-pending { width: 9px; height: 9px; border-radius: 50%;
     border: 1.5px solid rgba(31,30,27,0.28); }
 
-  /* results table */
   .trow { display: grid; align-items: center; gap: 14px; padding: 16px 18px;
     cursor: pointer; transition: background 0.15s ease; border-radius: 12px; }
   .trow:hover { background: rgba(31,30,27,0.035); }
@@ -456,16 +286,11 @@ const GLOBAL_CSS = `
     text-transform: uppercase; color: var(--muted); }
   .rowwrap { border-bottom: 1px solid var(--line); }
   .rowwrap:last-child { border-bottom: none; }
-  .chev { transition: transform 0.25s ease; color: var(--muted); }
-  .chev.open { transform: rotate(180deg); }
-
   .panel { padding: 6px 18px 28px; }
   .panel-inner { background: var(--paper); border: 1px solid var(--line);
     border-radius: 14px; padding: 24px; }
   .panel-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-
-  /* dotted-leader breakdown */
   .leader { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
   .leader-label { font-size: 13.5px; color: var(--ink); }
   .leader-dots { flex: 1; border-bottom: 1px dotted rgba(31,30,27,0.3);
@@ -473,40 +298,30 @@ const GLOBAL_CSS = `
   .leader-amt { font-family: var(--mono); font-size: 13px; color: var(--ink); }
   .leader-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .leader-total .leader-label, .leader-total .leader-amt { font-weight: 600; font-size: 14px; }
-
-  /* clauses */
-  .clause { display: flex; align-items: baseline; gap: 12px; padding: 7px 0;
-    border-bottom: 1px dashed var(--line); }
-  .clause:last-child { border-bottom: none; }
-  .clause-code { font-family: var(--mono); font-size: 12px; color: var(--ochre);
-    background: rgba(194,112,58,0.1); border: 1px solid rgba(194,112,58,0.22);
-    border-radius: 6px; padding: 2px 8px; flex-shrink: 0; white-space: nowrap; }
-  .clause-text { font-size: 13.5px; color: var(--ink); }
-
   .flag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
     color: #8a4a1f; background: rgba(194,112,58,0.12);
     border: 1px solid rgba(194,112,58,0.28); border-radius: 10px; padding: 9px 13px; }
 
-  .decision-pill { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
-    text-transform: uppercase; padding: 5px 11px; border-radius: 999px; }
+  .clause-ref { position: relative; cursor: help;
+    border-bottom: 1px dotted rgba(31,30,27,0.35); }
+  .clause-tip { position: absolute; bottom: calc(100% + 9px); left: 50%;
+    transform: translateX(-50%); background: var(--ink); color: var(--paper);
+    font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.55;
+    padding: 10px 13px; border-radius: 10px; width: max-content; max-width: 300px;
+    text-align: left; white-space: normal; letter-spacing: 0;
+    opacity: 0; visibility: hidden; transition: opacity 0.13s ease;
+    pointer-events: none; z-index: 60;
+    box-shadow: 0 12px 30px -10px rgba(31,30,27,0.55); }
+  .clause-tip::after { content: ''; position: absolute; top: 100%; left: var(--tip-arrow, 50%);
+    transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
+  .clause-ref:hover .clause-tip { opacity: 1; visibility: visible; }
+  .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
+  .danger-flag { color: var(--red); background: rgba(180,69,47,0.08); border-color: rgba(180,69,47,0.3); }
 
   .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
     display: flex; align-items: center; justify-content: space-between;
     gap: 14px; flex-wrap: wrap; }
 
-  /* award library (stage 1, card 02) */
-  .lib-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .lib-chip { display: flex; align-items: center; gap: 9px; border: 1px solid var(--line);
-    border-radius: 10px; padding: 9px 11px; background: var(--paper); }
-  .lib-check { width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
-    display: grid; place-items: center; background: rgba(91,122,92,0.14); color: var(--sage); }
-
-  /* coverage strip (stage 4) */
-  .cov-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
-    border-radius: 999px; padding: 6px 13px; background: var(--card); font-size: 13px; }
-  .cov-chip .mono { font-size: 12px; }
-
-  /* timesheet stage (stage 3) */
   .emp-group { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 18px 18px 8px; margin-bottom: 16px; }
   .ts-head, .ts-row { display: grid; gap: 12px; align-items: center;
@@ -514,17 +329,10 @@ const GLOBAL_CSS = `
   .ts-head { padding: 0 10px 10px; border-bottom: 1px solid var(--line); }
   .ts-row { padding: 9px 10px; border-bottom: 1px solid var(--line); }
   .ts-row:last-child { border-bottom: none; }
-
-  /* award comparison (stage 4, expanded) */
-  .cmp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .cmp-card { border: 1px solid var(--line); border-radius: 12px; padding: 16px; background: var(--paper); }
-  .cmp-card.chosen { border-color: rgba(91,122,92,0.5); }
-  .cmp-card.alt { border-color: rgba(194,112,58,0.45); }
-
-  /* disperse bar (stage 4) + email preview (stage 5) */
-  .disperse-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    flex-wrap: wrap; margin-top: 22px; padding: 18px 22px; background: var(--card);
-    border: 1px solid var(--line); border-radius: 16px; }
+  .table-scroll { overflow-x: auto; }
+  .table-inner { min-width: 920px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
@@ -532,10 +340,7 @@ const GLOBAL_CSS = `
     .upload-grid { grid-template-columns: 1fr !important; }
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .table-scroll { overflow-x: auto; }
-    .table-inner { min-width: 760px; }
-    .detail-grid { grid-template-columns: 1fr !important; }
-    .cmp-grid { grid-template-columns: 1fr !important; }
-    .lib-grid { grid-template-columns: 1fr !important; }
+    .table-inner { min-width: 860px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -543,7 +348,6 @@ const GLOBAL_CSS = `
   }
 `
 
-/* ── background (blobs + grid) ───────────────────────────────────────────── */
 function Background() {
   return (
     <div aria-hidden style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
@@ -555,7 +359,6 @@ function Background() {
   )
 }
 
-/* ── masthead ────────────────────────────────────────────────────────────── */
 function Masthead({ stage }) {
   const names = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
   return (
@@ -583,29 +386,32 @@ function Masthead({ stage }) {
   )
 }
 
-/* ── upload card ─────────────────────────────────────────────────────────── */
 function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file, onFile, onRemove }) {
   const inputRef = useRef(null)
   const [over, setOver] = useState(false)
   const dragDepth = useRef(0)
 
-  const stop = (e) => { e.preventDefault(); e.stopPropagation() }
-  const openPicker = () => inputRef.current && inputRef.current.click()
+  const stop = (event) => { event.preventDefault(); event.stopPropagation() }
+  const openPicker = () => inputRef.current?.click()
 
-  const handleEnter = (e) => { stop(e); dragDepth.current += 1; setOver(true) }
-  const handleOver = (e) => { stop(e) }
-  const handleLeave = (e) => { stop(e); dragDepth.current = Math.max(0, dragDepth.current - 1); if (dragDepth.current === 0) setOver(false) }
-  const handleDrop = (e) => {
-    stop(e)
+  const handleEnter = (event) => { stop(event); dragDepth.current += 1; setOver(true) }
+  const handleOver = (event) => stop(event)
+  const handleLeave = (event) => {
+    stop(event)
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setOver(false)
+  }
+  const handleDrop = (event) => {
+    stop(event)
     dragDepth.current = 0
     setOver(false)
-    const f = e.dataTransfer.files && e.dataTransfer.files[0]
-    if (f) onFile({ name: f.name, size: f.size })
+    const chosen = event.dataTransfer.files?.[0]
+    if (chosen) onFile(chosen)
   }
-  const handlePick = (e) => {
-    const f = e.target.files && e.target.files[0]
-    if (f) onFile({ name: f.name, size: f.size })
-    e.target.value = '' // allow re-selecting the same file
+  const handlePick = (event) => {
+    const chosen = event.target.files?.[0]
+    if (chosen) onFile(chosen)
+    event.target.value = ''
   }
 
   return (
@@ -628,8 +434,14 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
         </span>
       </div>
 
-      <input ref={inputRef} type="file" accept={accept} onChange={handlePick}
-        style={{ display: 'none' }} aria-label={`Choose ${title.toLowerCase()} file`} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={handlePick}
+        style={{ display: 'none' }}
+        aria-label={`Choose ${title.toLowerCase()} file`}
+      />
 
       {file ? (
         <div className="chip fade-up">
@@ -659,7 +471,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
           tabIndex={0}
           aria-label={`Upload ${title.toLowerCase()} — choose a file or drop it here`}
           onClick={openPicker}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker() } }}
+          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openPicker() } }}
           onDragEnter={handleEnter}
           onDragOver={handleOver}
           onDragLeave={handleLeave}
@@ -678,125 +490,6 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
   )
 }
 
-/* ── award library panel (stage 1, card 02 — pre-loaded) ─────────────────── */
-function AwardLibrary() {
-  const inputRef = useRef(null)
-  const [custom, setCustom] = useState(null)
-  const openPicker = () => inputRef.current && inputRef.current.click()
-  const handlePick = (e) => {
-    const f = e.target.files && e.target.files[0]
-    if (f) setCustom({ name: f.name, size: f.size })
-    e.target.value = ''
-  }
-  return (
-    <div className="ucard ready">
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 46, height: 46, borderRadius: 12, background: 'rgba(91,122,92,0.12)',
-            border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
-          }}>
-            <Library size={22} strokeWidth={1.6} />
-          </div>
-          <div>
-            <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Award library</div>
-            <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{AWARDS.length} modern awards loaded</div>
-          </div>
-        </div>
-        <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>02</span>
-      </div>
-
-      <div className="lib-grid">
-        {AWARDS.map((a) => (
-          <div className="lib-chip" key={a.code}>
-            <span className="lib-check"><Check size={12} strokeWidth={2.6} /></span>
-            <div style={{ minWidth: 0 }}>
-              <div className="mono" style={{ fontSize: 11.5, color: COLORS.ink }}>{a.code}</div>
-              <div style={{ fontSize: 11.5, color: COLORS.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.short}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
-        The interpreter selects the applicable award for each employee — no need to upload one.
-      </div>
-
-      <input ref={inputRef} type="file" accept=".pdf,.docx,.doc" onChange={handlePick} style={{ display: 'none' }} aria-label="Add a custom award document" />
-      {custom ? (
-        <div className="chip fade-up" style={{ marginTop: 12 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(91,122,92,0.14)', display: 'grid', placeItems: 'center', color: COLORS.sage, flexShrink: 0 }}>
-            <Check size={16} strokeWidth={2.2} />
-          </div>
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{custom.name}</div>
-            <div className="mono" style={{ fontSize: 11, color: COLORS.muted }}>added to library</div>
-          </div>
-          <button className="icon-x" onClick={() => setCustom(null)} aria-label="Remove custom award"><X size={16} /></button>
-        </div>
-      ) : (
-        <button className="btn" style={{ marginTop: 12, fontSize: 13 }} onClick={openPicker}>
-          + Add a custom award
-        </button>
-      )}
-    </div>
-  )
-}
-
-/* ── stage 1: upload ─────────────────────────────────────────────────────── */
-function UploadStage({ timesheet, setTimesheet, onInterpret }) {
-  const ready = Boolean(timesheet)
-  return (
-    <div className="fade-up">
-      <div style={{ marginBottom: 36, maxWidth: 620 }}>
-        <div className="eyebrow" style={{ marginBottom: 14 }}>01 — Upload</div>
-        <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
-          Interpret across awards.
-        </h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
-          Upload a pay-period timesheet. The interpreter holds a library of modern awards and
-          selects the applicable one for each employee — with the classification, pay treatment,
-          reasoning and cited clauses laid out for review.
-        </p>
-      </div>
-
-      <div className="upload-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 22 }}>
-        <UploadCard
-          index="01"
-          icon={FileSpreadsheet}
-          title="Timesheet"
-          subtitle="Shift entries for the pay period"
-          accept=".csv,.xlsx,.xls,.pdf"
-          formats="CSV · XLSX · PDF"
-          file={timesheet}
-          onFile={setTimesheet}
-          onRemove={() => setTimesheet(null)}
-        />
-        <AwardLibrary />
-      </div>
-
-      <div style={{ marginTop: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{
-            width: 9, height: 9, borderRadius: '50%',
-            background: ready ? COLORS.sage : 'rgba(31,30,27,0.25)',
-            boxShadow: ready ? '0 0 0 4px rgba(91,122,92,0.18)' : 'none',
-            transition: 'all 0.2s ease',
-          }} />
-          <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
-            {ready ? `Ready to interpret across ${AWARDS.length} awards` : 'Upload a timesheet to begin'}
-          </span>
-        </div>
-        <button className="btn-primary" disabled={!ready} onClick={onInterpret}>
-          Interpret awards
-          <ArrowRight size={18} strokeWidth={2} />
-        </button>
-      </div>
-    </div>
-  )
-}
-
-/* ── stage 2: processing ─────────────────────────────────────────────────── */
 function StepRow({ step, status, delay }) {
   return (
     <div className={`step ${status} fade-up`} style={{ animationDelay: `${delay}ms` }}>
@@ -827,128 +520,15 @@ function StepRow({ step, status, delay }) {
   )
 }
 
-function ProcessingStage({ timesheet, stepIndex }) {
-  const pct = Math.min(100, Math.round((stepIndex / STEPS.length) * 100))
+function Flag({ children, danger = false }) {
   return (
-    <div className="fade-up">
-      <div style={{ marginBottom: 28, maxWidth: 640 }}>
-        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={13} strokeWidth={1.8} /> 02 — Processing
-        </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
-          Reading your documents&hellip;
-        </h1>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 30 }}>
-        {timesheet && (
-          <span className="pill">
-            <FileSpreadsheet size={15} strokeWidth={1.7} color={COLORS.ochre} />
-            {timesheet.name}
-          </span>
-        )}
-        <span className="pill">
-          <Library size={15} strokeWidth={1.7} color={COLORS.sage} />
-          Award library · {AWARDS.length} awards
-        </span>
-      </div>
-
-      {/* progress meter */}
-      <div style={{ marginBottom: 22 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: COLORS.muted }}>PROGRESS</span>
-          <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{pct}%</span>
-        </div>
-        <div style={{ height: 4, background: 'rgba(31,30,27,0.08)', borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ width: `${pct}%`, height: '100%', background: COLORS.ochre, borderRadius: 3, transition: 'width 0.5s cubic-bezier(0.2,0.7,0.2,1)' }} />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {STEPS.map((step, i) => {
-          const status = i < stepIndex ? 'done' : i === stepIndex ? 'active' : 'pending'
-          return <StepRow key={i} step={step} status={status} delay={i * 90} />
-        })}
-      </div>
-    </div>
+    <span className={`flag${danger ? ' danger-flag' : ''}`}>
+      <AlertTriangle size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+      {children}
+    </span>
   )
 }
 
-/* ── stage 3: timesheet ──────────────────────────────────────────────────── */
-function TimesheetStage({ timesheet, onBack, onContinue }) {
-  return (
-    <div className="fade-up">
-      <div style={{ marginBottom: 26, maxWidth: 660 }}>
-        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet
-        </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
-          Review the timesheet.
-        </h1>
-        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
-          The parsed shifts behind each interpretation. Confirm the hours look right, then continue.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
-        <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{TIMESHEET_META.payPeriod}</span>
-        <span className="pill">{TIMESHEET_META.business}</span>
-        {timesheet && <span className="pill"><FileSpreadsheet size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheet.name}</span>}
-      </div>
-
-      {EMPLOYEES.map((e) => {
-        const rows = shiftsFor(e.id)
-        return (
-          <div className="emp-group" key={e.id}>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{e.empId}</span>
-                <span style={{ fontSize: 15.5, fontWeight: 600 }}>{e.name}</span>
-                <span style={{ fontSize: 12.5, color: COLORS.muted }}>{e.role} · {e.employment}</span>
-              </div>
-              <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{shiftHours(e.id)} hrs</span>
-            </div>
-            <div className="table-scroll">
-              <div className="table-inner">
-                <div className="ts-head">
-                  <span className="th">Date</span><span className="th">Day</span><span className="th">Start</span>
-                  <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
-                </div>
-                {rows.map((s, i) => (
-                  <div className="ts-row" key={i}>
-                    <span className="mono" style={{ fontSize: 12.5 }}>{s.date}</span>
-                    <span style={{ fontSize: 13 }}>{s.day}</span>
-                    <span className="mono" style={{ fontSize: 12.5 }}>{s.start}</span>
-                    <span className="mono" style={{ fontSize: 12.5 }}>{s.finish}</span>
-                    <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{s.brk}m</span>
-                    <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{s.hours}</span>
-                    <span style={{ fontSize: 12.5, color: COLORS.muted }}>{s.notes}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-      })}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <span className="eyebrow">Grand total</span>
-          <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>{TOTAL_SHIFT_HOURS} hrs</span>
-          <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {EMPLOYEES.length} employees · {SHIFTS.length} shifts</span>
-        </div>
-        <div style={{ display: 'flex', gap: 11 }}>
-          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to upload</button>
-          <button className="btn-primary" onClick={onContinue}>
-            Continue to interpretation <ArrowRight size={18} strokeWidth={2} />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ── stage 4: results ────────────────────────────────────────────────────── */
 function StatCard({ icon: Icon, label, value, caption, accent }) {
   return (
     <div style={{
@@ -972,198 +552,593 @@ function StatCard({ icon: Icon, label, value, caption, accent }) {
   )
 }
 
-function ConfidenceMeter({ value }) {
-  const color = confColor(value)
+function IndustrySelector({ industry, onSetIndustry }) {
+  const industries = Object.entries(INDUSTRY_LABELS)
+  const awards = industry ? listIndustryAwards(industry) : []
+  const pillStyle = (selected, disabled) => ({
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    fontFamily: BODY,
+    fontSize: 13,
+    opacity: disabled ? 0.5 : 1,
+    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(194,112,58,0.1)', color: COLORS.ink } : {}),
+  })
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}
-      role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}
-      aria-label={`Confidence ${value} percent`}>
-      <div style={{ flex: 1, height: 6, background: 'rgba(31,30,27,0.09)', borderRadius: 3, overflow: 'hidden', minWidth: 40 }}>
-        <div style={{ width: `${value}%`, height: '100%', background: color, borderRadius: 3, transformOrigin: 'left center', animation: 'barGrow 0.8s cubic-bezier(0.2,0.7,0.2,1) both' }} />
+    <div className="panel-inner" style={{ marginBottom: 26, padding: '18px 20px' }}>
+      <div className="panel-label" style={{ marginBottom: 12 }}>
+        Industry award library — preload instead of uploading an award
       </div>
-      <span className="mono" style={{ fontSize: 13, color, minWidth: 38, textAlign: 'right', fontWeight: 500 }}>
-        {value}%
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button className="pill" style={pillStyle(!industry, false)} onClick={() => onSetIndustry('')}>
+          No preload — upload award
+        </button>
+        {industries.map(([code, label]) => {
+          const seeded = isIndustrySeeded(code)
+          return (
+            <button
+              key={code}
+              className="pill"
+              style={pillStyle(industry === code, !seeded)}
+              disabled={!seeded}
+              onClick={() => onSetIndustry(industry === code ? '' : code)}
+            >
+              <Layers size={14} strokeWidth={1.7} color={industry === code ? COLORS.ochre : COLORS.muted} />
+              {label}
+            </button>
+          )
+        })}
+      </div>
+      {industry && awards.length > 0 && (
+        <>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+            {awards.map((award) => (
+              <span key={award.code} className="pill" style={{ fontSize: 12 }}>
+                <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{award.code}</span>
+                {award.title}
+                <span style={{ color: COLORS.muted }}>· {award.levels} levels</span>
+              </span>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+            <BadgeCheck size={15} strokeWidth={1.8} color={COLORS.sage} />
+            <span style={{ fontSize: 13, color: COLORS.sage, fontWeight: 500 }}>
+              {awards.length} awards preloaded — the award document upload is now optional
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onContinue }) {
+  const ready = Boolean(documents.agreement && (documents.award || (industry && isIndustrySeeded(industry))))
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 36, maxWidth: 640 }}>
+        <div className="eyebrow" style={{ marginBottom: 14 }}>01 — Upload</div>
+        <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
+          Parse the award stack.
+        </h1>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+          Select a preloaded industry award library or upload an award document, then add the employee agreements.
+          Compliance documents are optional but will be cross-referenced into the cached backend state before the
+          timesheet is uploaded.
+        </p>
+      </div>
+
+      <IndustrySelector industry={industry} onSetIndustry={onSetIndustry} />
+
+      <div className="upload-grid">
+        <UploadCard
+          index="01"
+          icon={ScrollTextIcon}
+          title="Award Document"
+          subtitle={industry ? 'Optional — merges on top of the preloaded library' : 'Rulebook or award extraction source'}
+          accept=".pdf,.docx,.doc,.txt"
+          formats="PDF · DOCX · TXT"
+          file={documents.award}
+          onFile={(file) => onSetDocument('award', file)}
+          onRemove={() => onSetDocument('award', null)}
+        />
+        <UploadCard
+          index="02"
+          icon={Scale}
+          title="Compliance Document"
+          subtitle="Optional compliance annotations"
+          accept=".pdf,.docx,.doc,.txt"
+          formats="PDF · DOCX · TXT"
+          file={documents.compliance}
+          onFile={(file) => onSetDocument('compliance', file)}
+          onRemove={() => onSetDocument('compliance', null)}
+        />
+        <UploadCard
+          index="03"
+          icon={FileText}
+          title="Employee Agreement"
+          subtitle="Profiles, roles, levels and override rates"
+          accept=".pdf,.docx,.doc,.txt"
+          formats="PDF · DOCX · TXT"
+          file={documents.agreement}
+          onFile={(file) => onSetDocument('agreement', file)}
+          onRemove={() => onSetDocument('agreement', null)}
+        />
+      </div>
+
+      <div style={{ marginTop: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{
+            width: 9, height: 9, borderRadius: '50%',
+            background: ready ? COLORS.sage : 'rgba(31,30,27,0.25)',
+            boxShadow: ready ? '0 0 0 4px rgba(91,122,92,0.18)' : 'none',
+            transition: 'all 0.2s ease',
+          }} />
+          <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
+            {ready ? 'Ready to build the parsed cache' : 'Select an industry or upload an award, plus the employee agreement, to continue'}
+          </span>
+        </div>
+        <button className="btn-primary" disabled={!ready} onClick={onContinue}>
+          Parse documents
+          <ArrowRight size={18} strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
+  const pct = Math.min(100, Math.round((stepIndex / PARSE_STEPS.length) * 100))
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 28, maxWidth: 640 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Sparkles size={13} strokeWidth={1.8} /> 02 — Processing
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+          Building the award cache&hellip;
+        </h1>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 30 }}>
+        {industry && (
+          <span className="pill">
+            <Layers size={15} strokeWidth={1.7} color={COLORS.ochre} />
+            {INDUSTRY_LABELS[industry] || industry} library · {listIndustryAwards(industry).length} awards preloaded
+          </span>
+        )}
+        {documents.award && (
+          <span className="pill">
+            <FileText size={15} strokeWidth={1.7} color={COLORS.ochre} />
+            {documents.award.name}
+          </span>
+        )}
+        {documents.agreement && (
+          <span className="pill">
+            <FileText size={15} strokeWidth={1.7} color={COLORS.sage} />
+            {documents.agreement.name}
+          </span>
+        )}
+        {documents.compliance && (
+          <span className="pill">
+            <Scale size={15} strokeWidth={1.7} color={COLORS.ink} />
+            {documents.compliance.name}
+          </span>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 22 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: COLORS.muted }}>PROGRESS</span>
+          <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{pct}%</span>
+        </div>
+        <div style={{ height: 4, background: 'rgba(31,30,27,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: COLORS.ochre, borderRadius: 3, transition: 'width 0.5s cubic-bezier(0.2,0.7,0.2,1)' }} />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {PARSE_STEPS.map((step, index) => {
+          const status = index < stepIndex ? 'done' : index === stepIndex ? 'active' : 'pending'
+          return <StepRow key={step.label} step={step} status={status} delay={index * 90} />
+        })}
+      </div>
+
+      {error && (
+        <div style={{ marginTop: 24 }}>
+          <Flag danger>{error}</Flag>
+          <div style={{ marginTop: 14 }}>
+            <button className="btn" onClick={onBack}>
+              <ArrowLeft size={15} strokeWidth={1.9} /> Back to upload
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap }) {
+  return (
+    <div className="trow rowwrap" style={{ gridTemplateColumns: FLAT_INTERP_GRID, cursor: 'default', alignItems: 'start' }}>
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
+        {matched && <BadgeCheck size={13} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, alignSelf: 'center' }} />}
+        {row.levelCode && <span className="mono" style={{ fontSize: 10.5, color: COLORS.muted }}>{row.levelCode}</span>}
+        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{row.employeeLevel}</span>
+      </span>
+      <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+        {row.categoryLabel}
+        {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
+      </span>
+      <span style={{ fontSize: 12.5, color: 'rgba(31,30,27,0.74)', lineHeight: 1.45 }}>
+        <span style={{ fontWeight: 600, color: COLORS.ink }}>{row.title}</span>
+        {' — '}
+        {row.plainLanguage}
+        {row.conditionsText && (
+          <span style={{ display: 'block', fontSize: 11.5, color: COLORS.muted, marginTop: 3 }}>
+            When: {row.conditionsText}
+          </span>
+        )}
+      </span>
+      <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
+      <span style={{ fontSize: 11.5, color: COLORS.muted }}>
+        {row.clauseRef
+          ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
+          : '—'}
       </span>
     </div>
   )
 }
 
-function Flag({ children }) {
+function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap }) {
+  const [showAll, setShowAll] = useState(false)
+  // Stable partition: levels matched by agreement profiles surface first.
+  const ordered = [
+    ...rows.filter((row) => matchedKeys.has(row.levelKey)),
+    ...rows.filter((row) => !matchedKeys.has(row.levelKey)),
+  ]
+  const visible = showAll ? ordered : ordered.slice(0, INTERP_ROW_CAP)
   return (
-    <span className="flag">
-      <AlertTriangle size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-      {children}
-    </span>
+    <div style={{ padding: '0 6px 12px' }}>
+      <div className="table-scroll">
+        <div className="table-inner" style={{ minWidth: 760 }}>
+          <div className="thead" style={{ gridTemplateColumns: FLAT_INTERP_GRID }}>
+            <span className="th">Level</span>
+            <span className="th">Category</span>
+            <span className="th">Interpretation</span>
+            <span className="th">Value / rate</span>
+            <span className="th">Clause</span>
+          </div>
+          {visible.map((row) => (
+            <InterpretationTableRowView
+              key={row.rowId}
+              row={row}
+              matched={matchedKeys.has(row.levelKey)}
+              clauseIndex={clauseIndex}
+              purposeMap={purposeMap}
+            />
+          ))}
+        </div>
+      </div>
+      {!showAll && ordered.length > INTERP_ROW_CAP && (
+        <div style={{ padding: '12px 12px 4px' }}>
+          <button className="btn" onClick={() => setShowAll(true)}>
+            <ChevronDown size={15} strokeWidth={1.9} /> Show all {ordered.length} clause rows
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
-function EmployeeRow({ employee: e, isOpen, onToggle, decision, onDecide, delay }) {
-  const gross = grossPay(e)
+function sourceBadge(source, interp) {
+  if (source === 'preloaded') {
+    return { text: `Preloaded · ${INDUSTRY_LABELS[interp.industry] || interp.industry || 'library'}`, color: COLORS.sage }
+  }
+  if (source === 'merged') return { text: 'Uploaded + library', color: COLORS.ochre }
+  return { text: 'Uploaded document', color: COLORS.ochre }
+}
+
+function AwardInterpretationSection({ parsedCache }) {
+  const interps = Object.values(parsedCache.interpretationsByCode || {})
+  const matchedKeys = new Set(
+    (parsedCache.employeeProfiles || [])
+      .map((profile) => keyForAwardLevel(profile.awardCode, profile.employeeLevel))
+      .filter(Boolean),
+  )
+  const hasMatch = (interp) => interp.levels.some((level) => matchedKeys.has(level.levelKey))
+  const ordered = [...interps].sort((a, b) => Number(hasMatch(b)) - Number(hasMatch(a)))
+  const [openCode, setOpenCode] = useState(ordered[0]?.awardCode || '')
+  if (!interps.length) return null
+
   return (
-    <div className="rowwrap fade-up" style={{ animationDelay: `${delay}ms` }}>
+    <div style={{ marginBottom: 30 }}>
+      <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Scale size={13} strokeWidth={1.8} /> Award interpretation — every level · every clause
+      </div>
+      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 18px', maxWidth: 740, lineHeight: 1.55 }}>
+        The award read for you, deterministically — no timesheet needed. One table row per clause interpretation:
+        each classification level, every loading, penalty and allowance it grants, and the clause behind each one.
+        Levels named in the employee agreement are marked and shown first.
+      </p>
+      {ordered.map((interp) => {
+        const code = interp.awardCode
+        const award = parsedCache.awardsByCode?.[code]
+        const source = parsedCache.sourcesByCode?.[code] || 'uploaded'
+        const rows = buildInterpretationTableRows(interp, { source })
+        const badge = sourceBadge(source, interp)
+        const isOpen = openCode === code
+        return (
+          <div key={code} className="emp-group" style={{ marginBottom: 12 }}>
+            <div
+              onClick={() => setOpenCode((current) => (current === code ? '' : code))}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '4px 10px 12px', cursor: 'pointer', flexWrap: 'wrap' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+                <span className="mono" style={{ fontSize: 12.5, color: COLORS.ochre, fontWeight: 600 }}>{code}</span>
+                <span style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 500 }}>{interp.awardTitle}</span>
+                {hasMatch(interp) && <BadgeCheck size={15} strokeWidth={1.8} color={COLORS.sage} style={{ alignSelf: 'center' }} />}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span className="pill" style={{ fontSize: 11.5 }}>{interp.levels.length} levels</span>
+                <span className="pill" style={{ fontSize: 11.5 }}>{rows.length} clause rows</span>
+                <span className="pill" style={{ fontSize: 11.5, color: badge.color, borderColor: `${badge.color}55` }}>{badge.text}</span>
+                {isOpen ? <ChevronUp size={16} strokeWidth={1.8} color={COLORS.muted} /> : <ChevronDown size={16} strokeWidth={1.8} color={COLORS.muted} />}
+              </div>
+            </div>
+            {isOpen && (
+              <AwardInterpretationTable
+                rows={rows}
+                matchedKeys={matchedKeys}
+                clauseIndex={award?.clauseIndex || {}}
+                purposeMap={buildPurposeMap(award?.references || {})}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 26, maxWidth: 660 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+          Upload and review the timesheet.
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
+          The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against
+          cached award levels without re-parsing the documents.
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
+        <span className="pill"><Layers size={15} strokeWidth={1.7} color={COLORS.ochre} />Award codes: {Object.keys(parsedCache.awardsByCode).join(', ') || 'none'}</span>
+        <span className="pill"><BadgeCheck size={15} strokeWidth={1.7} color={COLORS.sage} />{Object.keys(parsedCache.awardLevelsByKey).length} award levels cached</span>
+        <span className="pill"><FileText size={15} strokeWidth={1.7} color={COLORS.ochre} />{parsedCache.employeeProfiles.length} agreement profiles</span>
+        <span className="pill"><Scale size={15} strokeWidth={1.7} color={COLORS.ink} />{parsedCache.parseWarnings.length} parse warnings</span>
+      </div>
+
+      <AwardInterpretationSection key={parsedCache.cacheFingerprint} parsedCache={parsedCache} />
+
+      <div className="upload-grid" style={{ marginBottom: 24 }}>
+        <UploadCard
+          index="04"
+          icon={FileSpreadsheet}
+          title="Timesheet"
+          subtitle="Shift entries for the pay period"
+          accept=".csv,.xlsx,.xls,.pdf"
+          formats="CSV · XLSX · XLS · PDF"
+          file={timesheetFile}
+          onFile={onTimesheetFile}
+          onRemove={() => onTimesheetFile(null)}
+        />
+        <div className="ucard ready">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: 12, background: 'rgba(91,122,92,0.12)',
+                border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
+              }}>
+                <BadgeCheck size={22} strokeWidth={1.6} />
+              </div>
+              <div>
+                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Cached interpretation state</div>
+                <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
+              </div>
+            </div>
+            <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            <div className="chip">
+              <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>Fingerprint</span>
+              <span className="mono" style={{ fontSize: 11.5, color: COLORS.ink, marginLeft: 'auto' }}>{parsedCache.cacheFingerprint.slice(0, 12)}…</span>
+            </div>
+            <div className="chip">
+              <span style={{ fontSize: 13.5 }}>Overrides logged</span>
+              <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.overrides).length}</span>
+            </div>
+            <div className="chip">
+              <span style={{ fontSize: 13.5 }}>Compliance notes</span>
+              <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.complianceByAwardLevel).length}</span>
+            </div>
+          </div>
+          <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
+            Timesheet submission will only hit this cached structure. The backend parser is not re-run unless the rule documents change.
+          </div>
+        </div>
+      </div>
+
+      {timesheetError && (
+        <div style={{ marginBottom: 18 }}>
+          <Flag danger>{timesheetError}</Flag>
+        </div>
+      )}
+
+      {timesheetData && (
+        <>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+            {timesheetData.meta.payPeriod && <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{timesheetData.meta.payPeriod}</span>}
+            {timesheetData.meta.business && <span className="pill">{timesheetData.meta.business}</span>}
+            <span className="pill"><Clock size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheetData.totalHours} hrs</span>
+          </div>
+
+          {timesheetData.employees.map((employee) => (
+            <div className="emp-group" key={employee.employeeId || employee.employeeName}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{employee.employeeId || 'NO-ID'}</span>
+                  <span style={{ fontSize: 15.5, fontWeight: 600 }}>{employee.employeeName}</span>
+                  <span style={{ fontSize: 12.5, color: COLORS.muted }}>{employee.jobRole || 'Role unavailable'} · {employee.employmentType || 'Employment unavailable'}</span>
+                </div>
+                <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{employee.totalHours} hrs</span>
+              </div>
+              <div className="table-scroll">
+                <div className="table-inner">
+                  <div className="ts-head">
+                    <span className="th">Date</span><span className="th">Day</span><span className="th">Start</span>
+                    <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
+                  </div>
+                  {employee.shifts.map((shift) => (
+                    <div className="ts-row" key={`${shift.date}-${shift.start}-${shift.finish}`}>
+                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.date}</span>
+                      <span style={{ fontSize: 13 }}>{shift.day}</span>
+                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.start}</span>
+                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.finish}</span>
+                      <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.breakMinutes}m</span>
+                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{shift.hours}</span>
+                      <span style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.notes || '—'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span className="eyebrow">Timesheet status</span>
+          <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
+            {timesheetData ? `${timesheetData.employees.length} employees` : 'Awaiting upload'}
+          </span>
+          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 11 }}>
+          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to documents</button>
+          <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
+            Calculate pay <ArrowRight size={18} strokeWidth={2} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ResultRow({ row, isOpen, onToggle }) {
+  const hasValidationErrors = row.validationErrors.length > 0
+  return (
+    <div className="rowwrap fade-up">
       <div
         className="trow"
-        style={{ gridTemplateColumns: GRID }}
+        style={{ gridTemplateColumns: RESULTS_GRID }}
         onClick={onToggle}
         role="button"
         tabIndex={0}
         aria-expanded={isOpen}
-        aria-controls={`panel-${e.id}`}
-        onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onToggle() } }}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle() } }}
       >
-        {/* employee */}
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {e.name}
+            {row.employeeName}
           </div>
-          <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 2 }}>{e.role}</div>
-        </div>
-        {/* classification */}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, lineHeight: 1.4 }}>{e.classification}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-            <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{e.award}</span>
-            {e.crossAward && (
-              <span className="mono" style={{ fontSize: 10.5, color: COLORS.ochre, background: 'rgba(194,112,58,0.1)', borderRadius: 5, padding: '1px 6px' }}>
-                ?{e.crossAward}
-              </span>
-            )}
+          <div style={{ fontSize: 12.5, color: hasValidationErrors ? COLORS.red : COLORS.muted, marginTop: 2 }}>
+            {hasValidationErrors ? 'Validation error' : `${row.totalHours} hrs · ${row.employmentType || 'Employment unavailable'}`}
           </div>
         </div>
-        {/* hours */}
-        <div className="mono" style={{ fontSize: 14 }}>{e.hours}</div>
-        {/* base rate */}
-        <div className="mono" style={{ fontSize: 13.5 }}>
-          {fmt(e.baseRate)}<span style={{ color: COLORS.muted, fontSize: 11 }}>/hr</span>
-        </div>
-        {/* total pay */}
-        <div className="mono" style={{ fontSize: 14.5, fontWeight: 600 }}>{fmt(gross)}</div>
-        {/* confidence */}
-        <ConfidenceMeter value={e.confidence} />
-        {/* chevron */}
-        <div style={{ display: 'grid', placeItems: 'center' }}>
-          {e.flags.length > 0 && !isOpen && (
-            <span title="Has flags" style={{ position: 'absolute', transform: 'translate(14px,-14px)', width: 7, height: 7, borderRadius: '50%', background: COLORS.ochre }} />
-          )}
-          <ChevronDown className={`chev${isOpen ? ' open' : ''}`} size={18} />
-        </div>
+        <span className="mono" style={{ fontSize: 13.5, color: hasValidationErrors ? COLORS.red : COLORS.ink }}>{row.awardCode}</span>
+        <span style={{ fontSize: 13.5, color: hasValidationErrors ? COLORS.red : COLORS.ink }}>{row.employeeLevel}</span>
+        <span style={{ fontSize: 13.5 }}>{row.jobRole}</span>
+        <span className="mono" style={{ fontSize: 13.5 }}>{fmt(row.basePay)}<span style={{ color: COLORS.muted, fontSize: 11 }}>/hr</span></span>
+        <span className="mono" style={{ fontSize: 13.5 }}>{fmt(row.extrasAllowances.total)}</span>
+        <span className="mono" style={{ fontSize: 14.5, fontWeight: 600 }}>{fmt(row.totalCalculatedPay)}</span>
       </div>
 
       {isOpen && (
-        <div className="panel fade-up" id={`panel-${e.id}`}>
+        <div className="panel fade-up">
           <div className="panel-inner">
-            {e.flags.length > 0 && (
+            {row.validationErrors.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 22 }}>
-                {e.flags.map((f, i) => <Flag key={i}>{f}</Flag>)}
+                {row.validationErrors.map((error) => <Flag danger key={error}>{error}</Flag>)}
               </div>
             )}
 
-            <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: 30 }}>
-              {/* left: reasoning + clauses */}
-              <div>
-                <div className="panel-label">Reasoning</div>
-                <p style={{ fontSize: 14.5, lineHeight: 1.65, color: 'rgba(31,30,27,0.82)', margin: '0 0 26px' }}>
-                  {e.reasoning}
-                </p>
-                <div className="panel-label">Cited clauses</div>
-                <div>
-                  {e.clauses.map((c, i) => (
-                    <div className="clause" key={i}>
-                      <span className="clause-code">{c.code}</span>
-                      <span className="clause-text">{c.text}</span>
-                    </div>
-                  ))}
-                </div>
-                {e.crossAward && (
-                  <div style={{ marginTop: 14, fontSize: 12.5, color: COLORS.muted }}>
-                    Cross-referenced award:{' '}
-                    <span className="mono" style={{ color: COLORS.ochre }}>{e.crossAward}</span>
-                    {' '}— Security Services Industry Award 2020
-                  </div>
-                )}
+            {(row.overrideReason || row.complianceNotes.length > 0) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 22 }}>
+                {row.overrideReason && <Flag>{row.overrideReason}</Flag>}
+                {row.complianceNotes.map((note) => <Flag key={note}>{note}</Flag>)}
               </div>
+            )}
 
-              {/* right: pay breakdown */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr', gap: 30 }}>
               <div>
                 <div className="panel-label">Pay breakdown</div>
-                <div>
-                  {e.breakdown.map((b, i) => (
-                    <div className="leader" key={i}>
-                      <span className="leader-label">{b.label}</span>
-                      <span className="leader-dots" />
-                      <span className="leader-amt">{fmt(b.amount)}</span>
-                    </div>
-                  ))}
-                  <div className="leader leader-total">
-                    <span className="leader-label">Estimated gross</span>
+                <div className="leader">
+                  <span className="leader-label">Ordinary pay</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{fmt(row.ordinaryPay)}</span>
+                </div>
+                {row.extrasAllowances.items.map((item, index) => (
+                  <div className="leader" key={`${item.type}-${index}`}>
+                    <span className="leader-label">{item.type}{item.detail ? ` · ${item.detail}` : ''}</span>
                     <span className="leader-dots" />
-                    <span className="leader-amt">{fmt(gross)}</span>
+                    <span className="leader-amt">{fmt(item.amount)}</span>
                   </div>
+                ))}
+                <div className="leader leader-total">
+                  <span className="leader-label">Total calculated pay</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{fmt(row.totalCalculatedPay)}</span>
                 </div>
-                <div className="mono" style={{ fontSize: 11, color: COLORS.muted, marginTop: 12, lineHeight: 1.6 }}>
-                  + Superannuation (11.5%) {fmt(e.superAmount)} — paid above gross
+                <div className="leader">
+                  <span className="leader-label">Entitled per hour, after loadings</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{fmt(row.effectiveHourlyRate)}/hr</span>
                 </div>
               </div>
-            </div>
 
-            {/* award comparison (cross-award candidates) */}
-            {e.alt && (
-              <div style={{ marginTop: 26 }}>
-                <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Scale size={13} strokeWidth={1.9} /> Award comparison · match confidence {e.coverageConfidence}%
+              <div>
+                <div className="panel-label">Match context</div>
+                <div className="leader">
+                  <span className="leader-label">Award code</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{row.awardCode}</span>
                 </div>
-                <div className="cmp-grid">
-                  <div className="cmp-card chosen">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span className="mono" style={{ fontSize: 12, color: COLORS.sage }}>{e.chosenAward}</span>
-                      <span className="decision-pill" style={{ background: 'rgba(91,122,92,0.14)', color: COLORS.sage }}>Chosen</span>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{awardShort(e.chosenAward)} · {e.classification}</div>
-                    <div className="leader" style={{ marginTop: 8 }}><span className="leader-label">Base rate</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.baseRate)}/hr</span></div>
-                    <div className="leader"><span className="leader-label">Estimated gross</span><span className="leader-dots" /><span className="leader-amt">{fmt(grossPay(e))}</span></div>
-                  </div>
-                  <div className="cmp-card alt">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span className="mono" style={{ fontSize: 12, color: COLORS.ochre }}>{e.alt.award}</span>
-                      <span className="decision-pill" style={{ background: 'rgba(194,112,58,0.14)', color: COLORS.ochre }}>Candidate</span>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{awardShort(e.alt.award)} · {e.alt.classification}</div>
-                    <div className="leader" style={{ marginTop: 8 }}><span className="leader-label">Base rate</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.alt.baseRate)}/hr</span></div>
-                    <div className="leader"><span className="leader-label">Estimated gross</span><span className="leader-dots" /><span className="leader-amt">{fmt(e.alt.estGross)}</span></div>
-                    <div className="mono" style={{ fontSize: 11, color: COLORS.ochre, marginTop: 6 }}>
-                      {e.alt.estGross > grossPay(e) ? '+' : ''}{fmt(e.alt.estGross - grossPay(e))} vs chosen
-                    </div>
-                  </div>
+                <div className="leader">
+                  <span className="leader-label">Employee level</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{row.employeeLevel}</span>
                 </div>
-                <p style={{ fontSize: 13, lineHeight: 1.6, color: COLORS.muted, marginTop: 12 }}>{e.alt.note}</p>
+                <div className="leader">
+                  <span className="leader-label">Job role</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{row.jobRole}</span>
+                </div>
+                <div className="leader">
+                  <span className="leader-label">Clause refs</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{row.interpretation?.baseRateRef || '—'}</span>
+                </div>
+                <div className="leader">
+                  <span className="leader-label">Shift count</span>
+                  <span className="leader-dots" />
+                  <span className="leader-amt">{row.shifts.length}</span>
+                </div>
               </div>
-            )}
-
-            {/* actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 26, paddingTop: 22, borderTop: `1px solid ${COLORS.line}`, flexWrap: 'wrap' }}>
-              <button
-                className="btn"
-                onClick={(ev) => { ev.stopPropagation(); onDecide(e.id, 'approved') }}
-                style={decision === 'approved' ? { background: COLORS.sage, color: COLORS.paper, borderColor: COLORS.sage } : {}}
-              >
-                <Check size={16} strokeWidth={2.2} /> Approve
-              </button>
-              <button
-                className="btn"
-                onClick={(ev) => { ev.stopPropagation(); onDecide(e.id, 'overridden') }}
-                style={decision === 'overridden' ? { background: COLORS.ochre, color: COLORS.paper, borderColor: COLORS.ochre } : {}}
-              >
-                <Pencil size={15} strokeWidth={2} /> Override
-              </button>
-              {decision && (
-                <span className="decision-pill" style={{
-                  background: decision === 'approved' ? 'rgba(91,122,92,0.14)' : 'rgba(194,112,58,0.14)',
-                  color: decision === 'approved' ? COLORS.sage : COLORS.ochre,
-                  marginLeft: 'auto',
-                }}>
-                  {decision === 'approved' ? 'Approved' : 'Marked for override'}
-                </span>
-              )}
             </div>
           </div>
         </div>
@@ -1172,32 +1147,308 @@ function EmployeeRow({ employee: e, isOpen, onToggle, decision, onDecide, delay 
   )
 }
 
-function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, onReset, onDisperse }) {
-  const stats = useMemo(() => {
-    const totalHours = EMPLOYEES.reduce((s, e) => s + e.hours, 0)
-    const basePay = EMPLOYEES.reduce((s, e) => s + ordinaryPay(e), 0)
-    const penalties = EMPLOYEES.reduce((s, e) => s + loadingPay(e), 0)
-    const high = EMPLOYEES.filter((e) => e.confidence >= 90).length
-    const pctHigh = Math.round((high / EMPLOYEES.length) * 100)
-    const chosen = {}
-    const candidateOnly = {}
-    EMPLOYEES.forEach((e) => {
-      chosen[e.chosenAward] = (chosen[e.chosenAward] || 0) + 1
-      e.candidates.forEach((c) => { if (c !== e.chosenAward) candidateOnly[c] = (candidateOnly[c] || 0) + 1 })
+const SLOT_PURPOSES = {
+  baseRate: 'sets the minimum pay rate for each classification level',
+  schedule: 'describes the skill level for each classification',
+  ordinaryHours: 'defines ordinary hours for day workers — the baseline before overtime starts',
+  casualLoading: 'sets the casual loading paid instead of paid leave entitlements',
+  overtime: 'sets when overtime starts and the overtime rates',
+  penalties: 'sets the Sunday and public holiday penalty rates',
+  eveningNight: 'sets shiftwork / evening and night penalty rates',
+  allowances: 'grants the monetary allowances — first aid, meal, travel, tool and more',
+}
+
+function resolveClauseParts(ref = '', clauseIndex = {}) {
+  return String(ref)
+    .split('/')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const clauseMatch = part.match(/^cl\.\s*(\d+[A-Z]?)/i)
+      const schMatch = part.match(/^Sch(?:edule)?\.?\s*([A-Z])/i)
+      const baseRef = clauseMatch ? `cl. ${clauseMatch[1]}` : schMatch ? `Sch ${schMatch[1]}` : part
+      return { part, baseRef, title: clauseIndex[part] || clauseIndex[baseRef] || '' }
     })
-    return { totalHours, basePay, penalties, pctHigh, chosen, candidateOnly }
-  }, [])
+}
+
+function buildPurposeMap(references) {
+  const map = {}
+  for (const [slot, ref] of Object.entries(references || {})) {
+    if (!ref || !SLOT_PURPOSES[slot]) continue
+    for (const { baseRef } of resolveClauseParts(ref, {})) {
+      if (!map[baseRef]) map[baseRef] = SLOT_PURPOSES[slot]
+    }
+  }
+  return map
+}
+
+function ClauseRef({ refText, clauseIndex, purposeMap = {}, align = 'center', className = '', style }) {
+  if (!refText) return null
+  const parts = resolveClauseParts(refText, clauseIndex)
+  return (
+    <span className={`clause-ref ${className}`} style={style}>
+      {refText}
+      <span className={`clause-tip${align === 'right' ? ' clause-tip-right' : ''}`}>
+        {parts.map(({ part, baseRef, title }) => (
+          <span key={part} style={{ display: 'block' }}>
+            <strong>{part}</strong>
+            {title ? ` — ${title}` : ' — referenced provision of the award'}
+            {purposeMap[baseRef] && (
+              <span style={{ display: 'block', color: 'rgba(245,241,234,0.72)', fontSize: 11.5 }}>
+                {purposeMap[baseRef]}
+              </span>
+            )}
+          </span>
+        ))}
+      </span>
+    </span>
+  )
+}
+
+const CONDITIONAL_EXTRA_PRIORITY = [/first aid/i, /meal/i, /travel|vehicle/i, /tool/i, /disability/i, /supervisor|in charge/i, /uniform|laundry/i]
+
+function pickConditionalExtras(conditional, max) {
+  const picked = []
+  for (const pattern of CONDITIONAL_EXTRA_PRIORITY) {
+    if (picked.length >= max) break
+    const found = conditional.find((extra) => pattern.test(extra.type) && !picked.includes(extra))
+    if (found) picked.push(found)
+  }
+  for (const extra of conditional) {
+    if (picked.length >= max) break
+    if (!picked.includes(extra)) picked.push(extra)
+  }
+  return picked
+}
+
+function InterpretationExtras({ row }) {
+  const interp = row.interpretation || {}
+  const extras = interp.extras || []
+  const issues = interp.issues || []
+  const clauseIndex = interp.clauseIndex || {}
+  const purposeMap = buildPurposeMap(interp.references)
+
+  if (issues.length > 0) {
+    return (
+      <div style={{ fontSize: 12.5, color: COLORS.red, lineHeight: 1.55 }}>
+        {issues.join(' ')}
+      </div>
+    )
+  }
+
+  const applied = extras.filter((extra) => extra.applied)
+  const conditional = extras.filter((extra) => !extra.applied)
+  const MAX_CONDITIONAL = 3
+  const visibleConditional = pickConditionalExtras(conditional, MAX_CONDITIONAL)
+  const hiddenCount = conditional.length - visibleConditional.length
+  const allowancesRef = interp.references?.allowances || ''
 
   return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {applied.length === 0 && (
+        <div style={{ fontSize: 12, color: COLORS.muted }}>No extras paid this period — base rate only.</div>
+      )}
+      {applied.map((extra) => (
+        <div
+          key={extra.type}
+          title={`${extra.type} — ${extra.meaning}${extra.appliedDetail ? ` — ${extra.appliedDetail}` : ''}`}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
+        >
+          <Check size={12} strokeWidth={2.4} color={COLORS.sage} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            {extra.type}
+          </span>
+          <span className="mono" style={{ fontSize: 12, fontWeight: 600, flexShrink: 0 }}>{fmt(extra.appliedAmount)}</span>
+          {extra.clause && (
+            <ClauseRef
+              refText={extra.clause}
+              clauseIndex={clauseIndex}
+              purposeMap={purposeMap}
+              className="mono"
+              style={{ fontSize: 10.5, color: COLORS.muted, flexShrink: 0, whiteSpace: 'nowrap' }}
+            />
+          )}
+        </div>
+      ))}
+      {visibleConditional.map((extra) => (
+        <div
+          key={extra.type}
+          title={`${extra.type} — ${extra.condition || extra.meaning}`}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
+        >
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(31,30,27,0.25)', flexShrink: 0, marginLeft: 4, marginRight: 4 }} />
+          <span style={{ fontSize: 12, color: COLORS.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+            {extra.type}
+          </span>
+          <span className="mono" style={{ fontSize: 11, color: COLORS.muted, flexShrink: 0 }}>
+            {extra.amount != null ? `${fmt(extra.amount)}/${extra.unit}` : extra.rawAmountText}
+          </span>
+          {extra.clause && (
+            <ClauseRef
+              refText={extra.clause}
+              clauseIndex={clauseIndex}
+              purposeMap={purposeMap}
+              className="mono"
+              style={{ fontSize: 10.5, color: COLORS.muted, flexShrink: 0, whiteSpace: 'nowrap' }}
+            />
+          )}
+        </div>
+      ))}
+      {hiddenCount > 0 && (
+        <div style={{ fontSize: 11, color: COLORS.muted, paddingLeft: 18 }}>
+          + {hiddenCount} more award entitlement{hiddenCount === 1 ? '' : 's'}{allowancesRef ? ` under ${allowancesRef}` : ''}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WorkedChips({ summary }) {
+  const worked = []
+  if (summary.saturdayHours > 0) worked.push(`Saturday worked · ${summary.saturdayHours} hrs`)
+  if (summary.sundayHours > 0) worked.push(`Sunday worked · ${summary.sundayHours} hrs`)
+  if (summary.publicHolidayHours > 0) worked.push(`Public holiday worked · ${summary.publicHolidayHours} hrs`)
+  if (summary.overtimeAmount > 0) worked.push(`Overtime worked · ${fmt(summary.overtimeAmount)}`)
+
+  if (!worked.length) {
+    return (
+      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.5 }}>
+        No weekend, public holiday or overtime work this period.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {worked.map((label) => (
+        <span
+          key={label}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
+            color: COLORS.sage, background: 'rgba(91,122,92,0.1)', border: '1px solid rgba(91,122,92,0.28)',
+            borderRadius: 999, padding: '4px 11px',
+          }}
+        >
+          <Check size={12} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+          {label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function InterpretationCard({ row }) {
+  const interp = row.interpretation || {}
+  const summary = interp.workSummary
+  const problems = [...new Set([...(interp.issues || []), ...row.validationErrors])]
+  const hasIssues = problems.length > 0
+
+  return (
+    <div style={{
+      background: COLORS.card,
+      border: `1px solid ${hasIssues ? 'rgba(180,69,47,0.4)' : COLORS.line}`,
+      borderRadius: 16,
+      padding: '18px 22px 14px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+            <span style={{ fontFamily: SERIF, fontSize: 18.5, fontWeight: 500 }}>{row.employeeName}</span>
+            <span style={{ fontSize: 12, color: COLORS.muted }}>{row.employmentType || '—'} · {row.totalHours} hrs</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 3 }}>
+            {row.employeeLevel}{interp.levelCode ? ` · ${interp.levelCode}` : ''} — {row.jobRole}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="mono" style={{ fontSize: 13.5, color: hasIssues ? COLORS.red : COLORS.ink }}>{row.awardCode}</div>
+          {interp.baseRateRef && (
+            <div style={{ marginTop: 3 }}>
+              <ClauseRef
+                refText={interp.baseRateRef}
+                clauseIndex={interp.clauseIndex}
+                purposeMap={buildPurposeMap(interp.references)}
+                align="right"
+                className="mono"
+                style={{ fontSize: 11, color: COLORS.muted }}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {hasIssues ? (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+          {problems.map((problem) => <Flag danger key={problem}>{problem}</Flag>)}
+        </div>
+      ) : (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '14px 36px',
+          marginTop: 14, paddingTop: 14, borderTop: `1px solid ${COLORS.line}`,
+        }}>
+          <div>
+            <div className="panel-label">Worked this period</div>
+            <WorkedChips summary={summary} />
+            <div style={{ marginTop: 12 }}>
+              <div className="leader">
+                <span className="leader-label">Base rate</span>
+                <span className="leader-dots" />
+                <span className="leader-amt">{fmt(row.basePay)}/hr</span>
+              </div>
+              <div className="leader">
+                <span className="leader-label">Entitled rate after loadings</span>
+                <span className="leader-dots" />
+                <span className="leader-amt">{fmt(summary.effectiveHourlyRate)}/hr</span>
+              </div>
+              <div className="leader">
+                <span className="leader-label">Above base</span>
+                <span className="leader-dots" />
+                <span className="leader-amt" style={{ color: summary.aboveBase > 0 ? COLORS.sage : COLORS.muted }}>+{fmt(summary.aboveBase)}</span>
+              </div>
+              <div className="leader leader-total">
+                <span className="leader-label">Total entitled</span>
+                <span className="leader-dots" />
+                <span className="leader-amt">{fmt(row.totalCalculatedPay)}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="panel-label">Extras — money & entitlements</div>
+            <InterpretationExtras row={row} />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function InterpretationTable({ rows }) {
+  return (
+    <div style={{ marginTop: 36 }}>
+      <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Layers size={13} strokeWidth={1.8} /> Granular interpretation — award code · clause · extras
+      </div>
+      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 16px', maxWidth: 720, lineHeight: 1.55 }}>
+        One card per employee: the award clause behind their base rate, what they worked, what they are
+        entitled to per hour and in total, and the extras the award grants — each with its clause.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {rows.map((row) => <InterpretationCard key={`interp-${row.id}`} row={row} />)}
+      </div>
+    </div>
+  )
+}
+
+function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow }) {
+  return (
     <div className="fade-up">
-      {/* header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
-            <BadgeCheck size={14} strokeWidth={1.9} /> Interpretation complete
+            <BadgeCheck size={14} strokeWidth={1.9} /> Calculation complete
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>
-            {EMPLOYEES.length} employees interpreted
+            {results.stats.employees} employees calculated
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
@@ -1210,54 +1461,32 @@ function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, on
         </div>
       </div>
 
-      {/* coverage strip — which awards the interpreter selected */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 22 }}>
-        <span className="eyebrow" style={{ marginRight: 4 }}>Awards in play</span>
-        {Object.entries(stats.chosen).map(([code, n]) => (
-          <span className="cov-chip" key={code}>
-            <Check size={13} strokeWidth={2.4} color={COLORS.sage} />
-            <span className="mono">{code}</span> × {n}
-          </span>
-        ))}
-        {Object.entries(stats.candidateOnly).map(([code, n]) => (
-          <span className="cov-chip" key={code} style={{ borderColor: 'rgba(194,112,58,0.4)' }}>
-            <AlertTriangle size={13} strokeWidth={2} color={COLORS.ochre} />
-            <span className="mono">{code}</span> · {n} candidate{n > 1 ? 's' : ''} (review)
-          </span>
-        ))}
+      <div className="stats-grid" style={{ marginBottom: 36 }}>
+        <StatCard icon={Clock} label="Total hours" value={`${results.stats.totalHours}`} caption="across the uploaded timesheet" accent={COLORS.ink} />
+        <StatCard icon={Banknote} label="Base pay" value={fmt(results.stats.totalBasePay)} caption="hours × matched base pay rate" accent={COLORS.sage} />
+        <StatCard icon={Layers} label="Extras" value={fmt(results.stats.totalExtras)} caption="allowances and penalties" accent={COLORS.ochre} />
+        <StatCard icon={AlertTriangle} label="Validation rows" value={`${results.stats.validationErrors}`} caption="employees needing manual review" accent={COLORS.red} />
       </div>
 
-      {/* stats */}
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 36 }}>
-        <StatCard icon={Clock} label="Total hours" value={`${stats.totalHours}`} caption="across 6 staff, fortnight" accent={COLORS.ink} />
-        <StatCard icon={Banknote} label="Suggested base pay" value={fmt(stats.basePay)} caption="ordinary hours × base rate" accent={COLORS.sage} />
-        <StatCard icon={Layers} label="Penalties & loadings" value={fmt(stats.penalties)} caption="weekend, overtime & casual" accent={COLORS.ochre} />
-        <StatCard icon={BadgeCheck} label="High confidence" value={`${stats.pctHigh}%`} caption="≥ 90% match certainty" accent={COLORS.sage} />
-      </div>
-
-      {/* table */}
       <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 18, padding: '20px 4px 8px' }}>
         <div className="table-scroll">
           <div className="table-inner">
-            <div className="thead" style={{ gridTemplateColumns: GRID }}>
-              <span className="th">Employee</span>
-              <span className="th">Suggested classification</span>
-              <span className="th">Hours</span>
-              <span className="th">Base rate</span>
-              <span className="th">Total pay</span>
-              <span className="th">Confidence</span>
-              <span className="th" />
+            <div className="thead" style={{ gridTemplateColumns: RESULTS_GRID }}>
+              <span className="th">Employee Name</span>
+              <span className="th">Award Code</span>
+              <span className="th">Employee Level</span>
+              <span className="th">Job Role</span>
+              <span className="th">Base Pay</span>
+              <span className="th">Extras / Allowances</span>
+              <span className="th">Total Calculated Pay</span>
             </div>
             <div>
-              {EMPLOYEES.map((e, i) => (
-                <EmployeeRow
-                  key={e.id}
-                  employee={e}
-                  isOpen={expanded === e.id}
-                  onToggle={() => setExpanded((prev) => (prev === e.id ? null : e.id))}
-                  decision={decisions[e.id]}
-                  onDecide={onDecide}
-                  delay={i * 70}
+              {results.rows.map((row) => (
+                <ResultRow
+                  key={row.id}
+                  row={row}
+                  isOpen={expandedRowId === row.id}
+                  onToggle={() => onToggleRow(expandedRowId === row.id ? null : row.id)}
                 />
               ))}
             </div>
@@ -1265,13 +1494,14 @@ function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, on
         </div>
       </div>
 
-      {/* disperse pay → confirmation */}
-      <div className="disperse-bar">
+      <InterpretationTable rows={results.rows} />
+
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 22, padding: '18px 22px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16 }}>
         <div>
           <span className="eyebrow">Ready to disperse</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
-            <span style={{ fontWeight: 600 }}>{EMPLOYEES.length} employees</span>
-            <span style={{ color: COLORS.muted }}> · {fmt(EMPLOYEES.reduce((s, e) => s + grossPay(e), 0))} total gross to disperse</span>
+            <span style={{ fontWeight: 600 }}>{results.stats.employees} employees</span>
+            <span style={{ color: COLORS.muted }}> · {fmt(results.stats.totalCalculatedPay)} total calculated pay</span>
           </div>
         </div>
         <button className="btn-primary" onClick={onDisperse}>
@@ -1282,19 +1512,17 @@ function ResultsStage({ expanded, setExpanded, decisions, onDecide, onExport, on
   )
 }
 
-/* ── stage 5: confirmation (pay dispersed → email) ───────────────────────── */
-function ConfirmationStage({ onBack, onReset }) {
-  const total = EMPLOYEES.reduce((s, e) => s + grossPay(e), 0)
+function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
   const [recipient, setRecipient] = useState(CONFIRMATION_EMAIL)
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())
 
-  const subject = `Payroll dispersed — ${TIMESHEET_META.business} (${TIMESHEET_META.payPeriod})`
+  const subject = `Payroll dispersed — ${timesheetMeta.business || 'Payroll'} (${timesheetMeta.payPeriod || 'Current pay period'})`
   const body =
-    `This confirms that payroll has been dispersed for ${TIMESHEET_META.business}.\n\n` +
-    `Pay period: ${TIMESHEET_META.payPeriod}\n` +
-    `Employees paid: ${EMPLOYEES.length}\n` +
-    `Total gross dispersed: ${fmt(total)}\n\n` +
-    `Interpreted against the relevant modern awards (incl. MA000009). Superannuation is paid above gross.\n\n` +
+    `This confirms that payroll has been dispersed.\n\n` +
+    `Pay period: ${timesheetMeta.payPeriod || 'Not supplied'}\n` +
+    `Employees paid: ${results.stats.employees}\n` +
+    `Total calculated pay: ${fmt(results.stats.totalCalculatedPay)}\n\n` +
+    `The underlying document cache was built once and reused for the uploaded timesheet.\n\n` +
     `— Axi·WFM Award Interpreter`
   const mailto = `mailto:${recipient.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
@@ -1310,14 +1538,12 @@ function ConfirmationStage({ onBack, onReset }) {
         </p>
       </div>
 
-      {/* summary */}
-      <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
-        <StatCard icon={Banknote} label="Total dispersed" value={fmt(total)} caption="gross, this pay period" accent={COLORS.sage} />
-        <StatCard icon={BadgeCheck} label="Employees paid" value={`${EMPLOYEES.length}`} caption={TIMESHEET_META.business} accent={COLORS.ink} />
-        <StatCard icon={CalendarClock} label="Pay period" value="Fortnight" caption={TIMESHEET_META.payPeriod} accent={COLORS.ochre} />
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 28 }}>
+        <StatCard icon={Banknote} label="Total dispersed" value={fmt(results.stats.totalCalculatedPay)} caption="calculated pay, this pay period" accent={COLORS.sage} />
+        <StatCard icon={BadgeCheck} label="Employees paid" value={`${results.stats.employees}`} caption={timesheetMeta.business || 'Current business'} accent={COLORS.ink} />
+        <StatCard icon={CalendarClock} label="Pay period" value="Processed" caption={timesheetMeta.payPeriod || 'No pay period in source file'} accent={COLORS.ochre} />
       </div>
 
-      {/* email card */}
       <div className="panel-inner" style={{ marginBottom: 26 }}>
         <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Mail size={13} strokeWidth={1.9} /> Confirmation email
@@ -1326,7 +1552,7 @@ function ConfirmationStage({ onBack, onReset }) {
         <input
           type="email"
           value={recipient}
-          onChange={(ev) => setRecipient(ev.target.value)}
+          onChange={(event) => setRecipient(event.target.value)}
           aria-label="Confirmation email recipient"
           style={{
             width: '100%', maxWidth: 420, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
@@ -1340,7 +1566,6 @@ function ConfirmationStage({ onBack, onReset }) {
         </div>
       </div>
 
-      {/* actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <a
           className="btn-primary"
@@ -1357,7 +1582,6 @@ function ConfirmationStage({ onBack, onReset }) {
   )
 }
 
-/* ── footer ──────────────────────────────────────────────────────────────── */
 function Footer() {
   return (
     <div className="footer">
@@ -1371,21 +1595,14 @@ function Footer() {
   )
 }
 
-/* ── app (owns all state) ────────────────────────────────────────────────── */
+function ScrollTextIcon(props) {
+  return <FileText {...props} />
+}
+
 export default function App() {
-  const [stage, setStage] = useState(1)
-  const [timesheet, setTimesheet] = useState(null)
-  const [stepIndex, setStepIndex] = useState(0)
-  const [expanded, setExpanded] = useState(null)
-  const [decisions, setDecisions] = useState({})
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const [expandedRowId, setExpandedRowId] = useState(null)
 
-  const timersRef = useRef([])
-
-  /* load Google Fonts once (kept self-contained — no index.html edits needed).
-     Idempotent via a DOM id and intentionally NOT cleaned up: these are
-     app-global fonts that should persist for the lifetime of the page, the
-     same as if they were declared in index.html. The id guard also makes this
-     safe under React 18 StrictMode's double-invoke in development. */
   useEffect(() => {
     const FONT_ID = 'axi-google-fonts'
     if (document.getElementById(FONT_ID)) return
@@ -1399,75 +1616,109 @@ export default function App() {
       },
     ]
     defs.forEach((attrs) => {
-      const l = document.createElement('link')
-      Object.entries(attrs).forEach(([k, v]) => l.setAttribute(k, v))
-      document.head.appendChild(l)
+      const link = document.createElement('link')
+      Object.entries(attrs).forEach(([key, value]) => link.setAttribute(key, value))
+      document.head.appendChild(link)
     })
   }, [])
 
-  /* processing pipeline — recursive timeouts, fully cleaned up */
   useEffect(() => {
-    if (stage !== 2) return
-    setStepIndex(0)
-    timersRef.current = []
-    const STEP_MS = 1050
-    const TAIL_MS = 750
+    if (state.stage !== 2) return undefined
+    let cancelled = false
 
-    let i = 0
-    const tick = () => {
-      i += 1
-      setStepIndex(i)
-      if (i < STEPS.length) {
-        timersRef.current.push(setTimeout(tick, STEP_MS))
-      } else {
-        timersRef.current.push(setTimeout(() => setStage(3), TAIL_MS))
+    const run = async () => {
+      const files = [state.documents.award, state.documents.compliance, state.documents.agreement].filter(Boolean)
+      const preloadedAwards = state.industry ? loadAwardLibrary(state.industry) : []
+      dispatch({ type: 'setProcessingError', error: '' })
+      dispatch({ type: 'setStepIndex', stepIndex: 0 })
+
+      try {
+        await wait(150)
+        if (cancelled) return
+        const fingerprint = await computeCacheFingerprint(files, preloadedAwards)
+        dispatch({ type: 'setStepIndex', stepIndex: 1 })
+        await wait(150)
+        if (cancelled) return
+
+        if (shouldReuseParsedCache(state.parsedCache, fingerprint)) {
+          dispatch({ type: 'setParsedCache', cache: state.parsedCache })
+          await wait(250)
+          if (!cancelled) dispatch({ type: 'setStage', stage: 3 })
+          return
+        }
+
+        dispatch({ type: 'setStepIndex', stepIndex: 2 })
+        await wait(150)
+        if (cancelled) return
+        dispatch({ type: 'setStepIndex', stepIndex: 3 })
+        await wait(150)
+        if (cancelled) return
+        dispatch({ type: 'setStepIndex', stepIndex: 4 })
+
+        const parsedCache = await buildParsedCache(state.documents, {
+          cacheFingerprint: fingerprint,
+          preloadedAwards,
+          industry: state.industry || undefined,
+        })
+        if (cancelled) return
+        dispatch({ type: 'setParsedCache', cache: parsedCache })
+        await wait(300)
+        if (!cancelled) dispatch({ type: 'setStage', stage: 3 })
+      } catch (error) {
+        if (!cancelled) {
+          dispatch({ type: 'setProcessingError', error: error instanceof Error ? error.message : 'Document parsing failed.' })
+        }
       }
     }
-    timersRef.current.push(setTimeout(tick, STEP_MS))
 
-    return () => {
-      timersRef.current.forEach(clearTimeout)
-      timersRef.current = []
-    }
-  }, [stage])
+    run()
+    return () => { cancelled = true }
+  }, [state.stage, state.industry, state.documents.award, state.documents.compliance, state.documents.agreement])
 
-  const handleDecide = (id, choice) =>
-    setDecisions((prev) => ({ ...prev, [id]: prev[id] === choice ? undefined : choice }))
-
-  const handleExport = () => {
-    const headers = [
-      'Employee', 'Role', 'Classification', 'Award', 'Cross-award', 'Hours',
-      'Base rate', 'Ordinary pay', 'Penalties & loadings', 'Total pay',
-      'Superannuation', 'Confidence %', 'Decision', 'Flags',
-    ]
-    const esc = (v) => {
-      const s = String(v == null ? '' : v)
-      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-    }
-    const rows = EMPLOYEES.map((e) => [
-      e.name, e.role, e.classification, e.award, e.crossAward || '', e.hours,
-      e.baseRate.toFixed(2), ordinaryPay(e).toFixed(2), loadingPay(e).toFixed(2),
-      grossPay(e).toFixed(2), e.superAmount.toFixed(2), e.confidence,
-      decisions[e.id] || 'pending', e.flags.join('; '),
-    ])
-    const csv = [headers, ...rows].map((r) => r.map(esc).join(',')).join('\r\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'award-interpretation.csv'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
+  const handleSetDocument = (key, file) => {
+    dispatch({ type: 'setDocument', key, file })
+    setExpandedRowId(null)
   }
 
-  const handleReset = () => {
-    setStage(1)
-    setTimesheet(null)
-    setStepIndex(0)
-    setExpanded(null)
-    setDecisions({})
+  const handleTimesheetFile = async (file) => {
+    if (!file) {
+      dispatch({ type: 'setTimesheetError', file: null, error: '' })
+      return
+    }
+
+    dispatch({ type: 'setTimesheetStart', file })
+    try {
+      const data = await parseTimesheetFile(file)
+      dispatch({
+        type: 'setTimesheetSuccess',
+        file,
+        data,
+        error: buildTimesheetMatchMessage(state.parsedCache, data),
+      })
+    } catch (error) {
+      dispatch({ type: 'setTimesheetError', file, error: error instanceof Error ? error.message : 'Timesheet parsing failed.' })
+    }
+  }
+
+  const handleCalculate = () => {
+    if (!state.parsedCache || !state.timesheetData) return
+    dispatch({ type: 'setResults', results: calculateTimesheetResults(state.parsedCache, state.timesheetData) })
+    setExpandedRowId(null)
+    dispatch({ type: 'setStage', stage: 4 })
+  }
+
+  const handleExport = () => {
+    if (!state.results) return
+    const csv = resultsToCsv(state.results.rows)
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'award-interpretation.csv'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -1475,38 +1726,60 @@ export default function App() {
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <Background />
       <div className="app-shell">
-        <Masthead stage={stage} />
-        {stage === 1 && (
+        <Masthead stage={state.stage} />
+
+        {state.stage === 1 && (
           <UploadStage
-            timesheet={timesheet}
-            setTimesheet={setTimesheet}
-            onInterpret={() => timesheet && setStage(2)}
+            documents={state.documents}
+            industry={state.industry}
+            onSetDocument={handleSetDocument}
+            onSetIndustry={(industry) => { dispatch({ type: 'setIndustry', industry }); setExpandedRowId(null) }}
+            onContinue={() => dispatch({ type: 'setStage', stage: 2 })}
           />
         )}
-        {stage === 2 && (
-          <ProcessingStage timesheet={timesheet} stepIndex={stepIndex} />
+
+        {state.stage === 2 && (
+          <ProcessingStage
+            documents={state.documents}
+            industry={state.industry}
+            stepIndex={state.stepIndex}
+            error={state.processingError}
+            onBack={() => dispatch({ type: 'setStage', stage: 1 })}
+          />
         )}
-        {stage === 3 && (
+
+        {state.stage === 3 && state.parsedCache && (
           <TimesheetStage
-            timesheet={timesheet}
-            onBack={() => setStage(1)}
-            onContinue={() => setStage(4)}
+            parsedCache={state.parsedCache}
+            timesheetFile={state.timesheetFile}
+            timesheetData={state.timesheetData}
+            timesheetError={state.timesheetError}
+            onTimesheetFile={handleTimesheetFile}
+            onBack={() => dispatch({ type: 'setStage', stage: 1 })}
+            onContinue={handleCalculate}
           />
         )}
-        {stage === 4 && (
+
+        {state.stage === 4 && state.results && (
           <ResultsStage
-            expanded={expanded}
-            setExpanded={setExpanded}
-            decisions={decisions}
-            onDecide={handleDecide}
+            results={state.results}
+            expandedRowId={expandedRowId}
+            onToggleRow={setExpandedRowId}
             onExport={handleExport}
-            onReset={handleReset}
-            onDisperse={() => setStage(5)}
+            onReset={() => { setExpandedRowId(null); dispatch({ type: 'reset' }) }}
+            onDisperse={() => dispatch({ type: 'setStage', stage: 5 })}
           />
         )}
-        {stage === 5 && (
-          <ConfirmationStage onBack={() => setStage(4)} onReset={handleReset} />
+
+        {state.stage === 5 && state.results && (
+          <ConfirmationStage
+            results={state.results}
+            timesheetMeta={state.timesheetData?.meta || {}}
+            onBack={() => dispatch({ type: 'setStage', stage: 4 })}
+            onReset={() => { setExpandedRowId(null); dispatch({ type: 'reset' }) }}
+          />
         )}
+
         <Footer />
       </div>
     </>

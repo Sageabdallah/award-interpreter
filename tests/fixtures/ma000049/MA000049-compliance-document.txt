@@ -1,0 +1,39 @@
+Demo only. This is a parser-friendly compliance note file for the MVP.
+It is aligned to the local award and agreement demo files in this folder.
+Official references:
+- https://awards.fairwork.gov.au/MA000049.html
+- https://www.fairwork.gov.au/employment-conditions/awards/awards-summary/ma000049-summary
+- https://portal.fairwork.gov.au/ArticleDocuments/872/airport-employees-award-ma000049-pay-guide.pdf.aspx
+- https://www.fairwork.gov.au/sites/default/files/migration/724/Fair-Work-Information-Statement.pdf
+- https://www.fairwork.gov.au/sites/default/files/migration/724/casual-employment-information-statement.pdf
+- https://www.fairwork.gov.au/sites/default/files/2023-12/is-fixed-term-contract-information-statement.pdf
+
+Award Code: MA000049
+Employee Level: Ground services officer Level 1
+Note: Confirm the employer is an airport operator and that the employee is not more appropriately covered by another aviation award before applying MA000049.
+
+Award Code: MA000049
+Employee Level: Ground services officer Level 2
+Note: Check coverage carefully where work may instead fit the Airline Operations - Ground Staff Award MA000048.
+
+Award Code: MA000049
+Employee Level: Technical services officer Level 2
+Note: Confirm the employee's technical duties match the technical services stream and that any first aid duties are separately recorded if the first aid allowance is claimed.
+
+Award Code: MA000049
+Employee Level: Administrative services officer Level 3
+Note: Verify the current Fair Work pay guide and confirm that any over-award amounts are documented separately from the award minimum.
+
+Award Code: MA000049
+Employee Level: Professional engineer Level 4
+Note: Professional engineer salaries should be checked against the award minimum and any contract uplift should be documented as an over-award arrangement.
+
+Employee ID: AIR-004
+Award Code: MA000049
+Employee Level: Ground services officer Level 2
+Note: Employee is casual. Provide the Casual Employment Information Statement at commencement and again at the required follow-up points.
+
+Employee ID: AIR-005
+Award Code: MA000049
+Employee Level: Professional engineer Level 4
+Note: Employee is engaged on a fixed-term arrangement for the MVP example. Provide the Fixed Term Contract Information Statement before or as soon as possible after engagement.
