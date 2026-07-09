@@ -115,7 +115,10 @@ function entitlementFromAllowance(allowance, level, index) {
     conditions: allowance.condition ? [{ kind: 'other', text: allowance.condition }] : [],
     clauseRef,
     scheduleRef: scheduleRefFrom(allowance.clause),
-    confidence: 'high',
+    // Regex-parsed rows are 'high'; seed-time LLM-extracted rows carry their
+    // own confidence + origin so the UI badge can surface provenance.
+    confidence: allowance.confidence || 'high',
+    ...(allowance.origin ? { origin: allowance.origin } : {}),
     rawText: allowance.rawAmountText || '',
   }
 }
@@ -178,7 +181,8 @@ function penaltyFromRate(rate, level, index) {
     trigger: rate.trigger || '',
     conditions: penaltyConditions(rate),
     clauseRef: pickRef(rate.clause, level.references?.penalties, level.references?.overtime, 'cl. (unspecified)'),
-    confidence: 'high',
+    confidence: rate.confidence || 'high',
+    ...(rate.origin ? { origin: rate.origin } : {}),
   }
 }
 
@@ -189,7 +193,11 @@ export function buildLevelInterpretation(level) {
   const entitlements = (level.allowances || [])
     .map((allowance, index) => entitlementFromAllowance(allowance, level, index))
     .filter(Boolean)
-  const penalties = (level.penaltyRates || []).map((rate, index) => penaltyFromRate(rate, level, index))
+  // superseded = quarantined by the augment --repair pass (malformed regex row
+  // replaced by a grounded extraction); never rendered.
+  const penalties = (level.penaltyRates || [])
+    .filter((rate) => !rate.superseded)
+    .map((rate, index) => penaltyFromRate(rate, level, index))
 
   return {
     levelKey: level.key,
