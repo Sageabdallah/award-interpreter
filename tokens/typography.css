@@ -1,0 +1,59 @@
+/* ============================================================================
+   TYPOGRAPHY — Axi·WFM Award Interpreter
+   Three families, each with a job:
+     Fraunces      — serif display. Headlines, card titles, stat values, monogram.
+     Inter Tight   — body. Paragraphs, labels, buttons, table content.
+     JetBrains Mono — the "citation" voice. Award codes, rates, clause refs,
+                      eyebrows, table headers, fingerprints. Load-bearing:
+                      monospace signals "this is a traceable number, not a vibe."
+   Sizes/weights lifted from src/App.jsx.
+   ============================================================================ */
+:root {
+  /* -- Families ----------------------------------------------------------- */
+  --font-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:  'Inter Tight', system-ui, -apple-system, sans-serif;
+  --font-mono:  'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* Semantic aliases */
+  --font-display: var(--font-serif);
+  --font-ui:      var(--font-body);
+  --font-code:    var(--font-mono);
+
+  /* -- Display / headline scale (Fraunces, weight 500, tight tracking) ----
+     The product uses fluid clamps; these are the anchor sizes. */
+  --display-hero:    52px;  /* Stage 1 H1 — clamp(34px, 5vw, 52px) */
+  --display-stage:   44px;  /* Stage 2–5 H1 — clamp(30px, 4.4vw, 44px) */
+  --display-stat:    30px;  /* StatCard value */
+  --display-card:    20px;  /* upload-card / accordion title */
+  --display-lg:      18.5px;
+  --display-sm:      16.5px; /* masthead wordmark */
+
+  --display-weight:  500;
+  --display-tracking:-0.015em;
+  --display-leading: 1.02;
+
+  /* -- Body scale (Inter Tight) ------------------------------------------ */
+  --text-lead:  16px;   /* intro paragraphs (line-height 1.6) */
+  --text-base:  14px;   /* default UI text / buttons */
+  --text-sm:    13px;   /* pills, captions, table cells */
+  --text-xs:    12px;   /* fine print, meta */
+  --text-2xs:   11.5px;
+
+  --body-weight-regular: 400;
+  --body-weight-medium:  500;
+  --body-weight-semibold:600;
+  --leading-body: 1.6;
+
+  /* -- Mono scale (JetBrains Mono) --------------------------------------- */
+  --mono-base:  13px;   /* rates, totals in tables */
+  --mono-sm:    12px;
+  --mono-xs:    11px;   /* clause refs, meta */
+  --mono-weight: 500;
+
+  /* -- Eyebrow / label (mono, uppercase, wide tracking) ------------------ */
+  --eyebrow-size:     11px;
+  --eyebrow-tracking: 0.22em;
+  /* table header ("th"): 10.5px / 0.14em; step status: 11px / 0.12em */
+  --th-size:      10.5px;
+  --th-tracking:  0.14em;
+}

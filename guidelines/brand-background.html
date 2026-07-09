@@ -1,0 +1,29 @@
+<!-- @dsCard group="Brand" viewport="700x220" name="Background motif" subtitle="Faint 40px grid + slow red/grey blur blobs on a white canvas" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--paper); font-family: var(--font-body); color: var(--ink); }
+  .stage { position: relative; height: 220px; overflow: hidden; }
+  .bg-grid { position: absolute; inset: 0;
+    background-image: linear-gradient(to right, rgba(31,30,27,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,30,27,0.045) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
+    mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.55; }
+  .b1 { width: 260px; height: 260px; top: -90px; left: -60px; background: radial-gradient(circle at 35% 35%, rgba(225,27,34,0.42), transparent 70%); }
+  .b2 { width: 240px; height: 240px; bottom: -110px; right: -60px; background: radial-gradient(circle at 65% 65%, rgba(20,22,28,0.10), transparent 70%); }
+  .cap { position: absolute; left: 24px; top: 22px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="bg-grid"></div>
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <span class="cap">GRID 40px · MASKED · BLUR-72 BLOBS · RED + GREY · OPACITY 0.55</span>
+  </div>
+</body>
+</html>

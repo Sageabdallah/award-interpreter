@@ -1,0 +1,26 @@
+<!-- @dsCard group="Colors" viewport="700x172" name="Base palette" subtitle="Grey canvas, white cards, ink, muted, hairline — the neutrals" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--paper); font-family: var(--font-body); color: var(--ink); padding: 22px; }
+  .row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .sw { border: 1px solid var(--line); border-radius: var(--radius-lg); overflow: hidden; background: var(--card); }
+  .chip { height: 64px; }
+  .meta { padding: 9px 11px; }
+  .name { font-size: 12.5px; font-weight: 600; }
+  .hex { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="sw"><div class="chip" style="background:#F4F5F7"></div><div class="meta"><div class="name">Paper</div><div class="hex">#F4F5F7</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px rgba(20,22,28,0.10)"></div><div class="meta"><div class="name">Card</div><div class="hex">#FFFFFF</div></div></div>
+    <div class="sw"><div class="chip" style="background:#1A1B1E"></div><div class="meta"><div class="name">Ink</div><div class="hex">#1A1B1E</div></div></div>
+    <div class="sw"><div class="chip" style="background:#6B6F76"></div><div class="meta"><div class="name">Muted</div><div class="hex">#6B6F76</div></div></div>
+    <div class="sw"><div class="chip" style="background:#FFFFFF;box-shadow:inset 0 0 0 1px rgba(20,22,28,0.12)"></div><div class="meta"><div class="name">Hairline</div><div class="hex">20,22,28 / 12%</div></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!-- @dsCard group="Award Interpreter" viewport="1080x760" name="Award Interpreter — full flow" subtitle="Five-stage payroll compliance wizard; click the stage rail to move" -->
+<!-- @startingPoint section="Screens" subtitle="Full five-stage Award Interpreter wizard" viewport="1280x800" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Award Interpreter — Axi·WFM</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body, #root { height: 100%; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  ::selection { background: var(--selection); }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 6px; border: 3px solid var(--paper); }
+  a { color: var(--ochre); text-decoration: none; }
+  a:hover { color: var(--ink); }
+
+  @keyframes ax-blobmove { 0%,100% { transform: translate(0,0) scale(1); } 33% { transform: translate(28px,-26px) scale(1.07); } 66% { transform: translate(-22px,20px) scale(0.96); } }
+  .fade-up { animation: ax-fadeUp 0.55s var(--ease-out) both; }
+  .mono { font-family: var(--font-mono); }
+
+  .bg-grid { position: absolute; inset: 0;
+    background-image: linear-gradient(to right, rgba(31,30,27,0.045) 1px, transparent 1px), linear-gradient(to bottom, rgba(31,30,27,0.045) 1px, transparent 1px);
+    background-size: 40px 40px;
+    -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
+    mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%); }
+  .blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.55; }
+  .blob-1 { width: 540px; height: 540px; top: -180px; left: -130px; background: radial-gradient(circle at 35% 35%, rgba(225,27,34,0.42), transparent 70%); animation: ax-blobmove 20s ease-in-out infinite; }
+  .blob-2 { width: 500px; height: 500px; bottom: -200px; right: -120px; background: radial-gradient(circle at 65% 65%, rgba(20,22,28,0.10), transparent 70%); animation: ax-blobmove 26s ease-in-out infinite reverse; }
+  .blob-3 { width: 380px; height: 380px; top: 42%; left: 56%; background: radial-gradient(circle at 50% 50%, rgba(225,27,34,0.16), transparent 70%); animation: ax-blobmove 30s ease-in-out infinite; }
+
+  .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 38px 28px 96px; min-height: 100vh; }
+  .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+  .display { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.015em; line-height: 1.02; margin: 0; color: var(--ink); }
+
+  .panel-inner { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+  .panel-label { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+  .thead { display: grid; gap: 14px; padding: 0 18px 12px; border-bottom: 1px solid var(--line); }
+  .th { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .trow { display: grid; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 12px; }
+  .rowwrap { border-bottom: 1px solid var(--line); }
+  .rowwrap:last-child { border-bottom: none; }
+
+  .leader { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
+  .leader-label { font-size: 13.5px; color: var(--ink); }
+  .leader-dots { flex: 1; border-bottom: 1px dotted rgba(31,30,27,0.3); transform: translateY(-4px); }
+  .leader-amt { font-family: var(--font-mono); font-size: 13px; color: var(--ink); }
+  .leader-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
+  .leader-total .leader-label, .leader-total .leader-amt { font-weight: 600; font-size: 14px; }
+
+  .emp-group { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 8px; margin-bottom: 16px; }
+  .table-scroll { overflow-x: auto; }
+  .table-inner { min-width: 920px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .email-preview { margin-top: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
+  .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .upload-grid { grid-template-columns: 1fr !important; }
+    .stats-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel" src="kit.jsx"></script>
+  <script type="text/babel" src="Stage1Upload.jsx"></script>
+  <script type="text/babel" src="Stage2Processing.jsx"></script>
+  <script type="text/babel" src="Stage3Interpretation.jsx"></script>
+  <script type="text/babel" src="Stage4Results.jsx"></script>
+  <script type="text/babel" src="Stage5Confirmation.jsx"></script>
+  <script type="text/babel" src="App.jsx"></script>
+</body>
+</html>

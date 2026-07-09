@@ -1,0 +1,67 @@
+/* ============================================================================
+   SPACING · RADII · SHADOWS · MOTION — Axi·WFM Award Interpreter
+   Not a strict 4/8 grid — the product uses editorial, slightly irregular
+   values (13px, 18px, 26px, 46px). Values lifted verbatim from src/App.jsx;
+   do not snap these to a grid.
+   ============================================================================ */
+:root {
+  /* -- Spacing scale (as used) ------------------------------------------- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  10px;
+  --space-4:  13px;   /* chip padding, common gap */
+  --space-5:  16px;
+  --space-6:  18px;   /* card inner padding step */
+  --space-7:  22px;
+  --space-8:  26px;   /* upload-card padding */
+  --space-9:  34px;
+  --space-10: 46px;   /* masthead → content */
+  --space-12: 72px;   /* app-shell bottom padding */
+
+  --shell-max:  1080px; /* app-shell max-width */
+  --shell-pad-x: 28px;
+  --shell-pad-y: 38px;
+
+  /* -- Radii ------------------------------------------------------------- */
+  --radius-xs:   8px;   /* icon wells, small buttons */
+  --radius-sm:   9px;   /* monogram, file-chip icon */
+  --radius-md:   11px;  /* ghost button, icon container */
+  --radius-lg:   13px;  /* primary button, chip, dropzone */
+  --radius-xl:   14px;  /* step, panel-inner */
+  --radius-2xl:  16px;  /* stat card, emp-group */
+  --radius-3xl:  18px;  /* upload card, results table shell */
+  --radius-pill: 999px; /* pills, worked chips */
+
+  /* -- Borders ----------------------------------------------------------- */
+  --border-width: 1px;
+  --border-primary-width: 1px;  /* primary button uses a 1px ink border */
+  --dash-width: 1.5px;          /* dropzone dashed border */
+
+  /* -- Shadows (all soft, warm, downward; no hard drop shadows) ---------- */
+  --shadow-primary:      0 10px 30px -14px rgba(225,27,34,0.45); /* primary (red) btn rest */
+  --shadow-primary-hover:0 14px 34px -12px rgba(225,27,34,0.55); /* primary btn hover (red glow) */
+  --shadow-ready:        0 18px 40px -28px rgba(47,125,87,0.5);  /* ready/verified card */
+  --shadow-step:         0 14px 34px -26px rgba(31,30,27,0.5);   /* active step row */
+  --shadow-tip:          0 12px 30px -10px rgba(31,30,27,0.55);  /* clause tooltip */
+
+  /* -- Motion ------------------------------------------------------------ */
+  --ease-out: cubic-bezier(0.2,0.7,0.2,1); /* @kind other */ /* the house easing — used everywhere */
+  --dur-fast: 0.16s;   /* @kind other */ /* hover/border transitions */
+  --dur-med:  0.18s;   /* @kind other */
+  --dur-fade: 0.55s;   /* @kind other */ /* fadeUp entrance */
+  --press-shift: 1px;  /* buttons nudge down 1px on :active */
+}
+
+/* -- Signature keyframes (the product ships these) ----------------------- */
+@keyframes ax-fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ax-spin   { to { transform: rotate(360deg); } }
+@keyframes ax-barGrow{ from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes ax-blob {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(28px,-26px) scale(1.07); }
+  66% { transform: translate(-22px,20px) scale(0.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
