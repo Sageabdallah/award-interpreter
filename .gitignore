@@ -11,3 +11,6 @@ dist/
 
 # OS cruft
 .DS_Store
+
+# Raw award source documents fetched by the seeder (not committed)
+award-sources/

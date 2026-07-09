@@ -1,0 +1,5509 @@
+{
+  "parsedAward": {
+    "awardCode": "MA000012",
+    "awardTitle": "Pharmacy Industry Award 2020",
+    "references": {
+      "ordinaryHours": "cl. 13",
+      "baseRate": "cl. 16",
+      "casualLoading": "cl. 11",
+      "penalties": "cl. 28",
+      "eveningNight": "",
+      "overtime": "cl. 21",
+      "allowances": "cl. 19 / Sch C"
+    },
+    "clauseIndex": {
+      "cl. 1": "Title and commencement",
+      "cl. 2": "Definitions",
+      "cl. 3": "The National Employment Standards and this award",
+      "cl. 4": "Coverage",
+      "cl. 5": "Individual flexibility arrangements",
+      "cl. 6": "Requests for flexible working arrangements",
+      "cl. 7": "Facilitative provisions",
+      "cl. 8": "Types of employment",
+      "cl. 9": "Full-time employees",
+      "cl. 10": "Part-time employees",
+      "cl. 11": "Casual employees",
+      "cl. 12": "Classifications",
+      "cl. 13": "Ordinary hours of work",
+      "cl. 13A": "Employee right to disconnect",
+      "cl. 14": "Rostering arrangements—full-time and part-time employees",
+      "cl. 15": "Breaks",
+      "cl. 16": "Minimum rates",
+      "cl. 17": "Payment of wages",
+      "cl. 18": "Annualised wage arrangements—pharmacist and pharmacy assistant level 4",
+      "cl. 19": "Allowances",
+      "cl. 20": "Superannuation",
+      "cl. 21": "Overtime",
+      "cl. 22": "Penalty rates",
+      "cl. 23": "Annual leave",
+      "cl. 24": "Personal/carer’s leave and compassionate leave",
+      "cl. 25": "Parental leave and related entitlements",
+      "cl. 26": "Community service leave",
+      "cl. 27": "Family and domestic violence leave",
+      "cl. 28": "Public holidays",
+      "cl. 28A": "Workplace delegates’ rights",
+      "cl. 29": "Consultation about major workplace change",
+      "cl. 30": "Consultation about changes to rosters or hours of work",
+      "cl. 31": "Dispute resolution",
+      "cl. 32": "Termination of employment",
+      "cl. 33": "Redundancy",
+      "Sch A": "Classification Definitions",
+      "Sch B": "Summary of Minimum Hourly Rates of Pay",
+      "Sch C": "Summary of Monetary Allowances",
+      "Sch D": "Supported Wage System",
+      "Sch E": "Agreement to Take Annual Leave in Advance",
+      "Sch F": "Agreement to Cash Out Annual Leave"
+    },
+    "classificationRows": [
+      {
+        "code": "PA L1",
+        "employeeLevel": "Pharmacy assistant level 1",
+        "stream": "Pharmacy assistant level 1",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PA L2",
+        "employeeLevel": "Pharmacy assistant level 2",
+        "stream": "Pharmacy assistant level 2",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PA L3",
+        "employeeLevel": "Pharmacy assistant level 3",
+        "stream": "Pharmacy assistant level 3",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PA L4",
+        "employeeLevel": "Pharmacy assistant level 4",
+        "stream": "Pharmacy assistant level 4",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PS",
+        "employeeLevel": "Pharmacy student—1st year of course",
+        "stream": "Pharmacy student—1st year of course",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PS",
+        "employeeLevel": "Pharmacy student—2nd year of course",
+        "stream": "Pharmacy student—2nd year of course",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PS",
+        "employeeLevel": "Pharmacy student—3rd year of course",
+        "stream": "Pharmacy student—3rd year of course",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PS",
+        "employeeLevel": "Pharmacy student—4th year of course",
+        "stream": "Pharmacy student—4th year of course",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PI",
+        "employeeLevel": "Pharmacy intern—1st half of training",
+        "stream": "Pharmacy intern—1st half of training",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PI",
+        "employeeLevel": "Pharmacy intern—2nd half of training",
+        "stream": "Pharmacy intern—2nd half of training",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "P",
+        "employeeLevel": "Pharmacist",
+        "stream": "Pharmacist",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PI",
+        "employeeLevel": "Pharmacist in charge",
+        "stream": "Pharmacist in charge",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "PM",
+        "employeeLevel": "Pharmacist manager",
+        "stream": "Pharmacist manager",
+        "duties": "",
+        "schedule": ""
+      }
+    ],
+    "levels": [
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy assistant level 1",
+        "levelCode": "PA L1",
+        "basePayRateHourly": 27.81,
+        "weeklyRate": 1056.78,
+        "annualRate": null,
+        "casualRateHourly": 34.76,
+        "casualLoadingAmount": 6.95,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy assistant level 1",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyassistantlevel1"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy assistant level 2",
+        "levelCode": "PA L2",
+        "basePayRateHourly": 28.45,
+        "weeklyRate": 1081.1,
+        "annualRate": null,
+        "casualRateHourly": 35.56,
+        "casualLoadingAmount": 7.11,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy assistant level 2",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyassistantlevel2"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy assistant level 3",
+        "levelCode": "PA L3",
+        "basePayRateHourly": 29.45,
+        "weeklyRate": 1119.1,
+        "annualRate": null,
+        "casualRateHourly": 36.81,
+        "casualLoadingAmount": 7.36,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy assistant level 3",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyassistantlevel3"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy assistant level 4",
+        "levelCode": "PA L4",
+        "basePayRateHourly": 30.66,
+        "weeklyRate": 1165.08,
+        "annualRate": null,
+        "casualRateHourly": 38.33,
+        "casualLoadingAmount": 7.67,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy assistant level 4",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyassistantlevel4"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy student—1st year of course",
+        "levelCode": "PS",
+        "basePayRateHourly": 27.81,
+        "weeklyRate": 1056.78,
+        "annualRate": null,
+        "casualRateHourly": 34.76,
+        "casualLoadingAmount": 6.95,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy student—1st year of course",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacystudent1styearofcourse"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy student—2nd year of course",
+        "levelCode": "PS",
+        "basePayRateHourly": 28.45,
+        "weeklyRate": 1081.1,
+        "annualRate": null,
+        "casualRateHourly": 35.56,
+        "casualLoadingAmount": 7.11,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy student—2nd year of course",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacystudent2ndyearofcourse"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy student—3rd year of course",
+        "levelCode": "PS",
+        "basePayRateHourly": 29.45,
+        "weeklyRate": 1119.1,
+        "annualRate": null,
+        "casualRateHourly": 36.81,
+        "casualLoadingAmount": 7.36,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy student—3rd year of course",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacystudent3rdyearofcourse"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy student—4th year of course",
+        "levelCode": "PS",
+        "basePayRateHourly": 30.66,
+        "weeklyRate": 1165.08,
+        "annualRate": null,
+        "casualRateHourly": 38.33,
+        "casualLoadingAmount": 7.67,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy student—4th year of course",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacystudent4thyearofcourse"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy intern—1st half of training",
+        "levelCode": "PI",
+        "basePayRateHourly": 33.99,
+        "weeklyRate": 1291.62,
+        "annualRate": null,
+        "casualRateHourly": 42.49,
+        "casualLoadingAmount": 8.5,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy intern—1st half of training",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyintern1sthalfoftraining"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacy intern—2nd half of training",
+        "levelCode": "PI",
+        "basePayRateHourly": 35.14,
+        "weeklyRate": 1335.32,
+        "annualRate": null,
+        "casualRateHourly": 43.93,
+        "casualLoadingAmount": 8.79,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacy intern—2nd half of training",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacyintern2ndhalfoftraining"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacist",
+        "levelCode": "P",
+        "basePayRateHourly": 41.74,
+        "weeklyRate": 1586.12,
+        "annualRate": null,
+        "casualRateHourly": 52.18,
+        "casualLoadingAmount": 10.44,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacist",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacist"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacist in charge",
+        "levelCode": "PI",
+        "basePayRateHourly": 46.8,
+        "weeklyRate": 1778.4,
+        "annualRate": null,
+        "casualRateHourly": 58.5,
+        "casualLoadingAmount": 11.7,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacist in charge",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacistincharge"
+      },
+      {
+        "awardCode": "MA000012",
+        "awardTitle": "Pharmacy Industry Award 2020",
+        "employeeLevel": "Pharmacist manager",
+        "levelCode": "PM",
+        "basePayRateHourly": 52.15,
+        "weeklyRate": 1981.7,
+        "annualRate": null,
+        "casualRateHourly": 65.19,
+        "casualLoadingAmount": 13.04,
+        "allowances": [],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 28"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 21"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 28"
+          }
+        ],
+        "roleLabel": "Pharmacist manager",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 16",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 28",
+          "eveningNight": "",
+          "overtime": "cl. 21",
+          "allowances": "cl. 19 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000012 (fwc-pdf)",
+        "key": "MA000012::pharmacistmanager"
+      }
+    ]
+  },
+  "interpretation": {
+    "awardCode": "MA000012",
+    "awardTitle": "Pharmacy Industry Award 2020",
+    "industry": "healthcare",
+    "sourceRef": {
+      "sourceName": "MA000012",
+      "url": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000012.pdf",
+      "publisher": "Fair Work Commission"
+    },
+    "levels": [
+      {
+        "levelKey": "MA000012::pharmacyassistantlevel1",
+        "levelCode": "PA L1",
+        "employeeLevel": "Pharmacy assistant level 1",
+        "levelName": "Pharmacy assistant level 1",
+        "stream": "Pharmacy assistant level 1",
+        "baseRate": {
+          "hourly": 27.81,
+          "weekly": 1056.78,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 6.95,
+          "casualHourly": 34.76,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyassistantlevel1-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel1-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacyassistantlevel2",
+        "levelCode": "PA L2",
+        "employeeLevel": "Pharmacy assistant level 2",
+        "levelName": "Pharmacy assistant level 2",
+        "stream": "Pharmacy assistant level 2",
+        "baseRate": {
+          "hourly": 28.45,
+          "weekly": 1081.1,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.11,
+          "casualHourly": 35.56,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyassistantlevel2-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel2-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacyassistantlevel3",
+        "levelCode": "PA L3",
+        "employeeLevel": "Pharmacy assistant level 3",
+        "levelName": "Pharmacy assistant level 3",
+        "stream": "Pharmacy assistant level 3",
+        "baseRate": {
+          "hourly": 29.45,
+          "weekly": 1119.1,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.36,
+          "casualHourly": 36.81,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyassistantlevel3-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel3-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacyassistantlevel4",
+        "levelCode": "PA L4",
+        "employeeLevel": "Pharmacy assistant level 4",
+        "levelName": "Pharmacy assistant level 4",
+        "stream": "Pharmacy assistant level 4",
+        "baseRate": {
+          "hourly": 30.66,
+          "weekly": 1165.08,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.67,
+          "casualHourly": 38.33,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyassistantlevel4-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyassistantlevel4-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacystudent1styearofcourse",
+        "levelCode": "PS",
+        "employeeLevel": "Pharmacy student—1st year of course",
+        "levelName": "Pharmacy student—1st year of course",
+        "stream": "Pharmacy student—1st year of course",
+        "baseRate": {
+          "hourly": 27.81,
+          "weekly": 1056.78,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 6.95,
+          "casualHourly": 34.76,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent1styearofcourse-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacystudent2ndyearofcourse",
+        "levelCode": "PS",
+        "employeeLevel": "Pharmacy student—2nd year of course",
+        "levelName": "Pharmacy student—2nd year of course",
+        "stream": "Pharmacy student—2nd year of course",
+        "baseRate": {
+          "hourly": 28.45,
+          "weekly": 1081.1,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.11,
+          "casualHourly": 35.56,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent2ndyearofcourse-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacystudent3rdyearofcourse",
+        "levelCode": "PS",
+        "employeeLevel": "Pharmacy student—3rd year of course",
+        "levelName": "Pharmacy student—3rd year of course",
+        "stream": "Pharmacy student—3rd year of course",
+        "baseRate": {
+          "hourly": 29.45,
+          "weekly": 1119.1,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.36,
+          "casualHourly": 36.81,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent3rdyearofcourse-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacystudent4thyearofcourse",
+        "levelCode": "PS",
+        "employeeLevel": "Pharmacy student—4th year of course",
+        "levelName": "Pharmacy student—4th year of course",
+        "stream": "Pharmacy student—4th year of course",
+        "baseRate": {
+          "hourly": 30.66,
+          "weekly": 1165.08,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.67,
+          "casualHourly": 38.33,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacystudent4thyearofcourse-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacyintern1sthalfoftraining",
+        "levelCode": "PI",
+        "employeeLevel": "Pharmacy intern—1st half of training",
+        "levelName": "Pharmacy intern—1st half of training",
+        "stream": "Pharmacy intern—1st half of training",
+        "baseRate": {
+          "hourly": 33.99,
+          "weekly": 1291.62,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 8.5,
+          "casualHourly": 42.49,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern1sthalfoftraining-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacyintern2ndhalfoftraining",
+        "levelCode": "PI",
+        "employeeLevel": "Pharmacy intern—2nd half of training",
+        "levelName": "Pharmacy intern—2nd half of training",
+        "stream": "Pharmacy intern—2nd half of training",
+        "baseRate": {
+          "hourly": 35.14,
+          "weekly": 1335.32,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 8.79,
+          "casualHourly": 43.93,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacyintern2ndhalfoftraining-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacist",
+        "levelCode": "P",
+        "employeeLevel": "Pharmacist",
+        "levelName": "Pharmacist",
+        "stream": "Pharmacist",
+        "baseRate": {
+          "hourly": 41.74,
+          "weekly": 1586.12,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 10.44,
+          "casualHourly": 52.18,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacist-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacist-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacistincharge",
+        "levelCode": "PI",
+        "employeeLevel": "Pharmacist in charge",
+        "levelName": "Pharmacist in charge",
+        "stream": "Pharmacist in charge",
+        "baseRate": {
+          "hourly": 46.8,
+          "weekly": 1778.4,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 11.7,
+          "casualHourly": 58.5,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacistincharge-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistincharge-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000012::pharmacistmanager",
+        "levelCode": "PM",
+        "employeeLevel": "Pharmacist manager",
+        "levelName": "Pharmacist manager",
+        "stream": "Pharmacist manager",
+        "baseRate": {
+          "hourly": 52.15,
+          "weekly": 1981.7,
+          "clauseRef": "cl. 16"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 13.04,
+          "casualHourly": 65.19,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [],
+        "penalties": [
+          {
+            "id": "ma000012-pharmacistmanager-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 21",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000012-pharmacistmanager-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 28",
+            "confidence": "high"
+          }
+        ]
+      }
+    ],
+    "warnings": [],
+    "generatedFrom": {
+      "engine": "deterministic-parser",
+      "parserVersion": "interp-1.0.0",
+      "cacheFingerprint": "",
+      "generatedAt": "2026-06-25T06:49:28.589Z"
+    },
+    "schemaVersion": "1.0.0"
+  },
+  "source": {
+    "kind": "fwc-pdf",
+    "url": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000012.pdf",
+    "htmlUrl": "https://awards.fairwork.gov.au/MA000012.html",
+    "fetchedAt": "2026-06-25T06:49:28.589Z"
+  }
+}

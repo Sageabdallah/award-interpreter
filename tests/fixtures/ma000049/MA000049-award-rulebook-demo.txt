@@ -1,0 +1,193 @@
+Award Interpretation Rulebook
+Airport Employees Award 2020
+MA000049
+This is a parser-friendly MVP extract aligned to the current Fair Work award text for MA000049.
+Reference points used in this demo pack:
+- Clause 16 ordinary hours for day workers
+- Clause 19 minimum rates
+- Clause 23 overtime
+- Clause 31 Sunday and public holiday work
+- Schedule C monetary allowances
+SECTION 01
+Classifications
+Code
+Level
+Stream / role
+Indicative duties & training
+Schedule
+L1
+Ground services officer Level 1
+Ground services officer
+Performs routine airport ground services work under direct supervision using established procedures and induction-based training.
+Sch A.3.1
+L2
+Ground services officer Level 2
+Ground services officer
+Performs airport ground services work with broader operational familiarity and can complete standard tasks with limited supervision.
+Sch A.3.2
+L2
+Technical services officer Level 2
+Technical services officer
+Trades or technical services classification performing skilled airport maintenance and services work at Level 2 scope.
+Sch A.1.2
+L3
+Administrative services officer Level 3
+Administrative services officer
+Applies sound administrative judgement, coordinates recurring work and supports airport operations through established office systems.
+Sch A.2.3
+L4
+Professional engineer Level 4
+Professional engineer
+Senior engineer practitioner or managing/specialist engineer operating under broad policy direction.
+Sch A.4.4
+Refs:
+SECTION 02
+Base Rates
+Code
+Classification
+Weekly (38 hr)
+Hourly
+L1
+Ground services officer Level 1
+$956.46
+$25.17
+L2
+Ground services officer Level 2
+$977.74
+$25.73
+L2
+Technical services officer Level 2
+$1,105.80
+$29.10
+L3
+Administrative services officer Level 3
+$1,239.94
+$32.63
+L4
+Professional engineer Level 4
+$1,797.40
+$47.30
+Refs:
+SECTION 03
+Casual Loading
+Code
+Classification
+Ordinary hourly
++25% loading
+Casual hourly
+L1
+Ground services officer Level 1
+$25.17
+$6.29
+$31.46
+L2
+Ground services officer Level 2
+$25.73
+$6.43
+$32.16
+L2
+Technical services officer Level 2
+$29.10
+$7.28
+$36.38
+L3
+Administrative services officer Level 3
+$32.63
+$8.16
+$40.79
+L4
+Professional engineer Level 4
+$47.30
+$11.83
+$59.13
+Refs:
+SECTION 04
+Penalty Rates
+Day / type
+FT/PT %
+FT/PT $ (L3)
+Casual %
+Casual $ (L3)
+Notes
+Saturday
+150%
+$48.95
+175%
+$57.10
+Sunday
+200%
+$65.26
+225%
+$73.42
+Public holiday
+250%
+$81.58
+275%
+$89.73
+Minimum 3 hour payment applies for Sunday and public holiday work under clause 31.6.
+Minimum engagement
+—
+casual 3 hrs Sunday/public holiday
+Use clause 31.6 for minimum payment and clause 31.4 / 31.5 for rates
+Refs:
+SECTION 05
+Evening & Night
+Window
+Additional loading
+Days
+Notes
+Shift penalties handled in SECTION 04
+Not applied
+All days
+This MVP demo does not add a separate flat hourly loading for MA000049.
+Refs:
+SECTION 06
+Overtime
+Trigger / rate
+Threshold or multiplier
+Notes
+Daily trigger (FT/PT)
+More than 10 ordinary hrs/day
+Day workers cannot work more than 10 ordinary hours in a day under clause 16.5.
+Weekly trigger
+More than 38 hrs/week
+Ordinary hours for full-time employees are 38 per week under clause 16.1.
+Casual daily trigger
+More than 10 ordinary hrs/day
+Use the same day-worker threshold for the structured MVP timesheet.
+Overtime — first 3 hours
+150%
+Monday to Saturday
+Overtime — after 3 hours
+200%
+Monday to Saturday
+Overtime — Sunday
+200%
+All overtime worked on a Sunday
+Overtime — public holiday
+250%
+All overtime worked on a public holiday
+Refs:
+SECTION 07
+Allowances
+Allowance
+Amount
+Basis
+Clause
+Disability allowance — Technical or Ground services officers
+$1.08
+per hour
+cl. 21.2(a)(i) / Sch C
+First aid allowance
+$21.43
+per week
+cl. 21.2(c) / Sch C
+Meal allowance (overtime)
+$19.11
+per occasion
+cl. 23.10 / Sch C
+Travel / vehicle
+$7.00
+per occasion
+cl. 21.3(c) / Sch C
+SECTION 08

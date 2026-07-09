@@ -1,0 +1,22 @@
+﻿Pay Period,06/07/2026 - 12/07/2026
+Business,Banksia Grove Care & Nursing Pty Ltd
+Generated,09/07/2026
+
+Employee ID,Name,Role,Employment Type,Date,Day,Start,Finish,Break Mins,Hours,Location,Notes
+HC-001,Grace Whitlam,Nursing Assistant,Full-time,07/07/2026,Tuesday,07:00,15:30,30,8,Banksia Grove,
+HC-001,Grace Whitlam,Nursing Assistant,Full-time,09/07/2026,Thursday,07:00,15:30,30,8,Banksia Grove,
+HC-001,Grace Whitlam,Nursing Assistant,Full-time,11/07/2026,Saturday,07:00,15:30,30,8,Banksia Grove,
+HC-002,Liam O'Rourke,Enrolled Nurse,Full-time,06/07/2026,Monday,07:00,15:30,30,8,Banksia Grove,
+HC-002,Liam O'Rourke,Enrolled Nurse,Full-time,08/07/2026,Wednesday,07:00,19:30,30,12,Banksia Grove,double shift
+HC-002,Liam O'Rourke,Enrolled Nurse,Full-time,10/07/2026,Friday,07:00,15:30,30,8,Banksia Grove,
+HC-002,Liam O'Rourke,Enrolled Nurse,Full-time,12/07/2026,Sunday,07:00,15:30,30,8,Banksia Grove,
+HC-003,Mei Tanaka,Registered Nurse,Full-time,06/07/2026,Monday,22:00,06:00,0,8,Banksia Grove,night duty
+HC-003,Mei Tanaka,Registered Nurse,Full-time,07/07/2026,Tuesday,22:00,06:00,0,8,Banksia Grove,night duty
+HC-003,Mei Tanaka,Registered Nurse,Full-time,08/07/2026,Wednesday,22:00,06:00,0,8,Banksia Grove,night duty
+HC-004,Sofia Marino,Nursing Assistant,Casual,08/07/2026,Wednesday,09:00,17:30,30,8,Banksia Grove,
+HC-004,Sofia Marino,Nursing Assistant,Casual,11/07/2026,Saturday,09:00,17:30,30,8,Banksia Grove,
+HC-005,Ruth Adebayo,Aged Care Worker,Full-time,06/07/2026,Monday,07:00,15:30,30,8,Banksia Grove,Public holiday — regional show day
+HC-005,Ruth Adebayo,Aged Care Worker,Full-time,08/07/2026,Wednesday,07:00,15:30,30,8,Banksia Grove,
+HC-005,Ruth Adebayo,Aged Care Worker,Full-time,10/07/2026,Friday,07:00,15:30,30,8,Banksia Grove,
+HC-006,Ahmed Hassan,Personal Carer,Full-time,07/07/2026,Tuesday,08:00,16:30,30,8,Banksia Grove,
+HC-006,Ahmed Hassan,Personal Carer,Full-time,09/07/2026,Thursday,21:00,07:30,30,10,Banksia Grove,sleepover 23:00 to 07:00

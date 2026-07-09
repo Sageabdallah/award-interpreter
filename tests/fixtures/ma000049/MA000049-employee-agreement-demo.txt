@@ -1,0 +1,39 @@
+Demo only. This is a parser-friendly employee agreement file for the MVP.
+This file is aligned to the local MA000049 award-rulebook demo file in this folder.
+Rates shown below are either the current award minimum used in the MVP or a clearly marked over-award contractual rate for override testing.
+They are not legal advice and must be replaced with the employer's real contract or enterprise agreement terms.
+
+Employee: Amelia Hart
+Employee ID: AIR-001
+Award Code: MA000049
+Employee Level: Ground services officer Level 1
+Job Role: Ground Services Officer
+Base Pay Rate: $25.17/hr
+
+Employee: Noah Singh
+Employee ID: AIR-002
+Award Code: MA000049
+Employee Level: Technical services officer Level 2
+Job Role: Technical Services Officer
+Base Pay Rate: $29.10/hr
+
+Employee: Chloe Martin
+Employee ID: AIR-003
+Award Code: MA000049
+Employee Level: Administrative services officer Level 3
+Job Role: Administrative Services Officer
+Base Pay Rate: $32.63/hr
+
+Employee: Ethan Cole
+Employee ID: AIR-004
+Award Code: MA000049
+Employee Level: Ground services officer Level 2
+Job Role: Ground Services Officer
+Base Pay Rate: $25.73/hr
+
+Employee: Priya Das
+Employee ID: AIR-005
+Award Code: MA000049
+Employee Level: Professional engineer Level 4
+Job Role: Professional Engineer
+Base Pay Rate: $49.50/hr
