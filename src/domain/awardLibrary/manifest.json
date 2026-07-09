@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-25T06:49:28.589Z",
+  "generatedAt": "2026-07-09T10:46:50.551Z",
   "industries": {
     "healthcare": [
       {
@@ -15,35 +15,35 @@
         "title": "Health Professionals and Support Services Award 2020",
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000027.pdf",
         "levels": 20,
-        "entitlements": 200
+        "entitlements": 140
       },
       {
         "code": "MA000018",
         "title": "Aged Care Award 2010",
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000018.pdf",
         "levels": 13,
-        "entitlements": 143
+        "entitlements": 117
       },
       {
         "code": "MA000031",
         "title": "Medical Practitioners Award 2020",
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000031.pdf",
-        "levels": 12,
-        "entitlements": 120
+        "levels": 11,
+        "entitlements": 33
       },
       {
         "code": "MA000098",
         "title": "Ambulance and Patient Transport Industry Award 2020",
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000098.pdf",
         "levels": 20,
-        "entitlements": 200
+        "entitlements": 180
       },
       {
         "code": "MA000012",
         "title": "Pharmacy Industry Award 2020",
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000012.pdf",
         "levels": 13,
-        "entitlements": 130
+        "entitlements": 65
       }
     ]
   }

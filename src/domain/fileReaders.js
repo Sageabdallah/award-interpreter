@@ -110,7 +110,10 @@ export async function readSpreadsheetRows(file) {
   if (name.endsWith('.csv')) {
     workbook = XLSX.read(await file.text(), { type: 'string' })
   } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-    workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+    // cellDates turns date-formatted cells into real dates instead of serials.
+    // It cannot help a numeric cell carrying no date format — those arrive as
+    // bare numbers and are caught downstream by parseTimesheetDate().
+    workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true })
   } else {
     throw new Error(`Unsupported timesheet format: ${file.name}`)
   }
@@ -120,6 +123,9 @@ export async function readSpreadsheetRows(file) {
   return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
     header: 1,
     raw: false,
+    // Render date cells as ISO rather than the workbook's own (locale-shaped,
+    // ambiguous) number format, so 25 December never reads as 12 December.
+    dateNF: 'yyyy-mm-dd',
     defval: '',
     blankrows: false,
   })

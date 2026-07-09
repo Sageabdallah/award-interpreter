@@ -26,6 +26,16 @@ export async function structuredCall(client, { model, system, messages, schema, 
     system,
     messages,
   })
+  // A truncated response is still valid JSON often enough to be dangerous, and
+  // a refusal carries no JSON at all. Check why generation stopped before
+  // parsing, so the failure names itself instead of surfacing as a SyntaxError.
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error(`Model output hit max_tokens (${maxTokens}) and the JSON is incomplete — raise maxTokens for this call.`)
+  }
+  if (response.stop_reason === 'refusal') {
+    throw new Error(`Model declined to answer (${response.stop_details?.category || 'no category'}).`)
+  }
+
   const text = response.content.filter((block) => block.type === 'text').map((block) => block.text).join('')
   return {
     output: JSON.parse(text),

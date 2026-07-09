@@ -96,15 +96,35 @@ export async function replaceAllChunks(client, { chunks, vectors, embedderId }) 
 
 /**
  * Open the Weaviate store behind the shared vector-store interface.
- * Throws if the collection is missing/empty (index not built yet).
+ * Throws if the collection is missing/empty (index not built yet), or if it was
+ * populated by a different embedder than the one this process queries with —
+ * the vectors would be from an unrelated space (see flatStore for the rationale).
+ *
+ * @param {{ url: string, apiKey?: string, embedderId?: string }} options
  */
-export async function openWeaviateStore({ url, apiKey }) {
+export async function openWeaviateStore({ url, apiKey, embedderId }) {
   const client = await connectWeaviate({ url, apiKey })
   if (!(await client.collections.exists(COLLECTION))) {
     await client.close()
     throw new Error(`Weaviate collection ${COLLECTION} does not exist — run: npm run rag:index`)
   }
   const collection = client.collections.get(COLLECTION)
+
+  if (embedderId) {
+    const sample = await collection.query.fetchObjects({ limit: 1, returnProperties: ['embedderId'] })
+    const indexed = sample.objects[0]?.properties?.embedderId
+    if (!sample.objects.length) {
+      await client.close()
+      throw new Error(`Weaviate collection ${COLLECTION} is empty — run: npm run rag:index`)
+    }
+    if (indexed !== embedderId) {
+      await client.close()
+      throw new Error(
+        `Weaviate collection ${COLLECTION} was built with embedder "${indexed}" but this process embeds with `
+        + `"${embedderId}" — the vectors are not comparable. Rebuild it: npm run rag:index`,
+      )
+    }
+  }
 
   const filtersFor = ({ awardCode, chunkType }) => {
     const parts = []

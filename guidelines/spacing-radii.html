@@ -1,0 +1,25 @@
+<!-- @dsCard group="Spacing" viewport="700x160" name="Corner radii" subtitle="Soft, editorial radii — 8px wells up to 18px cards and full pills" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--paper); color: var(--ink); padding: 24px; font-family: var(--font-body); }
+  .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .item { text-align: center; }
+  .box { width: 74px; height: 56px; background: var(--card); border: 1px solid var(--line); }
+  .lbl { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="border-radius:8px"></div><div class="lbl">8 · well</div></div>
+    <div class="item"><div class="box" style="border-radius:11px"></div><div class="lbl">11 · button</div></div>
+    <div class="item"><div class="box" style="border-radius:13px"></div><div class="lbl">13 · chip</div></div>
+    <div class="item"><div class="box" style="border-radius:16px"></div><div class="lbl">16 · stat</div></div>
+    <div class="item"><div class="box" style="border-radius:18px"></div><div class="lbl">18 · upload</div></div>
+    <div class="item"><div class="box" style="border-radius:999px;width:56px"></div><div class="lbl">999 · pill</div></div>
+  </div>
+</body>
+</html>

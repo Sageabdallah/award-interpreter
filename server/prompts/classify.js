@@ -26,6 +26,11 @@ export const CLASSIFY_SCHEMA = {
           rationale: { type: 'string' },
           citations: {
             type: 'array',
+            // A suggestion with no quote is unverifiable; the route demotes it
+            // to low confidence, but the model should always try to cite.
+            // `maxItems` is rejected by output_config.format (400); the 1-2
+            // range is asked for in the system prompt instead.
+            minItems: 1,
             items: {
               type: 'object',
               properties: {

@@ -427,3 +427,100 @@ export function buildInterpretationTableRows(interpretation, { source = 'uploade
   }
   return rows
 }
+
+// --- InterpretationTableRow[] -> deduplicated AwardView ----------------------
+
+// Only the base rate (and the casual rate derived from it) actually vary per
+// level. Penalties, allowances and ordinary hours are award-wide in every award
+// we carry, so the flat table prints them once per level: MA000049 renders 1332
+// rows to convey ~71 facts. Partition rather than assume — an award whose levels
+// genuinely differ keeps its outliers on the level they belong to.
+const RATE_KINDS = new Set(['base_rate', 'casual_loading'])
+const SHARED_FIRST = ['ordinary_hours']
+
+// Separator is U+001F (unit separator) — it cannot occur in award text, so adjacent
+// fields can never run together into a colliding key.
+const factKey = (row) => [
+  row.kind, row.category, row.title, row.valueLabel,
+  row.clauseRef, row.conditionsText, row.employment, row.trigger,
+].join('')
+
+/**
+ * Split one AwardInterpretation into the level-varying rates and the clause
+ * facts shared by *every* level. Pure; derives from buildInterpretationTableRows
+ * so each row stays a valid InterpretationTableRow (the /api/explain-row input).
+ * @param {import('./interpretationSchema.js').AwardInterpretation} interpretation
+ * @param {{ source?: 'preloaded'|'uploaded'|'merged' }} [options]
+ * @returns {{
+ *   levels: Array<{levelKey,levelCode,employeeLevel,levelName,baseRow,casualRow,specificRows}>,
+ *   shared: Array<{category, label, rows}>,
+ *   totals: {flatRows: number, sharedRows: number, levelSpecificRows: number},
+ * }}
+ */
+export function buildAwardView(interpretation, { source = 'uploaded' } = {}) {
+  const rows = buildInterpretationTableRows(interpretation, { source })
+  const levels = interpretation?.levels || []
+
+  const byLevel = new Map(levels.map((level) => [level.levelKey, {
+    levelKey: level.levelKey,
+    levelCode: level.levelCode || '',
+    employeeLevel: level.employeeLevel || '',
+    levelName: level.levelName || level.employeeLevel || '',
+    baseRow: null,
+    casualRow: null,
+    specificRows: [],
+  }]))
+
+  const levelsPerFact = new Map()
+  const rowPerFact = new Map()
+  for (const row of rows) {
+    if (RATE_KINDS.has(row.kind)) {
+      const entry = byLevel.get(row.levelKey)
+      if (!entry) continue
+      if (row.kind === 'base_rate') entry.baseRow = row
+      else entry.casualRow = row
+      continue
+    }
+    const key = factKey(row)
+    if (!rowPerFact.has(key)) rowPerFact.set(key, row)
+    if (!levelsPerFact.has(key)) levelsPerFact.set(key, new Set())
+    levelsPerFact.get(key).add(row.levelKey)
+  }
+
+  // Shared == present, with an identical value, on every level. Insertion order
+  // of levelsPerFact is the first level's row order, so grouping stays stable.
+  const sharedKeys = new Set()
+  for (const [key, levelKeys] of levelsPerFact) {
+    if (levels.length > 0 && levelKeys.size === levels.length) sharedKeys.add(key)
+  }
+
+  let levelSpecificRows = 0
+  for (const row of rows) {
+    if (RATE_KINDS.has(row.kind) || sharedKeys.has(factKey(row))) continue
+    byLevel.get(row.levelKey)?.specificRows.push(row)
+    levelSpecificRows += 1
+  }
+
+  const rank = (category) => {
+    const pinned = SHARED_FIRST.indexOf(category)
+    if (pinned >= 0) return pinned
+    const index = CATEGORIES.indexOf(category)
+    return SHARED_FIRST.length + (index >= 0 ? index : CATEGORIES.length)
+  }
+
+  const groups = new Map()
+  for (const key of sharedKeys) {
+    const row = rowPerFact.get(key)
+    if (!groups.has(row.category)) groups.set(row.category, [])
+    groups.get(row.category).push(row)
+  }
+  const shared = [...groups.entries()]
+    .map(([category, groupRows]) => ({ category, label: categoryLabel(category), rows: groupRows }))
+    .sort((a, b) => rank(a.category) - rank(b.category))
+
+  return {
+    levels: [...byLevel.values()],
+    shared,
+    totals: { flatRows: rows.length, sharedRows: sharedKeys.size, levelSpecificRows },
+  }
+}

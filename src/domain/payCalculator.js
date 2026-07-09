@@ -6,17 +6,75 @@ import {
   round2,
   sumAmounts,
 } from './utils.js'
+import { createCalendarSet, resolvePublicHoliday } from './publicHolidays.js'
+import { assessRates, payPeriodFromTimesheet } from './rateValidity.js'
 
-function detectPublicHoliday(shift) {
-  return /public holiday|ph\b/i.test(`${shift.day} ${shift.notes}`)
+/**
+ * Resolve every shift against the public holiday calendar exactly once, caching
+ * by shift identity, and accumulate what the caller must be told about coverage.
+ *
+ * Public holidays used to be detected with /public holiday|ph\b/ over the
+ * timesheet's day+notes text. A shift on Christmas Day with an empty notes cell
+ * was paid as ordinary time — the single highest penalty in the award, skipped
+ * silently, always in the employer's favour. Everything here exists to make that
+ * failure impossible or, where the data genuinely cannot support an answer,
+ * loud.
+ */
+function createHolidayResolver(jurisdiction) {
+  const calendars = createCalendarSet(jurisdiction)
+  const cache = new Map()
+  const unreadableDates = new Set()
+  const applied = new Map()
+
+  const resolve = (shift) => {
+    if (!cache.has(shift)) {
+      const resolution = resolvePublicHoliday(shift, calendars)
+      cache.set(shift, resolution)
+      if (resolution.dateUnreadable) unreadableDates.add(shift.date || '(blank)')
+      if (resolution.isHoliday && resolution.source === 'calendar') applied.set(shift.dateKey, resolution.name)
+    }
+    return cache.get(shift)
+  }
+
+  return {
+    isHoliday: (shift) => resolve(shift).isHoliday,
+    resolve,
+    /** Non-blocking notices about what the calendar could and could not answer. */
+    warnings() {
+      const notices = []
+      const incompleteYears = calendars.consulted().filter((c) => !c.complete).map((c) => c.year).sort()
+
+      if (!jurisdiction) {
+        notices.push('No state or territory was selected, so only the seven national public holidays were applied. '
+          + 'Gazetted state holidays (Labour Day, King’s Birthday and others) were not checked and any penalty for them is missing.')
+      } else if (incompleteYears.length) {
+        notices.push(`Gazetted ${jurisdiction} public holidays for ${incompleteYears.join(', ')} are not loaded, `
+          + 'so only the seven national public holidays were applied. State-specific holidays were not checked.')
+      }
+      if (unreadableDates.size) {
+        notices.push(`${unreadableDates.size} shift date${unreadableDates.size === 1 ? '' : 's'} could not be read `
+          + `(${[...unreadableDates].slice(0, 3).join(', ')}${unreadableDates.size > 3 ? ', …' : ''}), `
+          + 'so those shifts were not checked against the public holiday calendar.')
+      }
+      return notices
+    },
+    /** Which calendar holidays this pay run actually landed on — audit trail. */
+    holidaysApplied: () => [...applied.entries()].map(([date, name]) => ({ date, name })).sort((a, b) => a.date.localeCompare(b.date)),
+  }
 }
 
 function getEmploymentBucket(value = '') {
   return /casual/i.test(value) ? 'casual' : 'standard'
 }
 
-function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType) {
+/**
+ * @returns {{ items, issues }} `issues` names any day the employee worked whose
+ *   penalty rate the parser could not read from the award. A null multiplier
+ *   would otherwise be skipped silently, underpaying that shift.
+ */
+function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType, holidays) {
   const items = []
+  const missingRates = new Set()
   const refs = level.references || {}
   const employmentBucket = getEmploymentBucket(employmentType)
   const weekendRules = employmentBucket === 'casual'
@@ -25,24 +83,28 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
 
   for (const shift of shifts) {
     const day = normalizeDay(shift.day)
-    const isPublicHoliday = detectPublicHoliday(shift)
-    if (isPublicHoliday) {
+    const holiday = holidays.resolve(shift)
+    if (holiday.isHoliday) {
       const multiplier = weekendRules.public_holiday
+      // An unknown penalty is flagged, but we still pay the loadings we do know
+      // (casual loading, shift loadings) rather than dropping to the base rate.
+      if (multiplier == null) missingRates.add('public holiday')
       if (multiplier) {
         items.push({
           type: 'Public holiday penalty',
           category: 'penalty',
           amount: round2(shift.hours * baseRate * (multiplier - 1)),
           unit: 'shift',
-          detail: `${shift.date} · ${shift.hours} hrs`,
+          detail: `${shift.date} · ${shift.hours} hrs · ${holiday.name}`,
           clause: refs.penalties || '',
           meaning: 'extra money for working a public holiday',
         })
+        continue
       }
-      continue
     }
-    if (day === 'saturday' || day === 'sunday') {
+    if ((day === 'saturday' || day === 'sunday') && !holiday.isHoliday) {
       const multiplier = weekendRules[day]
+      if (multiplier == null) missingRates.add(day)
       if (multiplier) {
         items.push({
           type: `${shift.day} penalty`,
@@ -53,8 +115,8 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
           clause: refs.penalties || '',
           meaning: `extra money for working ${day === 'saturday' ? 'Saturday' : 'Sunday'}`,
         })
+        continue
       }
-      continue
     }
 
     if (employmentBucket === 'casual') {
@@ -88,10 +150,14 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
     }
   }
 
-  return items
+  const bucket = employmentBucket === 'casual' ? 'casual' : 'standard'
+  const issues = [...missingRates].map((dayName) =>
+    `${level.awardCode} does not record a ${bucket} penalty rate for ${dayName} — it could not be read from the award text. Hours worked on ${dayName} were paid at the base rate only and must be checked manually.`)
+
+  return { items, issues }
 }
 
-function calculateOvertimeItems(level, shifts, baseRate, employmentType) {
+function calculateOvertimeItems(level, shifts, baseRate, employmentType, holidays) {
   const overtime = level.rules.overtime
   const dailyThreshold = getEmploymentBucket(employmentType) === 'casual'
     ? overtime.casualDailyThreshold
@@ -108,7 +174,7 @@ function calculateOvertimeItems(level, shifts, baseRate, employmentType) {
     if (!overtimeHours) continue
     dailyOvertimeByShift.set(shift, overtimeHours)
     const day = normalizeDay(shift.day)
-    const multiplier = detectPublicHoliday(shift)
+    const multiplier = holidays.isHoliday(shift)
       ? overtime.publicHolidayMultiplier
       : day === 'sunday'
         ? overtime.sundayMultiplier
@@ -137,7 +203,7 @@ function calculateOvertimeItems(level, shifts, baseRate, employmentType) {
       const overtimeHours = Math.min(available, remainingWeeklyOvertime)
       const day = normalizeDay(shift.day)
 
-      if (detectPublicHoliday(shift)) {
+      if (holidays.isHoliday(shift)) {
         items.push({
           type: 'Weekly overtime',
           category: 'penalty',
@@ -323,16 +389,16 @@ function buildUnmatchedRow(employee) {
   }
 }
 
-function buildWorkSummary(employee, extrasItems, ordinaryPay, totalCalculatedPay) {
+function buildWorkSummary(employee, extrasItems, ordinaryPay, totalCalculatedPay, holidays) {
   const dayHours = (predicate) => round2(
     employee.shifts.filter(predicate).reduce((sum, shift) => sum + shift.hours, 0),
   )
   const amountFor = (pattern) => round2(sumAmounts(extrasItems.filter((item) => pattern.test(item.type))))
 
   return {
-    saturdayHours: dayHours((shift) => normalizeDay(shift.day) === 'saturday' && !detectPublicHoliday(shift)),
-    sundayHours: dayHours((shift) => normalizeDay(shift.day) === 'sunday' && !detectPublicHoliday(shift)),
-    publicHolidayHours: dayHours((shift) => detectPublicHoliday(shift)),
+    saturdayHours: dayHours((shift) => normalizeDay(shift.day) === 'saturday' && !holidays.isHoliday(shift)),
+    sundayHours: dayHours((shift) => normalizeDay(shift.day) === 'sunday' && !holidays.isHoliday(shift)),
+    publicHolidayHours: dayHours((shift) => holidays.isHoliday(shift)),
     weekendAmount: amountFor(/saturday|sunday/i),
     publicHolidayAmount: amountFor(/public holiday/i),
     overtimeAmount: amountFor(/overtime/i),
@@ -380,7 +446,18 @@ function buildExtrasInterpretation(profileInterpretation, extrasItems) {
   ].sort((left, right) => Number(right.applied) - Number(left.applied))
 }
 
-export function calculateTimesheetResults(parsedCache, timesheetData) {
+/**
+ * @param {object} parsedCache
+ * @param {object} timesheetData
+ * @param {{ jurisdiction?: string }} [options]  the state/territory the shifts were
+ *   worked in. Public holidays are jurisdiction-specific; omitting it applies only
+ *   the national holidays and returns a warning saying so.
+ * @returns {{ rows, stats, warnings: string[], publicHolidaysApplied: Array<{date,name}>,
+ *   payPeriod: {start,end}, rateValidity: Array<{awardCode,status,message}> }}
+ */
+export function calculateTimesheetResults(parsedCache, timesheetData, options = {}) {
+  const holidays = createHolidayResolver(options.jurisdiction || null)
+
   const rows = timesheetData.employees.map((employee) => {
     const profile = employee.employeeId
       ? parsedCache.employeesById[employee.employeeId] || parsedCache.employeesByName[normalizeName(employee.employeeName)]
@@ -404,15 +481,16 @@ export function calculateTimesheetResults(parsedCache, timesheetData) {
 
     const basePay = profile.effectiveBasePayRateHourly ?? awardLevel.basePayRateHourly ?? 0
     const ordinaryPay = round2(employee.totalHours * basePay)
+    const weekendResult = calculateWeekendAndLoadingItems(awardLevel, employee.shifts, basePay, employee.employmentType, holidays)
     const penaltyItems = [
-      ...calculateWeekendAndLoadingItems(awardLevel, employee.shifts, basePay, employee.employmentType),
-      ...calculateOvertimeItems(awardLevel, employee.shifts, basePay, employee.employmentType),
+      ...weekendResult.items,
+      ...calculateOvertimeItems(awardLevel, employee.shifts, basePay, employee.employmentType, holidays),
     ]
     const allowanceItems = calculateAllowanceItems(awardLevel, employee, basePay, penaltyItems)
     const extrasItems = [...allowanceItems, ...penaltyItems]
     const complianceNotes = profile.complianceNotes?.map((note) => note.note).filter(Boolean) || []
     const totalCalculatedPay = round2(ordinaryPay + sumAmounts(extrasItems))
-    const workSummary = buildWorkSummary(employee, extrasItems, ordinaryPay, totalCalculatedPay)
+    const workSummary = buildWorkSummary(employee, extrasItems, ordinaryPay, totalCalculatedPay, holidays)
 
     return {
       id: employee.employeeId || normalizeName(employee.employeeName),
@@ -428,7 +506,7 @@ export function calculateTimesheetResults(parsedCache, timesheetData) {
       },
       totalCalculatedPay,
       effectiveHourlyRate: workSummary.effectiveHourlyRate,
-      validationErrors: [],
+      validationErrors: weekendResult.issues,
       complianceNotes,
       overrideReason: profile.overrideReason || '',
       totalHours: employee.totalHours,
@@ -443,8 +521,22 @@ export function calculateTimesheetResults(parsedCache, timesheetData) {
     }
   })
 
+  // Are the cached rates the ones that applied during this pay period? The
+  // Annual Wage Review resets minimum rates every 1 July, and only upward, so
+  // stale rates always understate what is owed.
+  const payPeriod = payPeriodFromTimesheet(timesheetData)
+  const rateValidity = assessRates(
+    rows.map((row) => row.awardCode).filter((code) => code && code !== 'Unmatched'),
+    parsedCache.rateSourcesByCode,
+    payPeriod,
+  )
+
   return {
     rows,
+    payPeriod,
+    rateValidity,
+    warnings: holidays.warnings(),
+    publicHolidaysApplied: holidays.holidaysApplied(),
     stats: {
       employees: rows.length,
       totalHours: round2(rows.reduce((sum, row) => sum + row.totalHours, 0)),

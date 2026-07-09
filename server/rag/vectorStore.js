@@ -17,15 +17,17 @@ import { openWeaviateStore } from './weaviateStore.js'
  * @param {string} config.indexDir      local flat index dir (data/rag-index)
  * @param {string} [config.weaviateUrl]
  * @param {string} [config.weaviateApiKey]
+ * @param {string} [config.embedderId]  assert the index was built with this embedder
+ * @param {number} [config.embeddingDim]
  * @param {(msg: string) => void} [config.log]
  */
-export async function openVectorStore({ indexDir, weaviateUrl, weaviateApiKey, log = console.warn }) {
+export async function openVectorStore({ indexDir, weaviateUrl, weaviateApiKey, embedderId, embeddingDim, log = console.warn }) {
   if (weaviateUrl) {
     try {
-      return await openWeaviateStore({ url: weaviateUrl, apiKey: weaviateApiKey })
+      return await openWeaviateStore({ url: weaviateUrl, apiKey: weaviateApiKey, embedderId })
     } catch (error) {
       log(`Weaviate unavailable (${error.message}) — falling back to local index.`)
     }
   }
-  return openFlatStore(indexDir)
+  return openFlatStore(indexDir, { embedderId, dim: embeddingDim })
 }

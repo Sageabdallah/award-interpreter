@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x180" name="Shadows" subtitle="Soft, downward — no hard drops. Red glow on primary hover." -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../styles.css">
+<style>
+  body { margin: 0; background: var(--paper); color: var(--ink); padding: 28px 24px; font-family: var(--font-body); }
+  .row { display: flex; gap: 26px; flex-wrap: wrap; }
+  .item { text-align: center; }
+  .box { width: 130px; height: 60px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-2xl); }
+  .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--muted); margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="row">
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-primary)"></div><div class="lbl">primary · rest</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-primary-hover)"></div><div class="lbl">primary · hover (red)</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-ready)"></div><div class="lbl">ready / verified</div></div>
+    <div class="item"><div class="box" style="box-shadow:var(--shadow-step)"></div><div class="lbl">active step</div></div>
+  </div>
+</body>
+</html>

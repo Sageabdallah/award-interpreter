@@ -55,12 +55,20 @@ export function amountInText(amount, text) {
 /**
  * Verify a list of { quote, clauseRef?, amount? } citations against the chunks
  * the model was shown. Never throws.
+ *
+ * Fails CLOSED: an empty citation list is a verification failure, not a pass.
+ * An answer that cites nothing is unfalsifiable — it must never be mistaken for
+ * a grounded one just because it produced no failing quotes to check.
+ *
  * @returns {{ ok: boolean, verified: object[], failures: Array<{ index, reason }> }}
  */
 export function verifyCitations(citations, chunks) {
   const verified = []
   const failures = []
-  ;(citations || []).forEach((citation, index) => {
+  if (!citations || citations.length === 0) {
+    return { ok: false, verified, failures: [{ index: -1, reason: 'no citations were provided — every claim must quote the clause text verbatim' }] }
+  }
+  citations.forEach((citation, index) => {
     const chunk = findQuoteChunk(citation.quote, chunks)
     if (!chunk) {
       failures.push({ index, reason: `quote ${index + 1} is not verbatim text from the provided clauses` })

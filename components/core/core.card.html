@@ -1,0 +1,66 @@
+<!-- @dsCard group="Components" viewport="700x300" name="Core — Button · Pill · Badge" subtitle="The action, chip and status-label primitives" -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="../../styles.css">
+<style>
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); padding: 26px; }
+  .sect { margin-bottom: 24px; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="../../_ds_bundle.js"></script>
+  <script type="text/babel">
+    const NS = window.AxiWFMAwardInterpreterDesignSystem_c5602f || {};
+    const { Button, Pill, Badge } = NS;
+    const L = window.lucide || {};
+    function Icon({ name, size = 16, strokeWidth = 2, color = 'currentColor' }) {
+      const node = L[name];
+      if (!node || !Array.isArray(node[2])) return null;
+      return React.createElement('svg', { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: color, strokeWidth, strokeLinecap: 'round', strokeLinejoin: 'round' },
+        node[2].map((c, i) => React.createElement(c[0], { key: i, ...c[1] })));
+    }
+
+    function Demo() {
+      return (
+        <>
+          <div className="sect">
+            <div className="lbl">Buttons — primary + secondary</div>
+            <div className="row">
+              <Button variant="primary" iconRight={<Icon name="ArrowRight" size={18} />}>Interpret award</Button>
+              <Button iconLeft={<Icon name="ArrowLeft" size={15} />}>Back to upload</Button>
+              <Button iconLeft={<Icon name="Download" size={16} />}>Export CSV</Button>
+              <Button variant="primary" disabled iconRight={<Icon name="ArrowRight" size={18} />}>Disperse pay</Button>
+            </div>
+          </div>
+          <div className="sect">
+            <div className="lbl">Pills — meta · code · selected</div>
+            <div className="row">
+              <Pill icon={<Icon name="Clock" size={15} strokeWidth={1.7} />}>76 hrs</Pill>
+              <Pill code="MA000034">Nurses Award <span style={{color:'var(--muted)'}}>· 22 levels</span></Pill>
+              <Pill icon={<Icon name="Layers" size={14} strokeWidth={1.7} />} selected>Healthcare</Pill>
+            </div>
+          </div>
+          <div className="sect">
+            <div className="lbl">Badges — provenance + ready dot</div>
+            <div className="row">
+              <Badge tone="sage" icon={<Icon name="BadgeCheck" size={13} />}>Preloaded · Healthcare</Badge>
+              <Badge tone="ochre">Uploaded + library</Badge>
+              <Badge shape="dot" tone="sage" ring>Ready to build the parsed cache</Badge>
+            </div>
+          </div>
+        </>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+  </script>
+</body>
+</html>

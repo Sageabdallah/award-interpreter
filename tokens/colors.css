@@ -1,0 +1,57 @@
+/* ============================================================================
+   COLOR — iSOFT ANZ · Award Interpreter
+   White + red, themed for iSOFT ANZ. Clean and clinical: a light-grey canvas,
+   white raised cards, and a confident iSOFT red as the single brand accent.
+   Green is retained for "verified/matched", and a DEEPER crimson is kept
+   distinct for validation errors so the audit signal never collides with the
+   brand red. (Variable names keep their original semantic slots; --ochre is the
+   brand-accent slot, now red.)
+   NOTE: the iSOFT red below is a close approximation — supply the exact brand
+   hex and this one line updates the whole system.
+   ============================================================================ */
+:root {
+  /* -- Base palette ------------------------------------------------------- */
+  --paper:  #F4F5F7;  /* app canvas — cool light grey ("white" overall) */
+  --ink:    #1A1B1E;  /* primary text, monogram, headings */
+  --card:   #FFFFFF;  /* raised surfaces — cards, panels (pure white) */
+  --muted:  #6B6F76;  /* secondary text, captions, meta, queued states */
+  --line:   rgba(20,22,28,0.12); /* hairline borders, dividers, table rules */
+
+  /* -- Accents (each carries a fixed semantic role) ----------------------- */
+  --ochre:  #E11B22;  /* BRAND RED. The accent: award codes, primary, selected/active */
+  --sage:   #2F7D57;  /* success / verified / matched / "ready" (clinical green) */
+  --red:    #B0121F;  /* validation errors, destructive, malformed-data flags (deep crimson) */
+
+  /* -- Semantic aliases --------------------------------------------------- */
+  --bg-app:          var(--paper);
+  --surface-card:    var(--card);
+  --surface-inset:   var(--paper);      /* chips, inputs, panel-inner sit on the grey canvas */
+  --text-primary:    var(--ink);
+  --text-secondary:  rgba(26,27,30,0.72); /* body paragraphs under a heading */
+  --text-muted:      var(--muted);
+  --text-on-ink:     #FFFFFF;           /* text on ink/accent surfaces */
+  --border-hairline: var(--line);
+  --border-strong:   rgba(20,22,28,0.24); /* button hover border */
+
+  --accent:          var(--ochre);
+  --accent-code:     var(--ochre);      /* award codes are brand red + mono */
+  --accent-strong:   #B0121F;           /* primary-button hover (darker red) */
+  --success:         var(--sage);
+  --danger:          var(--red);
+
+  /* -- Accent tints (surfaces + rings; ~8-12% of the accent) -------------- */
+  --ochre-tint:      rgba(225,27,34,0.08);   /* selected pill / dropzone hover / brand note */
+  --ochre-ring:      rgba(225,27,34,0.30);   /* borders on brand surfaces */
+  --ochre-strong:    #B0121F;                /* deep-red text on a brand tint */
+  --sage-tint:       rgba(47,125,87,0.12);   /* verified icon wells, worked chips */
+  --sage-ring:       rgba(47,125,87,0.32);
+  --sage-glow:       rgba(47,125,87,0.20);   /* focus ring on the ready dot */
+  --red-tint:        rgba(176,18,31,0.08);   /* danger flag surface */
+  --red-ring:        rgba(176,18,31,0.30);
+
+  /* -- Interaction fills (neutral) --------------------------------------- */
+  --hover-ink:       rgba(20,22,28,0.05);    /* ghost button / row hover */
+  --hover-ink-row:   rgba(20,22,28,0.035);   /* table row hover (subtler) */
+  --selection:       rgba(225,27,34,0.16);   /* ::selection */
+  --scroll-thumb:    rgba(20,22,28,0.18);
+}

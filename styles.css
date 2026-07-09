@@ -1,0 +1,8 @@
+/* ============================================================================
+   Axi·WFM Award Interpreter — Design System entry point.
+   Consumers link THIS one file. It is @import lines only.
+   ============================================================================ */
+@import "tokens/fonts.css";
+@import "tokens/colors.css";
+@import "tokens/typography.css";
+@import "tokens/spacing.css";

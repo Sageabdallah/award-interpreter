@@ -17,6 +17,11 @@ export const EXPLAIN_SCHEMA = {
     explanation: { type: 'string', description: '2-4 plain-English sentences explaining the row' },
     citations: {
       type: 'array',
+      // At least one: an explanation that cites nothing cannot be verified, and
+      // the server rejects it (see grounding.verifyCitations). `maxItems` is NOT
+      // supported by output_config.format and returns a 400 — the 1-3 range is
+      // asked for in the system prompt instead.
+      minItems: 1,
       items: {
         type: 'object',
         properties: {

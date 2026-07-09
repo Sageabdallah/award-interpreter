@@ -1,0 +1,5 @@
+/* Webfonts — Axi·WFM Award Interpreter
+   The build loads these three families exactly as the product does at runtime.
+   Fraunces (serif display), Inter Tight (body), JetBrains Mono (codes/rates/clauses).
+   Weights match the product's runtime <link>: Fraunces 400/500/600, Inter Tight 400/500/600, JetBrains Mono 400/500. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
