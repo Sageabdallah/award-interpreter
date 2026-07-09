@@ -21,33 +21,46 @@ import {
   Scale,
   Send,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   UploadCloud,
   X,
 } from 'lucide-react'
+// Supplied by iSOFT ANZ (white knocked out to transparent). Do not recolour.
+import isoftMark from '../assets/isoft-i.png'
+import isoftWordmark from '../assets/isoft-wordmark.png'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
-import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
+import { canClassify, countTimesheetMatches, describeEmployee, unmatchedTimesheetEmployees } from './domain/employeeMatching.js'
+import { buildAwardView } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
+import { JURISDICTIONS, JURISDICTION_LABELS } from './domain/publicHolidays.js'
+import { RATE_STATUS, isBlocking } from './domain/rateValidity.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
 import { parseTimesheetFile } from './domain/timesheetParser.js'
-import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
+import { keyForAwardLevel } from './domain/utils.js'
 
+// iSOFT ANZ brand palette — see the design system in tokens/colors.css.
+// `ochre` and `sage` keep their original semantic slot names: ochre is the
+// brand-accent slot (now iSOFT red), sage is success/verified.
 const COLORS = {
-  paper: '#F5F1EA',
-  ink: '#1F1E1B',
-  ochre: '#C2703A',
-  sage: '#5B7A5C',
-  red: '#B4452F',
-  card: '#FBF9F4',
-  muted: '#8A8579',
-  line: 'rgba(31,30,27,0.12)',
+  paper: '#F4F5F7',
+  ink: '#1A1B1E',
+  ochre: '#E11B22',
+  accentStrong: '#B0121F',
+  sage: '#2F7D57',
+  red: '#B0121F',
+  card: '#FFFFFF',
+  muted: '#6B6F76',
+  line: 'rgba(20,22,28,0.12)',
 }
 const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
 const BODY = "'Inter Tight', system-ui, -apple-system, sans-serif"
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
 const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr'
-const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
-const INTERP_ROW_CAP = 40
+const RATES_GRID = '2.4fr 1fr 1fr 0.9fr'
+const SHARED_GRID = '1.5fr 2.5fr 1fr 1.1fr'
+const LEVEL_ROW_CAP = 12
 const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
 const PARSE_STEPS = [
   { label: 'Hashing the document set', detail: 'Computing the cache fingerprint for the uploaded rule documents and preloaded award library' },
@@ -63,6 +76,7 @@ const fmt = (value) => audFmt.format(Number(value) || 0)
 const initialState = {
   stage: 1,
   industry: '',
+  jurisdiction: '',
   documents: { award: null, compliance: null, agreement: null },
   parsedCache: null,
   stepIndex: 0,
@@ -99,6 +113,10 @@ function reducer(state, action) {
         timesheetError: '',
         results: null,
       }
+    case 'setJurisdiction':
+      // Public holidays are jurisdiction-specific, so a change invalidates the
+      // calculated pay — but not the parsed document cache, which is unaffected.
+      return { ...state, jurisdiction: action.jurisdiction, results: null }
     case 'setStage':
       return { ...state, stage: action.stage }
     case 'setStepIndex':
@@ -131,15 +149,6 @@ const fmtSize = (bytes) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function countTimesheetMatches(parsedCache, timesheetData) {
-  if (!parsedCache || !timesheetData) return 0
-  return timesheetData.employees.reduce((count, employee) => {
-    const matchedProfile = employee.employeeId
-      ? parsedCache.employeesById[employee.employeeId] || parsedCache.employeesByName[normalizeName(employee.employeeName)]
-      : parsedCache.employeesByName[normalizeName(employee.employeeName)]
-    return count + (matchedProfile ? 1 : 0)
-  }, 0)
-}
 
 function buildTimesheetMatchMessage(parsedCache, timesheetData) {
   if (!parsedCache || !timesheetData?.employees?.length) return ''
@@ -165,6 +174,10 @@ const GLOBAL_CSS = `
     --paper:${COLORS.paper}; --ink:${COLORS.ink}; --ochre:${COLORS.ochre};
     --sage:${COLORS.sage}; --red:${COLORS.red}; --card:${COLORS.card};
     --muted:${COLORS.muted}; --line:${COLORS.line};
+    /* --ochre is the brand-accent slot (iSOFT red); --accent-strong is its
+       hover/pressed shade. --red stays a distinct deep crimson so the
+       validation-error signal never collides with the brand accent. */
+    --accent-strong:${COLORS.accentStrong};
     --serif:${SERIF}; --body:${BODY}; --mono:${MONO};
   }
   * { box-sizing: border-box; }
@@ -177,11 +190,11 @@ const GLOBAL_CSS = `
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  ::selection { background: rgba(194,112,58,0.22); }
+  ::selection { background: rgba(225,27,34,0.16); }
   ::-webkit-scrollbar { width: 11px; height: 11px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(31,30,27,0.18); border-radius: 6px; border: 3px solid var(--paper); }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(31,30,27,0.3); }
+  ::-webkit-scrollbar-thumb { background: rgba(20,22,28,0.18); border-radius: 6px; border: 3px solid var(--paper); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(20,22,28,0.3); }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -199,21 +212,23 @@ const GLOBAL_CSS = `
   .bg-grid {
     position: absolute; inset: 0;
     background-image:
-      linear-gradient(to right, rgba(31,30,27,0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(31,30,27,0.045) 1px, transparent 1px);
+      linear-gradient(to right, rgba(20,22,28,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(20,22,28,0.045) 1px, transparent 1px);
     background-size: 40px 40px;
     -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
     mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
   }
+  /* Brand background: one red bloom, one neutral ink bloom, one faint red.
+     Sage never appears here — green is reserved for "verified". */
   .blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.55; }
   .blob-1 { width: 540px; height: 540px; top: -180px; left: -130px;
-    background: radial-gradient(circle at 35% 35%, rgba(194,112,58,0.6), transparent 70%);
+    background: radial-gradient(circle at 35% 35%, rgba(225,27,34,0.42), transparent 70%);
     animation: blob 20s ease-in-out infinite; }
   .blob-2 { width: 500px; height: 500px; bottom: -200px; right: -120px;
-    background: radial-gradient(circle at 65% 65%, rgba(91,122,92,0.5), transparent 70%);
+    background: radial-gradient(circle at 65% 65%, rgba(20,22,28,0.10), transparent 70%);
     animation: blob 26s ease-in-out infinite reverse; }
   .blob-3 { width: 380px; height: 380px; top: 42%; left: 56%;
-    background: radial-gradient(circle at 50% 50%, rgba(194,112,58,0.28), transparent 70%);
+    background: radial-gradient(circle at 50% 50%, rgba(225,27,34,0.16), transparent 70%);
     animation: blob 30s ease-in-out infinite; }
 
   .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
@@ -229,17 +244,19 @@ const GLOBAL_CSS = `
     background: transparent; color: var(--ink); cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease; text-decoration: none; }
-  .btn:hover { background: rgba(31,30,27,0.05); border-color: rgba(31,30,27,0.24); }
+  .btn:hover { background: rgba(20,22,28,0.05); border-color: rgba(20,22,28,0.24); }
   .btn:active { transform: translateY(1px); }
 
+  /* The one call-to-action per screen: brand red at rest, deepening to
+     --accent-strong on hover with a soft red glow. */
   .btn-primary { font-family: var(--body); font-size: 15px; font-weight: 600;
-    border: 1px solid var(--ink); border-radius: 13px; padding: 15px 28px;
-    background: var(--ink); color: var(--paper); cursor: pointer;
+    border: 1px solid var(--ochre); border-radius: 13px; padding: 15px 28px;
+    background: var(--ochre); color: #FFFFFF; cursor: pointer;
     display: inline-flex; align-items: center; gap: 10px;
-    transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
-    box-shadow: 0 10px 30px -14px rgba(31,30,27,0.6); text-decoration: none; }
-  .btn-primary:hover:not(:disabled) { background: var(--ochre); border-color: var(--ochre);
-    box-shadow: 0 14px 34px -12px rgba(194,112,58,0.7); transform: translateY(-1px); }
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
+    box-shadow: 0 10px 30px -14px rgba(225,27,34,0.45); text-decoration: none; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-strong); border-color: var(--accent-strong);
+    box-shadow: 0 14px 34px -12px rgba(225,27,34,0.55); transform: translateY(-1px); }
   .btn-primary:active:not(:disabled) { transform: translateY(0); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed;
     box-shadow: none; background: transparent; color: var(--muted); border-color: var(--line); }
@@ -247,22 +264,22 @@ const GLOBAL_CSS = `
   .ucard { background: var(--card); border: 1px solid var(--line); border-radius: 18px;
     padding: 26px 26px 22px; position: relative; overflow: hidden;
     transition: border-color 0.18s ease, box-shadow 0.18s ease; }
-  .ucard.ready { border-color: rgba(91,122,92,0.5); box-shadow: 0 18px 40px -28px rgba(91,122,92,0.5); }
+  .ucard.ready { border-color: rgba(47,125,87,0.5); box-shadow: 0 18px 40px -28px rgba(47,125,87,0.5); }
 
-  .dropzone { border: 1.5px dashed rgba(31,30,27,0.26); border-radius: 13px;
+  .dropzone { border: 1.5px dashed rgba(20,22,28,0.26); border-radius: 13px;
     padding: 26px 18px; display: flex; flex-direction: column; align-items: center;
-    gap: 10px; text-align: center; cursor: pointer; background: rgba(245,241,234,0.5);
+    gap: 10px; text-align: center; cursor: pointer; background: rgba(244,245,247,0.5);
     transition: border-color 0.16s ease, background 0.16s ease; }
-  .dropzone:hover { border-color: var(--ochre); background: rgba(194,112,58,0.05); }
+  .dropzone:hover { border-color: var(--ochre); background: rgba(225,27,34,0.05); }
   .dropzone.over { border-color: var(--ochre); border-style: solid;
-    background: rgba(194,112,58,0.1); }
+    background: rgba(225,27,34,0.1); }
 
   .chip { display: flex; align-items: center; gap: 13px; border: 1px solid var(--line);
     border-radius: 13px; padding: 13px 14px; background: var(--paper); }
   .icon-x { display: grid; place-items: center; width: 30px; height: 30px;
     border-radius: 8px; border: 1px solid var(--line); background: transparent;
     color: var(--muted); cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
-  .icon-x:hover { color: var(--red); border-color: rgba(180,69,47,0.5); background: rgba(180,69,47,0.07); }
+  .icon-x:hover { color: var(--red); border-color: rgba(176,18,31,0.5); background: rgba(176,18,31,0.07); }
 
   .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     border-radius: 999px; padding: 7px 14px; background: var(--card);
@@ -270,16 +287,16 @@ const GLOBAL_CSS = `
   .step { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px;
     border: 1px solid transparent; border-radius: 14px; transition: all 0.3s ease; }
   .step.active { background: var(--card); border-color: var(--line);
-    box-shadow: 0 14px 34px -26px rgba(31,30,27,0.5); }
+    box-shadow: 0 14px 34px -26px rgba(20,22,28,0.5); }
   .step.done { opacity: 0.62; }
   .step-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
     display: grid; place-items: center; }
   .dot-pending { width: 9px; height: 9px; border-radius: 50%;
-    border: 1.5px solid rgba(31,30,27,0.28); }
+    border: 1.5px solid rgba(20,22,28,0.28); }
 
   .trow { display: grid; align-items: center; gap: 14px; padding: 16px 18px;
     cursor: pointer; transition: background 0.15s ease; border-radius: 12px; }
-  .trow:hover { background: rgba(31,30,27,0.035); }
+  .trow:hover { background: rgba(20,22,28,0.035); }
   .thead { display: grid; gap: 14px; padding: 0 18px 12px;
     border-bottom: 1px solid var(--line); }
   .th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
@@ -293,17 +310,17 @@ const GLOBAL_CSS = `
     text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
   .leader { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
   .leader-label { font-size: 13.5px; color: var(--ink); }
-  .leader-dots { flex: 1; border-bottom: 1px dotted rgba(31,30,27,0.3);
+  .leader-dots { flex: 1; border-bottom: 1px dotted rgba(20,22,28,0.3);
     transform: translateY(-4px); }
   .leader-amt { font-family: var(--mono); font-size: 13px; color: var(--ink); }
   .leader-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .leader-total .leader-label, .leader-total .leader-amt { font-weight: 600; font-size: 14px; }
   .flag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
-    color: #8a4a1f; background: rgba(194,112,58,0.12);
-    border: 1px solid rgba(194,112,58,0.28); border-radius: 10px; padding: 9px 13px; }
+    color: #B0121F; background: rgba(225,27,34,0.12);
+    border: 1px solid rgba(225,27,34,0.28); border-radius: 10px; padding: 9px 13px; }
 
   .clause-ref { position: relative; cursor: help;
-    border-bottom: 1px dotted rgba(31,30,27,0.35); }
+    border-bottom: 1px dotted rgba(20,22,28,0.35); }
   .clause-tip { position: absolute; bottom: calc(100% + 9px); left: 50%;
     transform: translateX(-50%); background: var(--ink); color: var(--paper);
     font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.55;
@@ -311,12 +328,12 @@ const GLOBAL_CSS = `
     text-align: left; white-space: normal; letter-spacing: 0;
     opacity: 0; visibility: hidden; transition: opacity 0.13s ease;
     pointer-events: none; z-index: 60;
-    box-shadow: 0 12px 30px -10px rgba(31,30,27,0.55); }
+    box-shadow: 0 12px 30px -10px rgba(20,22,28,0.55); }
   .clause-tip::after { content: ''; position: absolute; top: 100%; left: var(--tip-arrow, 50%);
     transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
   .clause-ref:hover .clause-tip { opacity: 1; visibility: visible; }
   .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
-  .danger-flag { color: var(--red); background: rgba(180,69,47,0.08); border-color: rgba(180,69,47,0.3); }
+  .danger-flag { color: var(--red); background: rgba(176,18,31,0.08); border-color: rgba(176,18,31,0.3); }
 
   .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
     display: flex; align-items: center; justify-content: space-between;
@@ -363,11 +380,9 @@ function Masthead({ stage }) {
   const names = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
   return (
     <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 46 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 9, background: COLORS.ink, color: COLORS.paper,
-          display: 'grid', placeItems: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 19,
-        }}>A</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src={isoftMark} alt="iSOFT" style={{ height: 34, width: 'auto', display: 'block' }} />
+        <div style={{ width: 1, height: 30, background: COLORS.line }} />
         <div>
           <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 16.5, lineHeight: 1 }}>Axi&thinsp;·&thinsp;WFM</div>
           <div className="eyebrow" style={{ marginTop: 4 }}>Award Interpreter</div>
@@ -419,7 +434,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 46, height: 46, borderRadius: 12, background: 'rgba(31,30,27,0.05)',
+            width: 46, height: 46, borderRadius: 12, background: 'rgba(20,22,28,0.05)',
             border: `1px solid ${COLORS.line}`, display: 'grid', placeItems: 'center', color: COLORS.ink,
           }}>
             <Icon size={22} strokeWidth={1.6} />
@@ -429,7 +444,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
             <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{subtitle}</div>
           </div>
         </div>
-        <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>
+        <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>
           {index}
         </span>
       </div>
@@ -446,8 +461,8 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
       {file ? (
         <div className="chip fade-up">
           <div style={{
-            width: 38, height: 38, borderRadius: 9, background: 'rgba(91,122,92,0.14)',
-            border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center',
+            width: 38, height: 38, borderRadius: 9, background: 'rgba(47,125,87,0.14)',
+            border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center',
             color: COLORS.sage, flexShrink: 0,
           }}>
             <Check size={19} strokeWidth={2.2} />
@@ -494,7 +509,7 @@ function StepRow({ step, status, delay }) {
   return (
     <div className={`step ${status} fade-up`} style={{ animationDelay: `${delay}ms` }}>
       <div className="step-icon" style={{
-        background: status === 'done' ? 'rgba(91,122,92,0.15)' : status === 'active' ? 'rgba(194,112,58,0.12)' : 'transparent',
+        background: status === 'done' ? 'rgba(47,125,87,0.15)' : status === 'active' ? 'rgba(225,27,34,0.12)' : 'transparent',
         border: status === 'pending' ? `1px solid ${COLORS.line}` : 'none',
         marginTop: 1,
       }}>
@@ -560,7 +575,7 @@ function IndustrySelector({ industry, onSetIndustry }) {
     fontFamily: BODY,
     fontSize: 13,
     opacity: disabled ? 0.5 : 1,
-    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(194,112,58,0.1)', color: COLORS.ink } : {}),
+    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(225,27,34,0.1)', color: COLORS.ink } : {}),
   })
   return (
     <div className="panel-inner" style={{ marginBottom: 26, padding: '18px 20px' }}>
@@ -624,7 +639,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
         <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
           Parse the award stack.
         </h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(20,22,28,0.72)', marginTop: 16 }}>
           Select a preloaded industry to interpret its award library straight away — no upload required.
           Uploading is optional: an award document merges on top of the library, an employee agreement adds
           employee matching and unlocks the timesheet run, and compliance notes are cross-referenced into the cache.
@@ -673,8 +688,8 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
             width: 9, height: 9, borderRadius: '50%',
-            background: ready ? COLORS.sage : 'rgba(31,30,27,0.25)',
-            boxShadow: ready ? '0 0 0 4px rgba(91,122,92,0.18)' : 'none',
+            background: ready ? COLORS.sage : 'rgba(20,22,28,0.25)',
+            boxShadow: ready ? '0 0 0 4px rgba(47,125,87,0.18)' : 'none',
             transition: 'all 0.2s ease',
           }} />
           <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
@@ -737,7 +752,7 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
           <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: COLORS.muted }}>PROGRESS</span>
           <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{pct}%</span>
         </div>
-        <div style={{ height: 4, background: 'rgba(31,30,27,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: 4, background: 'rgba(20,22,28,0.08)', borderRadius: 3, overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: COLORS.ochre, borderRadius: 3, transition: 'width 0.5s cubic-bezier(0.2,0.7,0.2,1)' }} />
         </div>
       </div>
@@ -766,17 +781,71 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
 // Feature-detect the optional RAG server (server/index.js). The app is fully
 // functional without it; when present, interpretation rows gain an "explain"
 // affordance grounded in the official award text.
+//
+// `awards` is the set of codes the server actually has indexed clause text for.
+// Only those can be explained — offering the affordance on an unindexed award
+// (an uploaded one, say) just yields a 409.
+const NO_RAG = { available: false, awards: new Set() }
+
 function useRagServer() {
-  const [available, setAvailable] = useState(false)
+  const [state, setState] = useState(NO_RAG)
   useEffect(() => {
     let cancelled = false
     fetch('/api/health')
       .then((r) => (r.ok ? r.json() : null))
-      .then((health) => { if (!cancelled && health?.ok) setAvailable(true) })
+      .then((health) => {
+        if (!cancelled && health?.ok) setState({ available: true, awards: new Set(health.awards || []) })
+      })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
-  return available
+  return state
+}
+
+/**
+ * Thumbs on a generated answer. This is not UX polish: each click appends a line
+ * to server/telemetry feedback.jsonl, which is the only non-self-reported signal
+ * available for building an eval set. It cannot be collected retroactively.
+ */
+function FeedbackControl({ kind, awardCode, rowId }) {
+  const [sent, setSent] = useState(null)
+
+  const send = (helpful) => {
+    setSent(helpful)
+    fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kind, awardCode, rowId, helpful }),
+    }).catch(() => {}) // a lost verdict must never disturb the reader
+  }
+
+  if (sent !== null) {
+    return (
+      <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 8 }}>
+        {sent ? 'Marked helpful — thank you.' : 'Marked unhelpful — thank you.'}
+      </div>
+    )
+  }
+  const button = (helpful, Icon, label) => (
+    <button
+      onClick={() => send(helpful)}
+      aria-label={label}
+      title={label}
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer', padding: 3,
+        color: COLORS.muted, display: 'inline-flex', alignItems: 'center',
+      }}
+    >
+      <Icon size={13} strokeWidth={1.9} />
+    </button>
+  )
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
+      <span style={{ fontSize: 11, color: COLORS.muted, marginRight: 2 }}>Was this helpful?</span>
+      {button(true, ThumbsUp, 'Mark this explanation helpful')}
+      {button(false, ThumbsDown, 'Mark this explanation unhelpful')}
+    </div>
+  )
 }
 
 function RowExplanation({ awardCode, row }) {
@@ -810,8 +879,23 @@ function RowExplanation({ awardCode, row }) {
     return <div style={{ fontSize: 12, color: COLORS.red }}>{state.error}</div>
   }
   if (state.status !== 'done') return null
+  // Retrieval found nothing relevant. This is a first-class answer — the model
+  // was never asked — and it must not look like a failed request.
+  if (state.data.noSources) {
+    return (
+      <div style={{ fontSize: 12.5, lineHeight: 1.55, color: COLORS.muted, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <AlertTriangle size={14} strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span>
+          {state.data.message}
+          <span className="mono" style={{ display: 'block', fontSize: 10.5, marginTop: 4 }}>
+            best match {Number(state.data.topScore).toFixed(3)} · relevance floor {Number(state.data.threshold).toFixed(2)}
+          </span>
+        </span>
+      </div>
+    )
+  }
   return (
-    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(31,30,27,0.82)' }}>
+    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(20,22,28,0.82)' }}>
       {state.data.explanation}
       {(state.data.citations || []).map((citation, i) => (
         <div key={i} style={{ marginTop: 7, paddingLeft: 10, borderLeft: `2px solid ${COLORS.ochre}55`, fontSize: 11.5, color: COLORS.muted }}>
@@ -819,55 +903,247 @@ function RowExplanation({ awardCode, row }) {
           {' '}“{citation.quote}”
         </div>
       ))}
+      <FeedbackControl kind="explain-row" awardCode={awardCode} rowId={row.rowId} />
     </div>
   )
 }
 
-function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, ragAvailable }) {
-  const [explainOpen, setExplainOpen] = useState(false)
+const CONFIDENCE_COLOR = { high: COLORS.sage, medium: COLORS.ochre, low: COLORS.muted }
+
+function ClassificationSuggestion({ suggestion }) {
+  const color = CONFIDENCE_COLOR[suggestion.confidence] || COLORS.muted
+  const grounded = (suggestion.citations || []).length > 0
   return (
-    <>
-      <div className="trow rowwrap" style={{ gridTemplateColumns: FLAT_INTERP_GRID, cursor: 'default', alignItems: 'start' }}>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
-          {matched && <BadgeCheck size={13} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, alignSelf: 'center' }} />}
-          {row.levelCode && <span className="mono" style={{ fontSize: 10.5, color: COLORS.muted }}>{row.levelCode}</span>}
-          <span style={{ fontSize: 12.5, fontWeight: 500 }}>{row.employeeLevel}</span>
+    <div style={{ padding: '12px 0', borderTop: `1px solid ${COLORS.line}` }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+        <span className="mono" style={{ fontSize: 12, color: COLORS.ochre, fontWeight: 600 }}>{suggestion.awardCode}</span>
+        <span style={{ fontSize: 13.5, fontWeight: 600 }}>{suggestion.employeeLevel}</span>
+        {suggestion.baseRateHourly != null && (
+          <span className="mono" style={{ fontSize: 12.5 }}>{fmt(suggestion.baseRateHourly)}/hr</span>
+        )}
+        <span className="pill" style={{ fontSize: 11, color, borderColor: `${color}55`, padding: '3px 10px' }}>
+          {suggestion.confidence} confidence
         </span>
-        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
-          {row.categoryLabel}
-          {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
-        </span>
-        <span style={{ fontSize: 12.5, color: 'rgba(31,30,27,0.74)', lineHeight: 1.45 }}>
-          <span style={{ fontWeight: 600, color: COLORS.ink }}>{row.title}</span>
-          {' — '}
-          {row.plainLanguage}
-          {row.conditionsText && (
-            <span style={{ display: 'block', fontSize: 11.5, color: COLORS.muted, marginTop: 3 }}>
-              When: {row.conditionsText}
+        {!suggestion.levelKey && (
+          <span style={{ fontSize: 11.5, color: COLORS.red }}>could not be joined to a cached award level</span>
+        )}
+      </div>
+      <div style={{ fontSize: 12.5, color: 'rgba(26,27,30,0.74)', marginTop: 5, lineHeight: 1.5 }}>
+        {suggestion.rationale}
+      </div>
+      {grounded ? (
+        (suggestion.citations || []).map((citation, index) => (
+          <div key={index} style={{ marginTop: 7, paddingLeft: 10, borderLeft: `2px solid ${COLORS.ochre}55`, fontSize: 11.5, color: COLORS.muted }}>
+            <span className="mono" style={{ color: COLORS.ochre, fontSize: 10.5 }}>{citation.clauseRef}</span>
+            {' '}“{citation.quote}”
+          </div>
+        ))
+      ) : (
+        <div style={{ marginTop: 7, fontSize: 11.5, color: COLORS.red }}>
+          Unverified — no quote from this suggestion could be matched to the official award text.
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The classifier only ever suggests. Applying a level to an employee stays a
+// human decision made against the agreement document — nothing here writes to
+// the parsed cache or the pay calculation.
+function ClassificationSuggestions({ employee }) {
+  const [state, setState] = useState({ status: 'idle' })
+  const description = describeEmployee(employee)
+  const canAsk = canClassify(employee)
+
+  const run = () => {
+    setState({ status: 'loading' })
+    fetch('/api/classify-employee', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: description }),
+    })
+      .then(async (response) => {
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || `classification failed (${response.status})`)
+        return data
+      })
+      .then((data) => setState({ status: 'done', data }))
+      .catch((error) => setState({ status: 'error', error: error.message }))
+  }
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {state.status === 'idle' && (
+        <button className="btn" onClick={run} disabled={!canAsk} style={{ fontSize: 13 }}>
+          <Sparkles size={14} strokeWidth={1.9} />
+          {canAsk ? 'Suggest a classification from the award library' : 'No job role in the timesheet to classify from'}
+        </button>
+      )}
+      {state.status === 'loading' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: COLORS.muted }}>
+          <Loader2 size={13} strokeWidth={2} className="spin" /> Searching the indexed classification definitions…
+        </div>
+      )}
+      {state.status === 'error' && (
+        <div style={{ fontSize: 12.5, color: COLORS.red }}>{state.error}</div>
+      )}
+      {state.status === 'done' && (
+        state.data.suggestions?.length > 0 ? (
+          <>
+            <div className="panel-label" style={{ marginBottom: 0 }}>Suggested classifications — review before use</div>
+            {state.data.suggestions.map((suggestion, index) => (
+              <ClassificationSuggestion key={`${suggestion.awardCode}-${suggestion.employeeLevel}-${index}`} suggestion={suggestion} />
+            ))}
+          </>
+        ) : (
+          <div style={{ fontSize: 12.5, color: COLORS.muted, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <AlertTriangle size={14} strokeWidth={1.8} style={{ flexShrink: 0, marginTop: 2 }} />
+            <span>
+              {state.data.noMatch || 'No classification in the indexed awards matched this role.'}
+              {state.data.noSources && (
+                <span className="mono" style={{ display: 'block', fontSize: 10.5, marginTop: 4 }}>
+                  best match {Number(state.data.topScore).toFixed(3)} · relevance floor {Number(state.data.threshold).toFixed(2)}
+                </span>
+              )}
             </span>
-          )}
-        </span>
-        <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
-        <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {row.clauseRef
-            ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
-            : '—'}
-          {ragAvailable && row.clauseRef && (
-            <button
-              onClick={() => setExplainOpen((open) => !open)}
-              title="Explain this row from the official award text"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                color: explainOpen ? COLORS.ochre : COLORS.muted, display: 'inline-flex', alignItems: 'center',
-              }}
-            >
-              <Sparkles size={13} strokeWidth={1.9} />
-            </button>
-          )}
+          </div>
+        )
+      )}
+    </div>
+  )
+}
+
+// Public holidays differ by state, and the penalty they attract (250-275%) is the
+// largest in the award. Without a jurisdiction only the seven national holidays
+// can be applied, so say so here rather than letting the number quietly be wrong.
+function JurisdictionPicker({ jurisdiction, onSetJurisdiction }) {
+  return (
+    <div className="panel-inner" style={{ marginBottom: 24, padding: '18px 20px' }}>
+      <div className="panel-label" style={{ marginBottom: 10 }}>Where were these shifts worked?</div>
+      <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select
+          value={jurisdiction}
+          onChange={(event) => onSetJurisdiction(event.target.value)}
+          aria-label="State or territory the shifts were worked in"
+          style={{
+            fontFamily: BODY, fontSize: 13.5, color: COLORS.ink, background: COLORS.card,
+            border: `1px solid ${jurisdiction ? COLORS.line : 'rgba(225,27,34,0.4)'}`,
+            borderRadius: 11, padding: '10px 13px', outline: 'none', minWidth: 260,
+          }}
+        >
+          <option value="">Not selected — national holidays only</option>
+          {JURISDICTIONS.map((code) => (
+            <option key={code} value={code}>{JURISDICTION_LABELS[code]} ({code})</option>
+          ))}
+        </select>
+        <span style={{ fontSize: 12.5, color: COLORS.muted, maxWidth: 520, lineHeight: 1.5 }}>
+          {jurisdiction
+            ? `Shifts are checked against the seven national public holidays. Gazetted ${jurisdiction} holidays are not loaded yet — mark any of those in the timesheet notes.`
+            : 'Without a state, only the seven national public holidays are applied. A state holiday worked would be paid as an ordinary day.'}
         </span>
       </div>
-      {explainOpen && (
-        <div style={{ padding: '10px 14px 14px', background: 'rgba(194,112,58,0.05)', borderBottom: `1px solid ${COLORS.line}` }}>
+    </div>
+  )
+}
+
+/**
+ * Minimum rates are re-set by the Annual Wage Review every 1 July, and only
+ * upward — so rates from before the review understate what is owed. A stale
+ * award is a danger flag and blocks dispersal; unknown currency is a note.
+ */
+function RateValidityNotice({ rateValidity }) {
+  const notices = (rateValidity || []).filter((assessment) => assessment.message)
+  if (!notices.length) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
+      {notices.map((assessment) => (
+        <Flag key={assessment.awardCode} danger={assessment.status === RATE_STATUS.STALE}>
+          {assessment.message}
+        </Flag>
+      ))}
+    </div>
+  )
+}
+
+/** Non-blocking notices from the pay run: what the calculator could not verify. */
+function CalculationWarnings({ warnings, publicHolidaysApplied }) {
+  if (!warnings?.length && !publicHolidaysApplied?.length) return null
+  return (
+    <div style={{ marginBottom: 28 }}>
+      {warnings?.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14, alignItems: 'flex-start' }}>
+          {warnings.map((warning) => <Flag key={warning}>{warning}</Flag>)}
+        </div>
+      )}
+      {publicHolidaysApplied?.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span className="eyebrow">Public holidays applied</span>
+          {publicHolidaysApplied.map((holiday) => (
+            <span key={holiday.date} className="pill" style={{ fontSize: 12 }}>
+              <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{holiday.date}</span>
+              {holiday.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UnmatchedEmployees({ parsedCache, timesheetData, ragAvailable }) {
+  const unmatched = unmatchedTimesheetEmployees(parsedCache, timesheetData)
+  if (!unmatched.length) return null
+  return (
+    <div className="panel-inner" style={{ marginBottom: 24 }}>
+      <div className="panel-label">
+        {unmatched.length} unmatched employee{unmatched.length === 1 ? '' : 's'}
+      </div>
+      <p style={{ fontSize: 12.5, color: COLORS.muted, margin: '0 0 4px', lineHeight: 1.55 }}>
+        These names appear in the timesheet but not in the employee agreement, so they have no award level and no pay
+        can be calculated for them.
+        {ragAvailable
+          ? ' The award library can suggest a classification from the official clause text — every suggestion is quoted from the award and must be confirmed against the agreement.'
+          : ' Start the award server (npm run server) for grounded classification suggestions.'}
+      </p>
+      {unmatched.map((employee) => (
+        <div key={employee.employeeId || employee.employeeName} style={{ marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{employee.employeeId || 'NO-ID'}</span>
+            <span style={{ fontSize: 14.5, fontWeight: 600 }}>{employee.employeeName}</span>
+            <span style={{ fontSize: 12.5, color: COLORS.muted }}>
+              {employee.jobRole || 'Role unavailable'} · {employee.employmentType || 'Employment unavailable'}
+            </span>
+          </div>
+          {ragAvailable && <ClassificationSuggestions employee={employee} />}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ExplainToggle({ row, clauseIndex, purposeMap, ragAvailable }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {row.clauseRef
+          ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
+          : '—'}
+        {ragAvailable && row.clauseRef && (
+          <button
+            onClick={() => setOpen((current) => !current)}
+            title="Explain this row from the official award text"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+              color: open ? COLORS.ochre : COLORS.muted, display: 'inline-flex', alignItems: 'center',
+            }}
+          >
+            <Sparkles size={13} strokeWidth={1.9} />
+          </button>
+        )}
+      </span>
+      {open && (
+        <div style={{ gridColumn: '1 / -1', padding: '10px 2px 4px' }}>
           <RowExplanation awardCode={row.awardCode} row={row} />
         </div>
       )}
@@ -875,44 +1151,163 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
   )
 }
 
-function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
-  const [showAll, setShowAll] = useState(false)
-  // Stable partition: levels matched by agreement profiles surface first.
-  const ordered = [
-    ...rows.filter((row) => matchedKeys.has(row.levelKey)),
-    ...rows.filter((row) => !matchedKeys.has(row.levelKey)),
-  ]
-  const visible = showAll ? ordered : ordered.slice(0, INTERP_ROW_CAP)
+// One row per clause fact. Rendered once for the whole award (shared) or under
+// the single level that diverges from it (level-specific).
+function ClauseFactRow({ row, clauseIndex, purposeMap, ragAvailable }) {
   return (
-    <div style={{ padding: '0 6px 12px' }}>
+    <div className="trow rowwrap" style={{ gridTemplateColumns: SHARED_GRID, cursor: 'default', alignItems: 'start' }}>
+      <span style={{ fontSize: 12.5, fontWeight: 600, minWidth: 0 }}>
+        {row.title}
+        {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
+      </span>
+      <span style={{ fontSize: 12.5, color: 'rgba(20,22,28,0.74)', lineHeight: 1.45 }}>
+        {row.plainLanguage}
+        {row.conditionsText && (
+          <span style={{ display: 'block', fontSize: 11.5, color: COLORS.muted, marginTop: 3 }}>
+            When: {row.conditionsText}
+          </span>
+        )}
+      </span>
+      <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
+      <ExplainToggle row={row} clauseIndex={clauseIndex} purposeMap={purposeMap} ragAvailable={ragAvailable} />
+    </div>
+  )
+}
+
+function LevelRatesTable({ levels, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
+  const [showAll, setShowAll] = useState(false)
+  const [openLevel, setOpenLevel] = useState('')
+  // Stable partition: levels named in the employee agreement surface first.
+  const ordered = [
+    ...levels.filter((level) => matchedKeys.has(level.levelKey)),
+    ...levels.filter((level) => !matchedKeys.has(level.levelKey)),
+  ]
+  const visible = showAll ? ordered : ordered.slice(0, LEVEL_ROW_CAP)
+
+  return (
+    <>
+      <div className="panel-label" style={{ padding: '4px 12px 10px' }}>Pay rates by level</div>
       <div className="table-scroll">
-        <div className="table-inner" style={{ minWidth: 760 }}>
-          <div className="thead" style={{ gridTemplateColumns: FLAT_INTERP_GRID }}>
+        <div className="table-inner" style={{ minWidth: 640 }}>
+          <div className="thead" style={{ gridTemplateColumns: RATES_GRID }}>
             <span className="th">Level</span>
-            <span className="th">Category</span>
-            <span className="th">Interpretation</span>
-            <span className="th">Value / rate</span>
+            <span className="th">Base rate</span>
+            <span className="th">Casual rate</span>
             <span className="th">Clause</span>
           </div>
-          {visible.map((row) => (
-            <InterpretationTableRowView
-              key={row.rowId}
-              row={row}
-              matched={matchedKeys.has(row.levelKey)}
-              clauseIndex={clauseIndex}
-              purposeMap={purposeMap}
-              ragAvailable={ragAvailable}
-            />
-          ))}
+          {visible.map((level) => {
+            const matched = matchedKeys.has(level.levelKey)
+            const isOpen = openLevel === level.levelKey
+            const hasSpecific = level.specificRows.length > 0
+            return (
+              <div key={level.levelKey} className="rowwrap">
+                <div
+                  className="trow"
+                  style={{ gridTemplateColumns: RATES_GRID, cursor: hasSpecific ? 'pointer' : 'default' }}
+                  onClick={hasSpecific ? () => setOpenLevel(isOpen ? '' : level.levelKey) : undefined}
+                >
+                  <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
+                    {matched && <BadgeCheck size={13} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, alignSelf: 'center' }} />}
+                    {level.levelCode && <span className="mono" style={{ fontSize: 10.5, color: COLORS.muted }}>{level.levelCode}</span>}
+                    <span style={{ fontSize: 12.5, fontWeight: 500 }}>{level.employeeLevel}</span>
+                    {hasSpecific && (
+                      <span style={{ fontSize: 11, color: COLORS.ochre }}>
+                        +{level.specificRows.length} level-specific
+                      </span>
+                    )}
+                  </span>
+                  <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{level.baseRow?.valueLabel || '—'}</span>
+                  <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{level.casualRow?.valueLabel || '—'}</span>
+                  {level.baseRow
+                    ? <ExplainToggle row={level.baseRow} clauseIndex={clauseIndex} purposeMap={purposeMap} ragAvailable={ragAvailable} />
+                    : <span style={{ fontSize: 11.5, color: COLORS.muted }}>—</span>}
+                </div>
+                {hasSpecific && isOpen && (
+                  <div style={{ padding: '4px 0 10px 18px', background: 'rgba(225,27,34,0.04)' }}>
+                    {level.specificRows.map((row) => (
+                      <ClauseFactRow
+                        key={row.rowId}
+                        row={row}
+                        clauseIndex={clauseIndex}
+                        purposeMap={purposeMap}
+                        ragAvailable={ragAvailable}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
-      {!showAll && ordered.length > INTERP_ROW_CAP && (
+      {!showAll && ordered.length > LEVEL_ROW_CAP && (
         <div style={{ padding: '12px 12px 4px' }}>
           <button className="btn" onClick={() => setShowAll(true)}>
-            <ChevronDown size={15} strokeWidth={1.9} /> Show all {ordered.length} clause rows
+            <ChevronDown size={15} strokeWidth={1.9} /> Show all {ordered.length} levels
           </button>
         </div>
       )}
+    </>
+  )
+}
+
+function SharedClauses({ shared, levelCount, clauseIndex, purposeMap, ragAvailable }) {
+  if (!shared.length) return null
+  return (
+    <div style={{ marginTop: 22 }}>
+      <div className="panel-label" style={{ padding: '4px 12px 4px' }}>
+        Applies to every level
+      </div>
+      <p style={{ fontSize: 12, color: COLORS.muted, margin: '0 12px 12px', lineHeight: 1.5 }}>
+        {levelCount === 1
+          ? 'These clauses apply to this level.'
+          : `These clauses are identical across all ${levelCount} levels of this award, so they are stated once.`}
+      </p>
+      <div className="table-scroll">
+        <div className="table-inner" style={{ minWidth: 640 }}>
+          <div className="thead" style={{ gridTemplateColumns: SHARED_GRID }}>
+            <span className="th">Clause</span>
+            <span className="th">What it means</span>
+            <span className="th">Value / rate</span>
+            <span className="th">Reference</span>
+          </div>
+          {shared.map((group) => (
+            <div key={group.category}>
+              <div className="th" style={{ padding: '16px 18px 6px', color: COLORS.ochre }}>{group.label}</div>
+              {group.rows.map((row) => (
+                <ClauseFactRow
+                  key={row.rowId}
+                  row={row}
+                  clauseIndex={clauseIndex}
+                  purposeMap={purposeMap}
+                  ragAvailable={ragAvailable}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AwardDetail({ view, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
+  return (
+    <div style={{ padding: '0 6px 12px' }}>
+      <LevelRatesTable
+        levels={view.levels}
+        matchedKeys={matchedKeys}
+        clauseIndex={clauseIndex}
+        purposeMap={purposeMap}
+        ragAvailable={ragAvailable}
+      />
+      <SharedClauses
+        shared={view.shared}
+        levelCount={view.levels.length}
+        clauseIndex={clauseIndex}
+        purposeMap={purposeMap}
+        ragAvailable={ragAvailable}
+      />
     </div>
   )
 }
@@ -925,8 +1320,7 @@ function sourceBadge(source, interp) {
   return { text: 'Uploaded document', color: COLORS.ochre }
 }
 
-function AwardInterpretationSection({ parsedCache }) {
-  const ragAvailable = useRagServer()
+function AwardInterpretationSection({ parsedCache, rag }) {
   const interps = Object.values(parsedCache.interpretationsByCode || {})
   const matchedKeys = new Set(
     (parsedCache.employeeProfiles || [])
@@ -935,7 +1329,7 @@ function AwardInterpretationSection({ parsedCache }) {
   )
   const hasMatch = (interp) => interp.levels.some((level) => matchedKeys.has(level.levelKey))
   const ordered = [...interps].sort((a, b) => Number(hasMatch(b)) - Number(hasMatch(a)))
-  const [openCode, setOpenCode] = useState(ordered[0]?.awardCode || '')
+  const [openCode, setOpenCode] = useState('')
   if (!interps.length) return null
 
   return (
@@ -943,16 +1337,16 @@ function AwardInterpretationSection({ parsedCache }) {
       <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Scale size={13} strokeWidth={1.8} /> Award interpretation — every level · every clause
       </div>
-      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 18px', maxWidth: 740, lineHeight: 1.55 }}>
-        The award read for you, deterministically — no timesheet needed. One table row per clause interpretation:
-        each classification level, every loading, penalty and allowance it grants, and the clause behind each one.
-        Levels named in the employee agreement are marked and shown first.
+      <p style={{ fontSize: 13.5, color: 'rgba(20,22,28,0.72)', margin: '0 0 18px', maxWidth: 740, lineHeight: 1.55 }}>
+        The award read for you, deterministically — no timesheet needed. Open an award to see the base rate for each
+        classification level, then the penalties and allowances that apply across every level. Levels named in the
+        employee agreement are marked and shown first.
       </p>
       {ordered.map((interp) => {
         const code = interp.awardCode
         const award = parsedCache.awardsByCode?.[code]
         const source = parsedCache.sourcesByCode?.[code] || 'uploaded'
-        const rows = buildInterpretationTableRows(interp, { source })
+        const view = buildAwardView(interp, { source })
         const badge = sourceBadge(source, interp)
         const isOpen = openCode === code
         return (
@@ -967,19 +1361,19 @@ function AwardInterpretationSection({ parsedCache }) {
                 {hasMatch(interp) && <BadgeCheck size={15} strokeWidth={1.8} color={COLORS.sage} style={{ alignSelf: 'center' }} />}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span className="pill" style={{ fontSize: 11.5 }}>{interp.levels.length} levels</span>
-                <span className="pill" style={{ fontSize: 11.5 }}>{rows.length} clause rows</span>
+                <span className="pill" style={{ fontSize: 11.5 }}>{view.levels.length} levels</span>
+                <span className="pill" style={{ fontSize: 11.5 }}>{view.totals.sharedRows} shared clauses</span>
                 <span className="pill" style={{ fontSize: 11.5, color: badge.color, borderColor: `${badge.color}55` }}>{badge.text}</span>
                 {isOpen ? <ChevronUp size={16} strokeWidth={1.8} color={COLORS.muted} /> : <ChevronDown size={16} strokeWidth={1.8} color={COLORS.muted} />}
               </div>
             </div>
             {isOpen && (
-              <AwardInterpretationTable
-                rows={rows}
+              <AwardDetail
+                view={view}
                 matchedKeys={matchedKeys}
                 clauseIndex={award?.clauseIndex || {}}
                 purposeMap={buildPurposeMap(award?.references || {})}
-                ragAvailable={ragAvailable}
+                ragAvailable={rag.available && rag.awards.has(code)}
               />
             )}
           </div>
@@ -989,77 +1383,71 @@ function AwardInterpretationSection({ parsedCache }) {
   )
 }
 
-function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
-  // No agreement uploaded → interpret-only: the preloaded award library is the
-  // whole payload, and there are no employee profiles to run a timesheet against.
-  const interpretOnly = parsedCache.employeeProfiles.length === 0
+function TimesheetEmployeeGroup({ employee }) {
+  const [open, setOpen] = useState(false)
+  const shiftCount = employee.shifts.length
   return (
-    <div className="fade-up">
-      <div style={{ marginBottom: 26, maxWidth: 660 }}>
-        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {interpretOnly
-            ? <><Scale size={13} strokeWidth={1.8} /> 03 — Interpretation</>
-            : <><CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet</>}
+    <div className="emp-group">
+      <div
+        onClick={() => setOpen((current) => !current)}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setOpen((current) => !current) } }}
+        style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap', cursor: 'pointer' }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{employee.employeeId || 'NO-ID'}</span>
+          <span style={{ fontSize: 15.5, fontWeight: 600 }}>{employee.employeeName}</span>
+          <span style={{ fontSize: 12.5, color: COLORS.muted }}>{employee.jobRole || 'Role unavailable'} · {employee.employmentType || 'Employment unavailable'}</span>
         </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
-          {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
-        </h1>
-        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
-          {interpretOnly
-            ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement on the upload step to match employees and run a pay-period timesheet.'
-            : 'The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against cached award levels without re-parsing the documents.'}
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 12.5, color: COLORS.muted }}>{shiftCount} shift{shiftCount === 1 ? '' : 's'}</span>
+          <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{employee.totalHours} hrs</span>
+          {open ? <ChevronUp size={16} strokeWidth={1.8} color={COLORS.muted} /> : <ChevronDown size={16} strokeWidth={1.8} color={COLORS.muted} />}
+        </div>
       </div>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
-        <span className="pill"><Layers size={15} strokeWidth={1.7} color={COLORS.ochre} />Award codes: {Object.keys(parsedCache.awardsByCode).join(', ') || 'none'}</span>
-        <span className="pill"><BadgeCheck size={15} strokeWidth={1.7} color={COLORS.sage} />{Object.keys(parsedCache.awardLevelsByKey).length} award levels cached</span>
-        <span className="pill"><FileText size={15} strokeWidth={1.7} color={COLORS.ochre} />{parsedCache.employeeProfiles.length} agreement profiles</span>
-        <span className="pill"><Scale size={15} strokeWidth={1.7} color={COLORS.ink} />{parsedCache.parseWarnings.length} parse warnings</span>
-      </div>
-
-      <AwardInterpretationSection key={parsedCache.cacheFingerprint} parsedCache={parsedCache} />
-
-      {interpretOnly && (
-        <div style={{ marginBottom: 24 }}>
-          <Flag>
-            Interpretation is running on the preloaded award library. To match employees and calculate pay from a
-            timesheet, go back and add an employee agreement document.
-          </Flag>
+      {open && (
+        <div className="table-scroll">
+          <div className="table-inner">
+            <div className="ts-head">
+              <span className="th">Date</span><span className="th">Day</span><span className="th">Start</span>
+              <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
+            </div>
+            {employee.shifts.map((shift) => (
+              <div className="ts-row" key={`${shift.date}-${shift.start}-${shift.finish}`}>
+                <span className="mono" style={{ fontSize: 12.5 }}>{shift.date}</span>
+                <span style={{ fontSize: 13 }}>{shift.day}</span>
+                <span className="mono" style={{ fontSize: 12.5 }}>{shift.start}</span>
+                <span className="mono" style={{ fontSize: 12.5 }}>{shift.finish}</span>
+                <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.breakMinutes}m</span>
+                <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{shift.hours}</span>
+                <span style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.notes || '—'}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
+    </div>
+  )
+}
 
-      {!interpretOnly && (
-      <>
-      <div className="upload-grid" style={{ marginBottom: 24 }}>
-        <UploadCard
-          index="04"
-          icon={FileSpreadsheet}
-          title="Timesheet"
-          subtitle="Shift entries for the pay period"
-          accept=".csv,.xlsx,.xls,.pdf"
-          formats="CSV · XLSX · XLS · PDF"
-          file={timesheetFile}
-          onFile={onTimesheetFile}
-          onRemove={() => onTimesheetFile(null)}
-        />
-        <div className="ucard ready">
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{
-                width: 46, height: 46, borderRadius: 12, background: 'rgba(91,122,92,0.12)',
-                border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
-              }}>
-                <BadgeCheck size={22} strokeWidth={1.6} />
-              </div>
-              <div>
-                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Cached interpretation state</div>
-                <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
-              </div>
-            </div>
-            <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
+function CacheStateDetails({ parsedCache }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <>
+      <button
+        className="btn"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        style={{ fontSize: 13 }}
+      >
+        {open ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
+        {open ? 'Hide cache details' : 'Show cache details'}
+      </button>
+      {open && (
+        <div className="fade-up">
+          <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
             <div className="chip">
               <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>Fingerprint</span>
               <span className="mono" style={{ fontSize: 11.5, color: COLORS.ink, marginLeft: 'auto' }}>{parsedCache.cacheFingerprint.slice(0, 12)}…</span>
@@ -1077,12 +1465,104 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
             Timesheet submission will only hit this cached structure. The backend parser is not re-run unless the rule documents change.
           </div>
         </div>
+      )}
+    </>
+  )
+}
+
+function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, jurisdiction, onSetJurisdiction, onTimesheetFile, onBack, onContinue }) {
+  // No agreement uploaded → interpret-only: the preloaded award library is the
+  // whole payload, and there are no employee profiles to run a timesheet against.
+  const interpretOnly = parsedCache.employeeProfiles.length === 0
+  // Probed once here and passed down, so the accordion and the classifier don't
+  // each hit /api/health (the accordion remounts on every cache fingerprint).
+  const rag = useRagServer()
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 26, maxWidth: 660 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {interpretOnly
+            ? <><Scale size={13} strokeWidth={1.8} /> 03 — Interpretation</>
+            : <><CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet</>}
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+          {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(20,22,28,0.72)', marginTop: 14 }}>
+          {interpretOnly
+            ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement on the upload step to match employees and run a pay-period timesheet.'
+            : 'The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against cached award levels without re-parsing the documents.'}
+        </p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 28 }}>
+        <span className="pill"><Layers size={15} strokeWidth={1.7} color={COLORS.ochre} />Award codes: {Object.keys(parsedCache.awardsByCode).join(', ') || 'none'}</span>
+        <span className="pill"><BadgeCheck size={15} strokeWidth={1.7} color={COLORS.sage} />{Object.keys(parsedCache.awardLevelsByKey).length} award levels cached</span>
+        <span className="pill"><FileText size={15} strokeWidth={1.7} color={COLORS.ochre} />{parsedCache.employeeProfiles.length} agreement profiles</span>
+        <span className="pill"><Scale size={15} strokeWidth={1.7} color={COLORS.ink} />{parsedCache.parseWarnings.length} parse warnings</span>
+      </div>
+
+      <AwardInterpretationSection key={parsedCache.cacheFingerprint} parsedCache={parsedCache} rag={rag} />
+
+      {interpretOnly && (
+        <div style={{ marginBottom: 24 }}>
+          <Flag>
+            Interpretation is running on the preloaded award library. To match employees and calculate pay from a
+            timesheet, go back and add an employee agreement document.
+          </Flag>
+        </div>
+      )}
+
+      {!interpretOnly && (
+      <>
+      <JurisdictionPicker jurisdiction={jurisdiction} onSetJurisdiction={onSetJurisdiction} />
+
+      <div className="upload-grid" style={{ marginBottom: 24 }}>
+        <UploadCard
+          index="04"
+          icon={FileSpreadsheet}
+          title="Timesheet"
+          subtitle="Shift entries for the pay period"
+          accept=".csv,.xlsx,.xls,.pdf"
+          formats="CSV · XLSX · XLS · PDF"
+          file={timesheetFile}
+          onFile={onTimesheetFile}
+          onRemove={() => onTimesheetFile(null)}
+        />
+        <div className="ucard ready">
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: 12, background: 'rgba(47,125,87,0.12)',
+                border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
+              }}>
+                <BadgeCheck size={22} strokeWidth={1.6} />
+              </div>
+              <div>
+                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Cached interpretation state</div>
+                <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
+              </div>
+            </div>
+            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
+          </div>
+          <CacheStateDetails parsedCache={parsedCache} />
+        </div>
       </div>
 
       {timesheetError && (
         <div style={{ marginBottom: 18 }}>
           <Flag danger>{timesheetError}</Flag>
         </div>
+      )}
+
+      {timesheetData?.parseWarnings?.length > 0 && (
+        <div style={{ marginBottom: 18, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+          {timesheetData.parseWarnings.map((warning) => <Flag danger key={warning}>{warning}</Flag>)}
+        </div>
+      )}
+
+      {timesheetData && (
+        <UnmatchedEmployees parsedCache={parsedCache} timesheetData={timesheetData} ragAvailable={rag.available} />
       )}
 
       {timesheetData && (
@@ -1094,35 +1574,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
           </div>
 
           {timesheetData.employees.map((employee) => (
-            <div className="emp-group" key={employee.employeeId || employee.employeeName}>
-              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-                  <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{employee.employeeId || 'NO-ID'}</span>
-                  <span style={{ fontSize: 15.5, fontWeight: 600 }}>{employee.employeeName}</span>
-                  <span style={{ fontSize: 12.5, color: COLORS.muted }}>{employee.jobRole || 'Role unavailable'} · {employee.employmentType || 'Employment unavailable'}</span>
-                </div>
-                <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{employee.totalHours} hrs</span>
-              </div>
-              <div className="table-scroll">
-                <div className="table-inner">
-                  <div className="ts-head">
-                    <span className="th">Date</span><span className="th">Day</span><span className="th">Start</span>
-                    <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
-                  </div>
-                  {employee.shifts.map((shift) => (
-                    <div className="ts-row" key={`${shift.date}-${shift.start}-${shift.finish}`}>
-                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.date}</span>
-                      <span style={{ fontSize: 13 }}>{shift.day}</span>
-                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.start}</span>
-                      <span className="mono" style={{ fontSize: 12.5 }}>{shift.finish}</span>
-                      <span className="mono" style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.breakMinutes}m</span>
-                      <span className="mono" style={{ fontSize: 13, fontWeight: 600 }}>{shift.hours}</span>
-                      <span style={{ fontSize: 12.5, color: COLORS.muted }}>{shift.notes || '—'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <TimesheetEmployeeGroup key={employee.employeeId || employee.employeeName} employee={employee} />
           ))}
         </>
       )}
@@ -1310,7 +1762,7 @@ function ClauseRef({ refText, clauseIndex, purposeMap = {}, align = 'center', cl
             <strong>{part}</strong>
             {title ? ` — ${title}` : ' — referenced provision of the award'}
             {purposeMap[baseRef] && (
-              <span style={{ display: 'block', color: 'rgba(245,241,234,0.72)', fontSize: 11.5 }}>
+              <span style={{ display: 'block', color: 'rgba(244,245,247,0.72)', fontSize: 11.5 }}>
                 {purposeMap[baseRef]}
               </span>
             )}
@@ -1392,7 +1844,7 @@ function InterpretationExtras({ row }) {
           title={`${extra.type} — ${extra.condition || extra.meaning}`}
           style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
         >
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(31,30,27,0.25)', flexShrink: 0, marginLeft: 4, marginRight: 4 }} />
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(20,22,28,0.25)', flexShrink: 0, marginLeft: 4, marginRight: 4 }} />
           <span style={{ fontSize: 12, color: COLORS.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
             {extra.type}
           </span>
@@ -1441,7 +1893,7 @@ function WorkedChips({ summary }) {
           key={label}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
-            color: COLORS.sage, background: 'rgba(91,122,92,0.1)', border: '1px solid rgba(91,122,92,0.28)',
+            color: COLORS.sage, background: 'rgba(47,125,87,0.1)', border: '1px solid rgba(47,125,87,0.28)',
             borderRadius: 999, padding: '4px 11px',
           }}
         >
@@ -1462,7 +1914,7 @@ function InterpretationCard({ row }) {
   return (
     <div style={{
       background: COLORS.card,
-      border: `1px solid ${hasIssues ? 'rgba(180,69,47,0.4)' : COLORS.line}`,
+      border: `1px solid ${hasIssues ? 'rgba(176,18,31,0.4)' : COLORS.line}`,
       borderRadius: 16,
       padding: '18px 22px 14px',
     }}>
@@ -1539,23 +1991,37 @@ function InterpretationCard({ row }) {
 }
 
 function InterpretationTable({ rows }) {
+  const [open, setOpen] = useState(false)
+  const flagged = rows.filter((row) => (row.interpretation?.issues || []).length > 0 || row.validationErrors.length > 0).length
   return (
     <div style={{ marginTop: 36 }}>
       <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Layers size={13} strokeWidth={1.8} /> Granular interpretation — award code · clause · extras
       </div>
-      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 16px', maxWidth: 720, lineHeight: 1.55 }}>
+      <p style={{ fontSize: 13.5, color: 'rgba(20,22,28,0.72)', margin: '0 0 16px', maxWidth: 720, lineHeight: 1.55 }}>
         One card per employee: the award clause behind their base rate, what they worked, what they are
         entitled to per hour and in total, and the extras the award grants — each with its clause.
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {rows.map((row) => <InterpretationCard key={`interp-${row.id}`} row={row} />)}
-      </div>
+      <button className="btn" onClick={() => setOpen((current) => !current)} aria-expanded={open}>
+        {open ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
+        {open ? 'Hide interpretation cards' : `Show interpretation for ${rows.length} employee${rows.length === 1 ? '' : 's'}`}
+        {!open && flagged > 0 && (
+          <span style={{ color: COLORS.red, fontWeight: 600 }}>· {flagged} flagged</span>
+        )}
+      </button>
+      {open && (
+        <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
+          {rows.map((row) => <InterpretationCard key={`interp-${row.id}`} row={row} />)}
+        </div>
+      )}
     </div>
   )
 }
 
 function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow }) {
+  // Paying from rates the tool knows are superseded would underpay every
+  // employee on that award. Export and review stay available; dispersal does not.
+  const staleRates = (results.rateValidity || []).filter(isBlocking)
   return (
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
@@ -1564,7 +2030,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
             <BadgeCheck size={14} strokeWidth={1.9} /> Calculation complete
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>
-            {results.stats.employees} employees calculated
+            {results.stats.employees} employee{results.stats.employees === 1 ? '' : 's'} calculated
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
@@ -1576,6 +2042,9 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
           </button>
         </div>
       </div>
+
+      <RateValidityNotice rateValidity={results.rateValidity} />
+      <CalculationWarnings warnings={results.warnings} publicHolidaysApplied={results.publicHolidaysApplied} />
 
       <div className="stats-grid" style={{ marginBottom: 36 }}>
         <StatCard icon={Clock} label="Total hours" value={`${results.stats.totalHours}`} caption="across the uploaded timesheet" accent={COLORS.ink} />
@@ -1612,15 +2081,21 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
 
       <InterpretationTable rows={results.rows} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 22, padding: '18px 22px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 22, padding: '18px 22px', background: COLORS.card, border: `1px solid ${staleRates.length ? 'rgba(176,18,31,0.4)' : COLORS.line}`, borderRadius: 16 }}>
         <div>
-          <span className="eyebrow">Ready to disperse</span>
+          <span className="eyebrow">{staleRates.length ? 'Cannot disperse' : 'Ready to disperse'}</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
-            <span style={{ fontWeight: 600 }}>{results.stats.employees} employees</span>
+            <span style={{ fontWeight: 600 }}>{results.stats.employees} employee{results.stats.employees === 1 ? '' : 's'}</span>
             <span style={{ color: COLORS.muted }}> · {fmt(results.stats.totalCalculatedPay)} total calculated pay</span>
           </div>
+          {staleRates.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 12.5, color: COLORS.red, maxWidth: 620, lineHeight: 1.5 }}>
+              {staleRates.map((a) => a.awardCode).join(', ')} {staleRates.length === 1 ? 'is' : 'are'} calculated from rates
+              superseded by the Annual Wage Review. Re-seed the award library before paying — the totals above are understated.
+            </div>
+          )}
         </div>
-        <button className="btn-primary" onClick={onDisperse}>
+        <button className="btn-primary" onClick={onDisperse} disabled={staleRates.length > 0}>
           Disperse pay <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
@@ -1649,7 +2124,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           <CheckCircle2 size={14} strokeWidth={1.9} /> 05 — Confirmation
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>Pay dispersed.</h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(20,22,28,0.72)', marginTop: 16 }}>
           Payroll has been dispersed for the period. Send a confirmation to the payroll mailbox below.
         </p>
       </div>
@@ -1672,13 +2147,13 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           aria-label="Confirmation email recipient"
           style={{
             width: '100%', maxWidth: 420, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
-            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(180,69,47,0.5)'}`,
+            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(176,18,31,0.5)'}`,
             borderRadius: 10, padding: '11px 13px', outline: 'none',
           }}
         />
         <div className="email-preview">
           <div style={{ fontWeight: 600, marginBottom: 6 }}>{subject}</div>
-          <div style={{ whiteSpace: 'pre-wrap', color: 'rgba(31,30,27,0.78)' }}>{body}</div>
+          <div style={{ whiteSpace: 'pre-wrap', color: 'rgba(20,22,28,0.78)' }}>{body}</div>
         </div>
       </div>
 
@@ -1701,9 +2176,12 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
 function Footer() {
   return (
     <div className="footer">
-      <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
-        AXI·WFM — INTELLIGENCE LAYER / AWARD INTERPRETATION
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src={isoftWordmark} alt="iSOFT" style={{ height: 17, width: 'auto', display: 'block' }} />
+        <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
+          ANZ · AWARD INTERPRETATION
+        </span>
+      </div>
       <span style={{ fontSize: 12, color: COLORS.muted, maxWidth: 420, textAlign: 'right' }}>
         Suggestions only. Review every classification against the current award before processing pay.
       </span>
@@ -1818,7 +2296,10 @@ export default function App() {
 
   const handleCalculate = () => {
     if (!state.parsedCache || !state.timesheetData) return
-    dispatch({ type: 'setResults', results: calculateTimesheetResults(state.parsedCache, state.timesheetData) })
+    dispatch({
+      type: 'setResults',
+      results: calculateTimesheetResults(state.parsedCache, state.timesheetData, { jurisdiction: state.jurisdiction || undefined }),
+    })
     setExpandedRowId(null)
     dispatch({ type: 'setStage', stage: 4 })
   }
@@ -1870,6 +2351,8 @@ export default function App() {
             timesheetFile={state.timesheetFile}
             timesheetData={state.timesheetData}
             timesheetError={state.timesheetError}
+            jurisdiction={state.jurisdiction}
+            onSetJurisdiction={(jurisdiction) => dispatch({ type: 'setJurisdiction', jurisdiction })}
             onTimesheetFile={handleTimesheetFile}
             onBack={() => dispatch({ type: 'setStage', stage: 1 })}
             onContinue={handleCalculate}
