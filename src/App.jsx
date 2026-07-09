@@ -611,7 +611,12 @@ function IndustrySelector({ industry, onSetIndustry }) {
 }
 
 function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onContinue }) {
-  const ready = Boolean(documents.agreement && (documents.award || (industry && isIndustrySeeded(industry))))
+  const seeded = Boolean(industry && isIndustrySeeded(industry))
+  const hasUploads = Boolean(documents.award || documents.compliance || documents.agreement)
+  // Interpret as soon as there's an award source: a preloaded industry library or
+  // an uploaded award. The employee agreement is optional — it only adds employee
+  // matching and unlocks the timesheet run.
+  const ready = seeded || Boolean(documents.award)
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 36, maxWidth: 640 }}>
@@ -620,9 +625,9 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
           Parse the award stack.
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
-          Select a preloaded industry award library or upload an award document, then add the employee agreements.
-          Compliance documents are optional but will be cross-referenced into the cached backend state before the
-          timesheet is uploaded.
+          Select a preloaded industry to interpret its award library straight away — no upload required.
+          Uploading is optional: an award document merges on top of the library, an employee agreement adds
+          employee matching and unlocks the timesheet run, and compliance notes are cross-referenced into the cache.
         </p>
       </div>
 
@@ -655,7 +660,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
           index="03"
           icon={FileText}
           title="Employee Agreement"
-          subtitle="Profiles, roles, levels and override rates"
+          subtitle="Optional — adds employee matching and the timesheet run"
           accept=".pdf,.docx,.doc,.txt"
           formats="PDF · DOCX · TXT"
           file={documents.agreement}
@@ -673,11 +678,13 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
             transition: 'all 0.2s ease',
           }} />
           <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
-            {ready ? 'Ready to build the parsed cache' : 'Select an industry or upload an award, plus the employee agreement, to continue'}
+            {ready
+              ? (hasUploads ? 'Ready to build the parsed cache' : 'Ready to interpret the preloaded award library')
+              : 'Select a preloaded industry — or upload an award — to continue'}
           </span>
         </div>
         <button className="btn-primary" disabled={!ready} onClick={onContinue}>
-          Parse documents
+          {hasUploads ? 'Parse documents' : 'Interpret preloaded awards'}
           <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
@@ -756,39 +763,119 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
   )
 }
 
-function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap }) {
+// Feature-detect the optional RAG server (server/index.js). The app is fully
+// functional without it; when present, interpretation rows gain an "explain"
+// affordance grounded in the official award text.
+function useRagServer() {
+  const [available, setAvailable] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/health')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((health) => { if (!cancelled && health?.ok) setAvailable(true) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  return available
+}
+
+function RowExplanation({ awardCode, row }) {
+  const [state, setState] = useState({ status: 'idle' })
+  useEffect(() => {
+    let cancelled = false
+    setState({ status: 'loading' })
+    fetch('/api/explain-row', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ awardCode, row }),
+    })
+      .then(async (r) => {
+        const data = await r.json()
+        if (!r.ok) throw new Error(data.error || `explain failed (${r.status})`)
+        return data
+      })
+      .then((data) => { if (!cancelled) setState({ status: 'done', data }) })
+      .catch((error) => { if (!cancelled) setState({ status: 'error', error: error.message }) })
+    return () => { cancelled = true }
+  }, [awardCode, row.rowId])
+
+  if (state.status === 'loading') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: COLORS.muted }}>
+        <Loader2 size={13} strokeWidth={2} className="spin" /> Reading the award text…
+      </div>
+    )
+  }
+  if (state.status === 'error') {
+    return <div style={{ fontSize: 12, color: COLORS.red }}>{state.error}</div>
+  }
+  if (state.status !== 'done') return null
   return (
-    <div className="trow rowwrap" style={{ gridTemplateColumns: FLAT_INTERP_GRID, cursor: 'default', alignItems: 'start' }}>
-      <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
-        {matched && <BadgeCheck size={13} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, alignSelf: 'center' }} />}
-        {row.levelCode && <span className="mono" style={{ fontSize: 10.5, color: COLORS.muted }}>{row.levelCode}</span>}
-        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{row.employeeLevel}</span>
-      </span>
-      <span style={{ fontSize: 12.5, fontWeight: 600 }}>
-        {row.categoryLabel}
-        {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
-      </span>
-      <span style={{ fontSize: 12.5, color: 'rgba(31,30,27,0.74)', lineHeight: 1.45 }}>
-        <span style={{ fontWeight: 600, color: COLORS.ink }}>{row.title}</span>
-        {' — '}
-        {row.plainLanguage}
-        {row.conditionsText && (
-          <span style={{ display: 'block', fontSize: 11.5, color: COLORS.muted, marginTop: 3 }}>
-            When: {row.conditionsText}
-          </span>
-        )}
-      </span>
-      <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
-      <span style={{ fontSize: 11.5, color: COLORS.muted }}>
-        {row.clauseRef
-          ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
-          : '—'}
-      </span>
+    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(31,30,27,0.82)' }}>
+      {state.data.explanation}
+      {(state.data.citations || []).map((citation, i) => (
+        <div key={i} style={{ marginTop: 7, paddingLeft: 10, borderLeft: `2px solid ${COLORS.ochre}55`, fontSize: 11.5, color: COLORS.muted }}>
+          <span className="mono" style={{ color: COLORS.ochre, fontSize: 10.5 }}>{citation.clauseRef}</span>
+          {' '}“{citation.quote}”
+        </div>
+      ))}
     </div>
   )
 }
 
-function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap }) {
+function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, ragAvailable }) {
+  const [explainOpen, setExplainOpen] = useState(false)
+  return (
+    <>
+      <div className="trow rowwrap" style={{ gridTemplateColumns: FLAT_INTERP_GRID, cursor: 'default', alignItems: 'start' }}>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 7, flexWrap: 'wrap', minWidth: 0 }}>
+          {matched && <BadgeCheck size={13} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, alignSelf: 'center' }} />}
+          {row.levelCode && <span className="mono" style={{ fontSize: 10.5, color: COLORS.muted }}>{row.levelCode}</span>}
+          <span style={{ fontSize: 12.5, fontWeight: 500 }}>{row.employeeLevel}</span>
+        </span>
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+          {row.categoryLabel}
+          {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
+        </span>
+        <span style={{ fontSize: 12.5, color: 'rgba(31,30,27,0.74)', lineHeight: 1.45 }}>
+          <span style={{ fontWeight: 600, color: COLORS.ink }}>{row.title}</span>
+          {' — '}
+          {row.plainLanguage}
+          {row.conditionsText && (
+            <span style={{ display: 'block', fontSize: 11.5, color: COLORS.muted, marginTop: 3 }}>
+              When: {row.conditionsText}
+            </span>
+          )}
+        </span>
+        <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
+        <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {row.clauseRef
+            ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
+            : '—'}
+          {ragAvailable && row.clauseRef && (
+            <button
+              onClick={() => setExplainOpen((open) => !open)}
+              title="Explain this row from the official award text"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
+                color: explainOpen ? COLORS.ochre : COLORS.muted, display: 'inline-flex', alignItems: 'center',
+              }}
+            >
+              <Sparkles size={13} strokeWidth={1.9} />
+            </button>
+          )}
+        </span>
+      </div>
+      {explainOpen && (
+        <div style={{ padding: '10px 14px 14px', background: 'rgba(194,112,58,0.05)', borderBottom: `1px solid ${COLORS.line}` }}>
+          <RowExplanation awardCode={row.awardCode} row={row} />
+        </div>
+      )}
+    </>
+  )
+}
+
+function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
   const [showAll, setShowAll] = useState(false)
   // Stable partition: levels matched by agreement profiles surface first.
   const ordered = [
@@ -814,6 +901,7 @@ function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap }
               matched={matchedKeys.has(row.levelKey)}
               clauseIndex={clauseIndex}
               purposeMap={purposeMap}
+              ragAvailable={ragAvailable}
             />
           ))}
         </div>
@@ -838,6 +926,7 @@ function sourceBadge(source, interp) {
 }
 
 function AwardInterpretationSection({ parsedCache }) {
+  const ragAvailable = useRagServer()
   const interps = Object.values(parsedCache.interpretationsByCode || {})
   const matchedKeys = new Set(
     (parsedCache.employeeProfiles || [])
@@ -890,6 +979,7 @@ function AwardInterpretationSection({ parsedCache }) {
                 matchedKeys={matchedKeys}
                 clauseIndex={award?.clauseIndex || {}}
                 purposeMap={buildPurposeMap(award?.references || {})}
+                ragAvailable={ragAvailable}
               />
             )}
           </div>
@@ -900,18 +990,24 @@ function AwardInterpretationSection({ parsedCache }) {
 }
 
 function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
+  // No agreement uploaded → interpret-only: the preloaded award library is the
+  // whole payload, and there are no employee profiles to run a timesheet against.
+  const interpretOnly = parsedCache.employeeProfiles.length === 0
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet
+          {interpretOnly
+            ? <><Scale size={13} strokeWidth={1.8} /> 03 — Interpretation</>
+            : <><CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet</>}
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
-          Upload and review the timesheet.
+          {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
-          The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against
-          cached award levels without re-parsing the documents.
+          {interpretOnly
+            ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement on the upload step to match employees and run a pay-period timesheet.'
+            : 'The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against cached award levels without re-parsing the documents.'}
         </p>
       </div>
 
@@ -924,6 +1020,17 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
 
       <AwardInterpretationSection key={parsedCache.cacheFingerprint} parsedCache={parsedCache} />
 
+      {interpretOnly && (
+        <div style={{ marginBottom: 24 }}>
+          <Flag>
+            Interpretation is running on the preloaded award library. To match employees and calculate pay from a
+            timesheet, go back and add an employee agreement document.
+          </Flag>
+        </div>
+      )}
+
+      {!interpretOnly && (
+      <>
       <div className="upload-grid" style={{ marginBottom: 24 }}>
         <UploadCard
           index="04"
@@ -1020,19 +1127,28 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
         </>
       )}
 
+      </>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <span className="eyebrow">Timesheet status</span>
+          <span className="eyebrow">{interpretOnly ? 'Interpretation status' : 'Timesheet status'}</span>
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
-            {timesheetData ? `${timesheetData.employees.length} employees` : 'Awaiting upload'}
+            {interpretOnly
+              ? `${Object.keys(parsedCache.interpretationsByCode).length} awards interpreted`
+              : (timesheetData ? `${timesheetData.employees.length} employees` : 'Awaiting upload')}
           </span>
-          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
+          {!interpretOnly && timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
           <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to documents</button>
-          <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
-            Calculate pay <ArrowRight size={18} strokeWidth={2} />
-          </button>
+          {interpretOnly
+            ? <button className="btn-primary" onClick={onBack}>Add employee agreement <ArrowRight size={18} strokeWidth={2} /></button>
+            : (
+              <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
+                Calculate pay <ArrowRight size={18} strokeWidth={2} />
+              </button>
+            )}
         </div>
       </div>
     </div>
