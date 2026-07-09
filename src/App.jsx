@@ -31,16 +31,21 @@ import { calculateTimesheetResults } from './domain/payCalculator.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
 import { parseTimesheetFile } from './domain/timesheetParser.js'
 import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
+import isoftMark from './assets/isoft-i.png'
+import isoftWordmark from './assets/isoft-wordmark.png'
 
+// iSOFT ANZ white + red. --ochre is the brand-accent slot (now iSOFT red);
+// sage stays for verified/matched; --red is a deeper crimson kept distinct for
+// validation errors so the audit signal never collides with the brand red.
 const COLORS = {
-  paper: '#F5F1EA',
-  ink: '#1F1E1B',
-  ochre: '#C2703A',
-  sage: '#5B7A5C',
-  red: '#B4452F',
-  card: '#FBF9F4',
-  muted: '#8A8579',
-  line: 'rgba(31,30,27,0.12)',
+  paper: '#F4F5F7',
+  ink: '#1A1B1E',
+  ochre: '#E11B22',
+  sage: '#2F7D57',
+  red: '#B0121F',
+  card: '#FFFFFF',
+  muted: '#6B6F76',
+  line: 'rgba(20,22,28,0.12)',
 }
 const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
 const BODY = "'Inter Tight', system-ui, -apple-system, sans-serif"
@@ -177,11 +182,11 @@ const GLOBAL_CSS = `
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  ::selection { background: rgba(194,112,58,0.22); }
+  ::selection { background: rgba(225,27,34,0.16); }
   ::-webkit-scrollbar { width: 11px; height: 11px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(31,30,27,0.18); border-radius: 6px; border: 3px solid var(--paper); }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(31,30,27,0.3); }
+  ::-webkit-scrollbar-thumb { background: rgba(20,22,28,0.18); border-radius: 6px; border: 3px solid var(--paper); }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(20,22,28,0.3); }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -199,21 +204,21 @@ const GLOBAL_CSS = `
   .bg-grid {
     position: absolute; inset: 0;
     background-image:
-      linear-gradient(to right, rgba(31,30,27,0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(31,30,27,0.045) 1px, transparent 1px);
+      linear-gradient(to right, rgba(20,22,28,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(20,22,28,0.045) 1px, transparent 1px);
     background-size: 40px 40px;
     -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
     mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
   }
   .blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.55; }
   .blob-1 { width: 540px; height: 540px; top: -180px; left: -130px;
-    background: radial-gradient(circle at 35% 35%, rgba(194,112,58,0.6), transparent 70%);
+    background: radial-gradient(circle at 35% 35%, rgba(225,27,34,0.42), transparent 70%);
     animation: blob 20s ease-in-out infinite; }
   .blob-2 { width: 500px; height: 500px; bottom: -200px; right: -120px;
-    background: radial-gradient(circle at 65% 65%, rgba(91,122,92,0.5), transparent 70%);
+    background: radial-gradient(circle at 65% 65%, rgba(20,22,28,0.10), transparent 70%);
     animation: blob 26s ease-in-out infinite reverse; }
   .blob-3 { width: 380px; height: 380px; top: 42%; left: 56%;
-    background: radial-gradient(circle at 50% 50%, rgba(194,112,58,0.28), transparent 70%);
+    background: radial-gradient(circle at 50% 50%, rgba(225,27,34,0.16), transparent 70%);
     animation: blob 30s ease-in-out infinite; }
 
   .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
@@ -229,17 +234,17 @@ const GLOBAL_CSS = `
     background: transparent; color: var(--ink); cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
     transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease; text-decoration: none; }
-  .btn:hover { background: rgba(31,30,27,0.05); border-color: rgba(31,30,27,0.24); }
+  .btn:hover { background: rgba(20,22,28,0.05); border-color: rgba(20,22,28,0.24); }
   .btn:active { transform: translateY(1px); }
 
   .btn-primary { font-family: var(--body); font-size: 15px; font-weight: 600;
-    border: 1px solid var(--ink); border-radius: 13px; padding: 15px 28px;
-    background: var(--ink); color: var(--paper); cursor: pointer;
+    border: 1px solid var(--ochre); border-radius: 13px; padding: 15px 28px;
+    background: var(--ochre); color: #FFFFFF; cursor: pointer;
     display: inline-flex; align-items: center; gap: 10px;
     transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
-    box-shadow: 0 10px 30px -14px rgba(31,30,27,0.6); text-decoration: none; }
-  .btn-primary:hover:not(:disabled) { background: var(--ochre); border-color: var(--ochre);
-    box-shadow: 0 14px 34px -12px rgba(194,112,58,0.7); transform: translateY(-1px); }
+    box-shadow: 0 10px 30px -14px rgba(225,27,34,0.45); text-decoration: none; }
+  .btn-primary:hover:not(:disabled) { background: #B0121F; border-color: #B0121F;
+    box-shadow: 0 14px 34px -12px rgba(225,27,34,0.55); transform: translateY(-1px); }
   .btn-primary:active:not(:disabled) { transform: translateY(0); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed;
     box-shadow: none; background: transparent; color: var(--muted); border-color: var(--line); }
@@ -247,22 +252,22 @@ const GLOBAL_CSS = `
   .ucard { background: var(--card); border: 1px solid var(--line); border-radius: 18px;
     padding: 26px 26px 22px; position: relative; overflow: hidden;
     transition: border-color 0.18s ease, box-shadow 0.18s ease; }
-  .ucard.ready { border-color: rgba(91,122,92,0.5); box-shadow: 0 18px 40px -28px rgba(91,122,92,0.5); }
+  .ucard.ready { border-color: rgba(47,125,87,0.5); box-shadow: 0 18px 40px -28px rgba(47,125,87,0.5); }
 
-  .dropzone { border: 1.5px dashed rgba(31,30,27,0.26); border-radius: 13px;
+  .dropzone { border: 1.5px dashed rgba(20,22,28,0.26); border-radius: 13px;
     padding: 26px 18px; display: flex; flex-direction: column; align-items: center;
-    gap: 10px; text-align: center; cursor: pointer; background: rgba(245,241,234,0.5);
+    gap: 10px; text-align: center; cursor: pointer; background: rgba(244,245,247,0.5);
     transition: border-color 0.16s ease, background 0.16s ease; }
-  .dropzone:hover { border-color: var(--ochre); background: rgba(194,112,58,0.05); }
+  .dropzone:hover { border-color: var(--ochre); background: rgba(225,27,34,0.05); }
   .dropzone.over { border-color: var(--ochre); border-style: solid;
-    background: rgba(194,112,58,0.1); }
+    background: rgba(225,27,34,0.1); }
 
   .chip { display: flex; align-items: center; gap: 13px; border: 1px solid var(--line);
     border-radius: 13px; padding: 13px 14px; background: var(--paper); }
   .icon-x { display: grid; place-items: center; width: 30px; height: 30px;
     border-radius: 8px; border: 1px solid var(--line); background: transparent;
     color: var(--muted); cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
-  .icon-x:hover { color: var(--red); border-color: rgba(180,69,47,0.5); background: rgba(180,69,47,0.07); }
+  .icon-x:hover { color: var(--red); border-color: rgba(176,18,31,0.5); background: rgba(176,18,31,0.07); }
 
   .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     border-radius: 999px; padding: 7px 14px; background: var(--card);
@@ -270,16 +275,16 @@ const GLOBAL_CSS = `
   .step { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px;
     border: 1px solid transparent; border-radius: 14px; transition: all 0.3s ease; }
   .step.active { background: var(--card); border-color: var(--line);
-    box-shadow: 0 14px 34px -26px rgba(31,30,27,0.5); }
+    box-shadow: 0 14px 34px -26px rgba(20,22,28,0.5); }
   .step.done { opacity: 0.62; }
   .step-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
     display: grid; place-items: center; }
   .dot-pending { width: 9px; height: 9px; border-radius: 50%;
-    border: 1.5px solid rgba(31,30,27,0.28); }
+    border: 1.5px solid rgba(20,22,28,0.28); }
 
   .trow { display: grid; align-items: center; gap: 14px; padding: 16px 18px;
     cursor: pointer; transition: background 0.15s ease; border-radius: 12px; }
-  .trow:hover { background: rgba(31,30,27,0.035); }
+  .trow:hover { background: rgba(20,22,28,0.035); }
   .thead { display: grid; gap: 14px; padding: 0 18px 12px;
     border-bottom: 1px solid var(--line); }
   .th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
@@ -293,17 +298,17 @@ const GLOBAL_CSS = `
     text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
   .leader { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
   .leader-label { font-size: 13.5px; color: var(--ink); }
-  .leader-dots { flex: 1; border-bottom: 1px dotted rgba(31,30,27,0.3);
+  .leader-dots { flex: 1; border-bottom: 1px dotted rgba(20,22,28,0.3);
     transform: translateY(-4px); }
   .leader-amt { font-family: var(--mono); font-size: 13px; color: var(--ink); }
   .leader-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .leader-total .leader-label, .leader-total .leader-amt { font-weight: 600; font-size: 14px; }
   .flag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
-    color: #8a4a1f; background: rgba(194,112,58,0.12);
-    border: 1px solid rgba(194,112,58,0.28); border-radius: 10px; padding: 9px 13px; }
+    color: #B0121F; background: rgba(225,27,34,0.08);
+    border: 1px solid rgba(225,27,34,0.30); border-radius: 10px; padding: 9px 13px; }
 
   .clause-ref { position: relative; cursor: help;
-    border-bottom: 1px dotted rgba(31,30,27,0.35); }
+    border-bottom: 1px dotted rgba(20,22,28,0.35); }
   .clause-tip { position: absolute; bottom: calc(100% + 9px); left: 50%;
     transform: translateX(-50%); background: var(--ink); color: var(--paper);
     font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.55;
@@ -311,12 +316,12 @@ const GLOBAL_CSS = `
     text-align: left; white-space: normal; letter-spacing: 0;
     opacity: 0; visibility: hidden; transition: opacity 0.13s ease;
     pointer-events: none; z-index: 60;
-    box-shadow: 0 12px 30px -10px rgba(31,30,27,0.55); }
+    box-shadow: 0 12px 30px -10px rgba(20,22,28,0.55); }
   .clause-tip::after { content: ''; position: absolute; top: 100%; left: var(--tip-arrow, 50%);
     transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
   .clause-ref:hover .clause-tip { opacity: 1; visibility: visible; }
   .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
-  .danger-flag { color: var(--red); background: rgba(180,69,47,0.08); border-color: rgba(180,69,47,0.3); }
+  .danger-flag { color: var(--red); background: rgba(176,18,31,0.08); border-color: rgba(176,18,31,0.3); }
 
   .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
     display: flex; align-items: center; justify-content: space-between;
@@ -363,11 +368,9 @@ function Masthead({ stage }) {
   const names = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
   return (
     <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 46 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: 9, background: COLORS.ink, color: COLORS.paper,
-          display: 'grid', placeItems: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 19,
-        }}>A</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src={isoftMark} alt="iSOFT" style={{ height: 34, width: 'auto', display: 'block' }} />
+        <div style={{ width: 1, height: 30, background: COLORS.line }} />
         <div>
           <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 16.5, lineHeight: 1 }}>Axi&thinsp;·&thinsp;WFM</div>
           <div className="eyebrow" style={{ marginTop: 4 }}>Award Interpreter</div>
@@ -419,7 +422,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{
-            width: 46, height: 46, borderRadius: 12, background: 'rgba(31,30,27,0.05)',
+            width: 46, height: 46, borderRadius: 12, background: 'rgba(20,22,28,0.05)',
             border: `1px solid ${COLORS.line}`, display: 'grid', placeItems: 'center', color: COLORS.ink,
           }}>
             <Icon size={22} strokeWidth={1.6} />
@@ -429,7 +432,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
             <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{subtitle}</div>
           </div>
         </div>
-        <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>
+        <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>
           {index}
         </span>
       </div>
@@ -446,8 +449,8 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
       {file ? (
         <div className="chip fade-up">
           <div style={{
-            width: 38, height: 38, borderRadius: 9, background: 'rgba(91,122,92,0.14)',
-            border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center',
+            width: 38, height: 38, borderRadius: 9, background: 'rgba(47,125,87,0.14)',
+            border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center',
             color: COLORS.sage, flexShrink: 0,
           }}>
             <Check size={19} strokeWidth={2.2} />
@@ -494,7 +497,7 @@ function StepRow({ step, status, delay }) {
   return (
     <div className={`step ${status} fade-up`} style={{ animationDelay: `${delay}ms` }}>
       <div className="step-icon" style={{
-        background: status === 'done' ? 'rgba(91,122,92,0.15)' : status === 'active' ? 'rgba(194,112,58,0.12)' : 'transparent',
+        background: status === 'done' ? 'rgba(47,125,87,0.15)' : status === 'active' ? 'rgba(225,27,34,0.12)' : 'transparent',
         border: status === 'pending' ? `1px solid ${COLORS.line}` : 'none',
         marginTop: 1,
       }}>
@@ -560,7 +563,7 @@ function IndustrySelector({ industry, onSetIndustry }) {
     fontFamily: BODY,
     fontSize: 13,
     opacity: disabled ? 0.5 : 1,
-    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(194,112,58,0.1)', color: COLORS.ink } : {}),
+    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(225,27,34,0.1)', color: COLORS.ink } : {}),
   })
   return (
     <div className="panel-inner" style={{ marginBottom: 26, padding: '18px 20px' }}>
@@ -624,7 +627,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
         <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
           Parse the award stack.
         </h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 16 }}>
           Select a preloaded industry to interpret its award library straight away — no upload required.
           Uploading is optional: an award document merges on top of the library, an employee agreement adds
           employee matching and unlocks the timesheet run, and compliance notes are cross-referenced into the cache.
@@ -673,8 +676,8 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
             width: 9, height: 9, borderRadius: '50%',
-            background: ready ? COLORS.sage : 'rgba(31,30,27,0.25)',
-            boxShadow: ready ? '0 0 0 4px rgba(91,122,92,0.18)' : 'none',
+            background: ready ? COLORS.sage : 'rgba(20,22,28,0.25)',
+            boxShadow: ready ? '0 0 0 4px rgba(47,125,87,0.18)' : 'none',
             transition: 'all 0.2s ease',
           }} />
           <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
@@ -737,7 +740,7 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
           <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: COLORS.muted }}>PROGRESS</span>
           <span className="mono" style={{ fontSize: 11, color: COLORS.ochre }}>{pct}%</span>
         </div>
-        <div style={{ height: 4, background: 'rgba(31,30,27,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ height: 4, background: 'rgba(20,22,28,0.08)', borderRadius: 3, overflow: 'hidden' }}>
           <div style={{ width: `${pct}%`, height: '100%', background: COLORS.ochre, borderRadius: 3, transition: 'width 0.5s cubic-bezier(0.2,0.7,0.2,1)' }} />
         </div>
       </div>
@@ -811,7 +814,7 @@ function RowExplanation({ awardCode, row }) {
   }
   if (state.status !== 'done') return null
   return (
-    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(31,30,27,0.82)' }}>
+    <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(26,27,30,0.82)' }}>
       {state.data.explanation}
       {(state.data.citations || []).map((citation, i) => (
         <div key={i} style={{ marginTop: 7, paddingLeft: 10, borderLeft: `2px solid ${COLORS.ochre}55`, fontSize: 11.5, color: COLORS.muted }}>
@@ -837,7 +840,7 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
           {row.categoryLabel}
           {row.employment === 'casual' && <span style={{ color: COLORS.muted, fontWeight: 400 }}> · casual</span>}
         </span>
-        <span style={{ fontSize: 12.5, color: 'rgba(31,30,27,0.74)', lineHeight: 1.45 }}>
+        <span style={{ fontSize: 12.5, color: 'rgba(26,27,30,0.74)', lineHeight: 1.45 }}>
           <span style={{ fontWeight: 600, color: COLORS.ink }}>{row.title}</span>
           {' — '}
           {row.plainLanguage}
@@ -867,7 +870,7 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
         </span>
       </div>
       {explainOpen && (
-        <div style={{ padding: '10px 14px 14px', background: 'rgba(194,112,58,0.05)', borderBottom: `1px solid ${COLORS.line}` }}>
+        <div style={{ padding: '10px 14px 14px', background: 'rgba(225,27,34,0.05)', borderBottom: `1px solid ${COLORS.line}` }}>
           <RowExplanation awardCode={row.awardCode} row={row} />
         </div>
       )}
@@ -943,7 +946,7 @@ function AwardInterpretationSection({ parsedCache }) {
       <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Scale size={13} strokeWidth={1.8} /> Award interpretation — every level · every clause
       </div>
-      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 18px', maxWidth: 740, lineHeight: 1.55 }}>
+      <p style={{ fontSize: 13.5, color: 'rgba(26,27,30,0.72)', margin: '0 0 18px', maxWidth: 740, lineHeight: 1.55 }}>
         The award read for you, deterministically — no timesheet needed. One table row per clause interpretation:
         each classification level, every loading, penalty and allowance it grants, and the clause behind each one.
         Levels named in the employee agreement are marked and shown first.
@@ -1004,7 +1007,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
         <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
           {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
         </h1>
-        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 14 }}>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
           {interpretOnly
             ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement on the upload step to match employees and run a pay-period timesheet.'
             : 'The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against cached award levels without re-parsing the documents.'}
@@ -1047,8 +1050,8 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{
-                width: 46, height: 46, borderRadius: 12, background: 'rgba(91,122,92,0.12)',
-                border: '1px solid rgba(91,122,92,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
+                width: 46, height: 46, borderRadius: 12, background: 'rgba(47,125,87,0.12)',
+                border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
               }}>
                 <BadgeCheck size={22} strokeWidth={1.6} />
               </div>
@@ -1057,7 +1060,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                 <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
               </div>
             </div>
-            <span className="mono" style={{ fontSize: 26, color: 'rgba(31,30,27,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
+            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div className="chip">
@@ -1310,7 +1313,7 @@ function ClauseRef({ refText, clauseIndex, purposeMap = {}, align = 'center', cl
             <strong>{part}</strong>
             {title ? ` — ${title}` : ' — referenced provision of the award'}
             {purposeMap[baseRef] && (
-              <span style={{ display: 'block', color: 'rgba(245,241,234,0.72)', fontSize: 11.5 }}>
+              <span style={{ display: 'block', color: 'rgba(244,245,247,0.72)', fontSize: 11.5 }}>
                 {purposeMap[baseRef]}
               </span>
             )}
@@ -1392,7 +1395,7 @@ function InterpretationExtras({ row }) {
           title={`${extra.type} — ${extra.condition || extra.meaning}`}
           style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}
         >
-          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(31,30,27,0.25)', flexShrink: 0, marginLeft: 4, marginRight: 4 }} />
+          <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(20,22,28,0.25)', flexShrink: 0, marginLeft: 4, marginRight: 4 }} />
           <span style={{ fontSize: 12, color: COLORS.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
             {extra.type}
           </span>
@@ -1441,7 +1444,7 @@ function WorkedChips({ summary }) {
           key={label}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
-            color: COLORS.sage, background: 'rgba(91,122,92,0.1)', border: '1px solid rgba(91,122,92,0.28)',
+            color: COLORS.sage, background: 'rgba(47,125,87,0.1)', border: '1px solid rgba(47,125,87,0.28)',
             borderRadius: 999, padding: '4px 11px',
           }}
         >
@@ -1462,7 +1465,7 @@ function InterpretationCard({ row }) {
   return (
     <div style={{
       background: COLORS.card,
-      border: `1px solid ${hasIssues ? 'rgba(180,69,47,0.4)' : COLORS.line}`,
+      border: `1px solid ${hasIssues ? 'rgba(176,18,31,0.4)' : COLORS.line}`,
       borderRadius: 16,
       padding: '18px 22px 14px',
     }}>
@@ -1544,7 +1547,7 @@ function InterpretationTable({ rows }) {
       <div className="eyebrow" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
         <Layers size={13} strokeWidth={1.8} /> Granular interpretation — award code · clause · extras
       </div>
-      <p style={{ fontSize: 13.5, color: 'rgba(31,30,27,0.72)', margin: '0 0 16px', maxWidth: 720, lineHeight: 1.55 }}>
+      <p style={{ fontSize: 13.5, color: 'rgba(26,27,30,0.72)', margin: '0 0 16px', maxWidth: 720, lineHeight: 1.55 }}>
         One card per employee: the award clause behind their base rate, what they worked, what they are
         entitled to per hour and in total, and the extras the award grants — each with its clause.
       </p>
@@ -1639,7 +1642,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
     `Employees paid: ${results.stats.employees}\n` +
     `Total calculated pay: ${fmt(results.stats.totalCalculatedPay)}\n\n` +
     `The underlying document cache was built once and reused for the uploaded timesheet.\n\n` +
-    `— Axi·WFM Award Interpreter`
+    `— Axi·WFM Award Interpreter · an iSOFT ANZ product`
   const mailto = `mailto:${recipient.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
 
   return (
@@ -1649,7 +1652,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           <CheckCircle2 size={14} strokeWidth={1.9} /> 05 — Confirmation
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>Pay dispersed.</h1>
-        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(31,30,27,0.72)', marginTop: 16 }}>
+        <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 16 }}>
           Payroll has been dispersed for the period. Send a confirmation to the payroll mailbox below.
         </p>
       </div>
@@ -1672,13 +1675,13 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           aria-label="Confirmation email recipient"
           style={{
             width: '100%', maxWidth: 420, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
-            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(180,69,47,0.5)'}`,
+            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(176,18,31,0.5)'}`,
             borderRadius: 10, padding: '11px 13px', outline: 'none',
           }}
         />
         <div className="email-preview">
           <div style={{ fontWeight: 600, marginBottom: 6 }}>{subject}</div>
-          <div style={{ whiteSpace: 'pre-wrap', color: 'rgba(31,30,27,0.78)' }}>{body}</div>
+          <div style={{ whiteSpace: 'pre-wrap', color: 'rgba(26,27,30,0.78)' }}>{body}</div>
         </div>
       </div>
 
@@ -1701,9 +1704,12 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
 function Footer() {
   return (
     <div className="footer">
-      <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
-        AXI·WFM — INTELLIGENCE LAYER / AWARD INTERPRETATION
-      </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src={isoftWordmark} alt="iSOFT" style={{ height: 17, width: 'auto', display: 'block' }} />
+        <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
+          ANZ · AXI·WFM AWARD INTERPRETATION
+        </span>
+      </div>
       <span style={{ fontSize: 12, color: COLORS.muted, maxWidth: 420, textAlign: 'right' }}>
         Suggestions only. Review every classification against the current award before processing pay.
       </span>
