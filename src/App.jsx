@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   Banknote,
+  BarChart3,
   CalendarClock,
   Check,
   CheckCircle2,
@@ -22,8 +23,10 @@ import {
   Send,
   Sparkles,
   UploadCloud,
+  Users,
   X,
 } from 'lucide-react'
+import { buildAnalytics } from './domain/analytics.js'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
@@ -361,6 +364,269 @@ function Background() {
       <div className="blob blob-2" />
       <div className="blob blob-3" />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Analytics sidebar — read-only aggregations from src/domain/analytics.js.
+// Additive: a floating toggle + fixed right panel; nothing in the stage flow
+// changes. Sections light up as data arrives (timesheet → workforce/hours,
+// calculated pay → cost analytics).
+// ---------------------------------------------------------------------------
+
+const pctFmt = (value) => `${Math.round((value || 0) * 100)}%`
+
+function SideSection({ icon: Icon, title, children }) {
+  return (
+    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${COLORS.line}` }}>
+      <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 13 }}>
+        <Icon size={12.5} strokeWidth={1.9} color={COLORS.ochre} /> {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SideStat({ label, value, sub }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div className="mono" style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 3, lineHeight: 1.3 }}>{label}{sub ? <span style={{ display: 'block' }}>{sub}</span> : null}</div>
+    </div>
+  )
+}
+
+function MiniBarRow({ label, value, max, display, color = COLORS.ochre }) {
+  const width = max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 0
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, marginBottom: 3 }}>
+        <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+        <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted, flexShrink: 0 }}>{display}</span>
+      </div>
+      <div style={{ height: 5, borderRadius: 3, background: 'rgba(20,22,28,0.07)' }}>
+        <div style={{ height: '100%', width: `${width}%`, borderRadius: 3, background: color, transition: 'width 0.3s ease' }} />
+      </div>
+    </div>
+  )
+}
+
+function SideHint({ children }) {
+  return (
+    <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.5, padding: '10px 12px', background: 'rgba(20,22,28,0.04)', borderRadius: 8 }}>
+      {children}
+    </div>
+  )
+}
+
+const SIGNAL_COLORS = { error: COLORS.red, warn: '#B26A00', info: COLORS.muted }
+
+function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }) {
+  const analytics = React.useMemo(
+    () => buildAnalytics({ parsedCache, timesheetData, results }),
+    [parsedCache, timesheetData, results],
+  )
+  if (!open) return null
+  const { workforce, hours, pay, compliance } = analytics
+  const maxWeekday = hours ? Math.max(...hours.byWeekday.map((day) => day.hours), 0.01) : 0
+
+  return (
+    <aside style={{
+      position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 92vw)', zIndex: 70,
+      background: COLORS.card, borderLeft: `1px solid ${COLORS.line}`,
+      boxShadow: '-18px 0 44px rgba(20,22,28,0.13)', overflowY: 'auto', fontFamily: BODY,
+    }}>
+      <div style={{
+        position: 'sticky', top: 0, background: COLORS.card, zIndex: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 20px', borderBottom: `1px solid ${COLORS.line}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <BarChart3 size={16} strokeWidth={2} color={COLORS.ochre} />
+          <div>
+            <div style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 600, lineHeight: 1 }}>Workforce analytics</div>
+            <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 3 }}>
+              {analytics.payPeriod ? `Pay period ${analytics.payPeriod}` : 'Live from the current session'}
+              {analytics.business ? ` · ${analytics.business}` : ''}
+            </div>
+          </div>
+        </div>
+        <button onClick={onClose} title="Close analytics" style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.muted, padding: 4 }}>
+          <X size={17} strokeWidth={2} />
+        </button>
+      </div>
+
+      <SideSection icon={Users} title="Workforce — who worked">
+        {workforce ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
+              <SideStat label="employees rostered" value={workforce.headcount} />
+              <SideStat label="matched to agreements" value={`${workforce.matched}/${workforce.headcount}`} />
+              <SideStat label="total hours" value={hours?.totalHours ?? '—'} />
+            </div>
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>BY ROLE FAMILY</div>
+            {workforce.roleFamilies.map((family) => (
+              <MiniBarRow
+                key={family.label}
+                label={family.label}
+                value={family.employees}
+                max={workforce.roleFamilies[0]?.employees || 1}
+                display={`${family.employees} · ${family.hours}h`}
+              />
+            ))}
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>EMPLOYMENT MIX</div>
+            {workforce.employmentMix.map((mix) => (
+              <MiniBarRow
+                key={mix.label}
+                label={mix.label}
+                value={mix.hours}
+                max={workforce.employmentMix.reduce((top, m) => Math.max(top, m.hours), 0.01)}
+                display={`${mix.employees} · ${mix.hours}h`}
+                color={COLORS.sage}
+              />
+            ))}
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>BY AWARD</div>
+            {workforce.byAward.map((award) => (
+              <MiniBarRow
+                key={award.label}
+                label={award.label}
+                value={award.hours}
+                max={workforce.byAward.reduce((top, a) => Math.max(top, a.hours), 0.01)}
+                display={`${award.employees} · ${award.hours}h`}
+              />
+            ))}
+          </>
+        ) : (
+          <SideHint>Upload a timesheet to see who worked this pay period — headcount by role family (e.g. how many nurses), employment mix and per-award hours.</SideHint>
+        )}
+      </SideSection>
+
+      <SideSection icon={Clock} title="Hours & rostering">
+        {hours ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
+              <SideStat label="avg hrs / employee" value={hours.avgHoursPerEmployee} />
+              <SideStat label="weekend share" value={pctFmt(hours.weekendShare)} sub={`${hours.weekendHours}h`} />
+              <SideStat label="after-hours share" value={pctFmt(hours.afterHoursShare)} sub="outside 7am–7pm" />
+            </div>
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>HOURS BY WEEKDAY</div>
+            {hours.byWeekday.map((day) => (
+              <MiniBarRow
+                key={day.label}
+                label={day.label.slice(0, 3)}
+                value={day.hours}
+                max={maxWeekday}
+                display={`${day.hours}h · ${day.shifts} shifts`}
+                color={day.label === 'Saturday' || day.label === 'Sunday' ? COLORS.ochre : COLORS.sage}
+              />
+            ))}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 11, fontSize: 11.5, color: COLORS.muted }}>
+              <span className="pill" style={{ fontSize: 11 }}>{hours.shifts} shifts · avg {hours.avgShiftHours}h</span>
+              {hours.overnightShifts > 0 && <span className="pill" style={{ fontSize: 11 }}>{hours.overnightShifts} overnight</span>}
+              {hours.longShifts.length > 0 && <span className="pill" style={{ fontSize: 11 }}>{hours.longShifts.length} over 10h</span>}
+            </div>
+          </>
+        ) : (
+          <SideHint>Weekday distribution, weekend and after-hours shares, overnight and 10h+ shifts appear here once a timesheet is loaded.</SideHint>
+        )}
+      </SideSection>
+
+      <SideSection icon={Banknote} title="Pay & cost">
+        {pay ? (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
+              <SideStat label="gross this period" value={audFmt.format(pay.gross)} />
+              <SideStat label="penalty burden" value={pctFmt(pay.penaltyBurden)} sub="paid above base" />
+              <SideStat label="avg effective rate" value={`${audFmt.format(pay.avgEffectiveRate)}/h`} />
+            </div>
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>COST COMPOSITION</div>
+            <div style={{ display: 'flex', height: 9, borderRadius: 5, overflow: 'hidden', marginBottom: 9 }}>
+              {pay.composition.map((part, i) => (
+                <div
+                  key={part.label}
+                  title={`${part.label}: ${audFmt.format(part.amount)}`}
+                  style={{
+                    width: `${(part.amount / pay.gross) * 100}%`,
+                    background: i === 0 ? COLORS.ink : [COLORS.ochre, '#B26A00', COLORS.sage, '#5A6B9A', COLORS.muted][(i - 1) % 5],
+                  }}
+                />
+              ))}
+            </div>
+            {pay.composition.map((part) => (
+              <MiniBarRow
+                key={part.label}
+                label={part.label}
+                value={part.amount}
+                max={pay.composition[0]?.amount || 1}
+                display={audFmt.format(part.amount)}
+                color={part.label === 'Base pay' ? COLORS.ink : COLORS.ochre}
+              />
+            ))}
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>COST BY ROLE FAMILY</div>
+            {pay.costByFamily.map((family) => (
+              <MiniBarRow
+                key={family.label}
+                label={family.label}
+                value={family.amount}
+                max={pay.costByFamily[0]?.amount || 1}
+                display={audFmt.format(family.amount)}
+                color={COLORS.sage}
+              />
+            ))}
+            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>TOP EARNERS</div>
+            {pay.topEarners.map((earner) => (
+              <div key={earner.employeeName} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12.5, padding: '4px 0' }}>
+                <span style={{ fontWeight: 500 }}>{earner.employeeName}</span>
+                <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>
+                  {audFmt.format(earner.total)} · {earner.hours}h · {audFmt.format(earner.effectiveRate)}/h
+                </span>
+              </div>
+            ))}
+          </>
+        ) : (
+          <SideHint>
+            {timesheetData
+              ? 'Run “Calculate pay” to unlock cost analytics — gross, penalty burden, cost composition and top earners.'
+              : 'Cost analytics unlock after a timesheet is uploaded and pay is calculated.'}
+          </SideHint>
+        )}
+      </SideSection>
+
+      <SideSection icon={AlertTriangle} title="Compliance signals">
+        {compliance.signals.length ? compliance.signals.map((signal, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.45, padding: '5px 0', color: SIGNAL_COLORS[signal.severity] || COLORS.muted }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', marginTop: 4, flexShrink: 0, background: SIGNAL_COLORS[signal.severity] || COLORS.muted }} />
+            {signal.text}
+          </div>
+        )) : (
+          <SideHint>No compliance signals on the current data set.</SideHint>
+        )}
+      </SideSection>
+
+      <div style={{ padding: '13px 20px 22px', fontSize: 10.5, color: COLORS.muted, lineHeight: 1.5 }}>
+        Deterministic aggregations from the parsed cache, timesheet and calculated pay — no AI involved.
+        After-hours share is estimated from rostered spans (breaks are not position-aware).
+      </div>
+    </aside>
+  )
+}
+
+function AnalyticsToggle({ onOpen }) {
+  return (
+    <button
+      onClick={onOpen}
+      title="Open workforce analytics"
+      style={{
+        position: 'fixed', right: 20, bottom: 20, zIndex: 60,
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '11px 17px', borderRadius: 24, border: 'none', cursor: 'pointer',
+        background: COLORS.ink, color: '#fff', fontFamily: BODY, fontSize: 13, fontWeight: 600,
+        boxShadow: '0 8px 22px rgba(20,22,28,0.28)',
+      }}
+    >
+      <BarChart3 size={15} strokeWidth={2.1} color={COLORS.ochre} />
+      Analytics
+    </button>
   )
 }
 
@@ -1724,6 +1990,7 @@ function ScrollTextIcon(props) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [expandedRowId, setExpandedRowId] = useState(null)
+  const [analyticsOpen, setAnalyticsOpen] = useState(false)
 
   useEffect(() => {
     const FONT_ID = 'axi-google-fonts'
@@ -1904,6 +2171,19 @@ export default function App() {
 
         <Footer />
       </div>
+
+      {state.stage >= 3 && state.parsedCache && (
+        <>
+          {!analyticsOpen && <AnalyticsToggle onOpen={() => setAnalyticsOpen(true)} />}
+          <AnalyticsSidebar
+            parsedCache={state.parsedCache}
+            timesheetData={state.timesheetData}
+            results={state.results}
+            open={analyticsOpen}
+            onClose={() => setAnalyticsOpen(false)}
+          />
+        </>
+      )}
     </>
   )
 }
