@@ -29,12 +29,15 @@ const CHUNKS = [
   },
 ]
 
-function stubStore() {
+function stubStore({ score = 0.8 } = {}) {
   return {
     backend: 'stub',
     meta: { builtAt: 'test' },
+    // Real stores attach a cosine score to every semantic hit; retrieval now
+    // filters on it (see rag/retrieve.js MIN_SCORE), so the stub must too.
     async search({ chunkType }) {
-      return chunkType ? CHUNKS.filter((c) => c.chunkType === chunkType) : CHUNKS
+      const hits = chunkType ? CHUNKS.filter((c) => c.chunkType === chunkType) : CHUNKS
+      return hits.map((chunk) => ({ ...chunk, score }))
     },
     async byClauseRef(awardCode, ref) {
       return CHUNKS.filter((c) => c.awardCode === awardCode && c.clauseRef === ref)
@@ -78,11 +81,11 @@ const ROW = {
   valueLabel: '×1.50 (150%)', clauseRef: 'cl. 19',
 }
 
-function makeApp({ outputs }) {
+function makeApp({ outputs, score }) {
   const anthropic = stubAnthropic(outputs)
   const app = createApp({
     anthropic,
-    store: stubStore(),
+    store: stubStore({ score }),
     embedQuery: async () => new Array(4).fill(0),
     modelId: 'claude-test',
     library: LIBRARY,

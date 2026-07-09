@@ -4,8 +4,10 @@
 import express from 'express'
 import { explainRowRoute } from './routes/explainRow.js'
 import { classifyEmployeeRoute } from './routes/classifyEmployee.js'
+import { createTelemetry } from './telemetry.js'
+import { feedbackRoute } from './routes/feedback.js'
 
-export function createApp({ anthropic, store, embedQuery, modelId, library }) {
+export function createApp({ anthropic, store, embedQuery, modelId, library, telemetry = createTelemetry() }) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
 
@@ -22,9 +24,10 @@ export function createApp({ anthropic, store, embedQuery, modelId, library }) {
     })
   })
 
-  const deps = { anthropic, store, embedQuery, modelId, library }
+  const deps = { anthropic, store, embedQuery, modelId, library, telemetry }
   app.post('/api/explain-row', wrap(explainRowRoute(deps)))
   app.post('/api/classify-employee', wrap(classifyEmployeeRoute(deps)))
+  app.post('/api/feedback', wrap(feedbackRoute(deps)))
 
   return app
 }

@@ -10,7 +10,8 @@
     "test": "vitest run",
     "server": "node --env-file-if-exists=.env server/index.js",
     "rag:index": "node --env-file-if-exists=.env scripts/buildRagIndex.mjs",
-    "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs"
+    "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs",
+    "audit:awards": "node --env-file-if-exists=.env scripts/auditAwardData.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

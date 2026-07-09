@@ -10,4 +10,6 @@ export const config = {
   weaviateUrl: process.env.WEAVIATE_URL || '',
   weaviateApiKey: process.env.WEAVIATE_API_KEY || '',
   awardLibraryDir: path.join(ROOT, 'src/domain/awardLibrary'),
+  // Structured JSONL logs. Set LOG_DIR='' to disable all telemetry.
+  logDir: process.env.LOG_DIR ?? path.join(ROOT, 'data/logs'),
 }

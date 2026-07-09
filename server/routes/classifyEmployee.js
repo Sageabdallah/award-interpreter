@@ -1,6 +1,6 @@
 import { structuredCall } from '../anthropic.js'
 import { verifyCitations } from '../rag/grounding.js'
-import { chunksToPromptBlock, retrieveClassifications } from '../rag/retrieve.js'
+import { MIN_SCORE, chunksToPromptBlock, retrieveClassifications } from '../rag/retrieve.js'
 import { CLASSIFY_SCHEMA, CLASSIFY_SYSTEM, classifyUserMessage } from '../prompts/classify.js'
 import { keyForAwardLevel, normalizeLevel } from '../../src/domain/utils.js'
 
@@ -48,17 +48,40 @@ function joinToLevel(suggestion, library) {
  * POST /api/classify-employee  { text, industry?, maxSuggestions? }
  * → { suggestions: [...], noMatch? }
  */
-export function classifyEmployeeRoute({ anthropic, store, embedQuery, modelId, library }) {
+export function classifyEmployeeRoute({ anthropic, store, embedQuery, modelId, library, telemetry }) {
   return async (req, res) => {
     const { text, maxSuggestions = 3 } = req.body || {}
     if (!text || typeof text !== 'string' || text.trim().length < 20) {
       return res.status(400).json({ error: 'Body must include { text } — a job description or agreement excerpt (min 20 chars).' })
     }
 
-    const chunks = await retrieveClassifications({ store, embedQuery }, { text })
-    if (!chunks.length) {
+    const indexed = await store.listAwards()
+    if (!indexed.length) {
       return res.status(409).json({ error: 'No classification definitions indexed — run: npm run rag:index' })
     }
+
+    const retrieval = await retrieveClassifications({ store, embedQuery }, { text })
+    telemetry.retrieval({
+      kind: 'classify-employee',
+      query: text,
+      topScore: retrieval.topScore,
+      threshold: MIN_SCORE,
+      relevant: retrieval.relevant,
+      semanticCount: retrieval.chunks.length,
+      chunkIds: retrieval.chunks.map((chunk) => chunk.id),
+    })
+    // Nothing cleared the relevance floor. Asking the model to pick the best of
+    // several irrelevant definitions is how a sourdough baker becomes a nurse.
+    if (!retrieval.relevant) {
+      return res.json({
+        suggestions: [],
+        noSources: true,
+        topScore: retrieval.topScore,
+        threshold: MIN_SCORE,
+        noMatch: 'No classification definition in the indexed awards is a close enough match for this role. Nothing was sent to the model.',
+      })
+    }
+    const { chunks } = retrieval
 
     const { output, usage } = await structuredCall(anthropic, {
       model: modelId,
@@ -80,6 +103,16 @@ export function classifyEmployeeRoute({ anthropic, store, embedQuery, modelId, l
       }
     })
 
+    const verified = suggestions.reduce((sum, suggestion) => sum + suggestion.citations.length, 0)
+    telemetry.generation({
+      kind: 'classify-employee',
+      model: modelId,
+      attempts: 1,
+      outcome: verified > 0 ? 'grounded' : 'ungrounded',
+      citationsOffered: (output.suggestions || []).reduce((sum, s) => sum + (s.citations || []).length, 0),
+      citationsVerified: verified,
+      usage,
+    })
     return res.json({ suggestions, noMatch: output.noMatch || undefined, usage })
   }
 }
