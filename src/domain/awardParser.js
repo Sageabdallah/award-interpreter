@@ -887,7 +887,264 @@ function firstNumberMatch(text, patterns, fallback) {
       if (Number.isFinite(value)) return value
     }
   }
-  return fallback
+  return fallback // may be null: callers that must not invent a value pass null
+}
+
+
+// ---------------------------------------------------------------------------
+// Day penalties (Saturday / Sunday / public holiday)
+//
+// These are ORDINARY-HOURS penalties and live in their own clause — "Saturday
+// and Sunday work", "Penalty rates" — which is NOT the public holidays clause
+// and is NOT the overtime clause. An earlier version of this parser read the
+// overtime table (150/200/250) and installed it as the penalty table, then
+// silently defaulted to those same numbers when its regex missed. Every award in
+// the library carried the overtime rates as its weekend rates as a result.
+//
+// Awards express the casual figure two different ways, and the difference is
+// real money:
+//   "150% of the casual hourly rate"   → 1.50 x (base x (1 + casual loading))
+//   "175% of the ordinary hourly rate" → 1.75 x base   (loading already inside)
+// We record which, and normalise both to a base-rate multiplier.
+//
+// Nothing here defaults. A rate we cannot read from the clause is null, and the
+// caller warns. A missing penalty is visible; a wrong one is not.
+// ---------------------------------------------------------------------------
+
+const PCT = String.raw`(\d+(?:\.\d+)?)\s*%`
+
+// Several awards write the multiplier in words rather than a percentage.
+const WORD_RATES = [
+  [/double time and a half/i, 250],
+  [/double time/i, 200],
+  [/time and three quarters/i, 175],
+  [/time and a half/i, 150],
+  [/time and a quarter/i, 125],
+]
+
+function wordRate(text) {
+  for (const [pattern, pct] of WORD_RATES) if (pattern.test(text)) return pct
+  return null
+}
+
+function firstPct(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern)
+    if (match) {
+      const value = Number(match[1])
+      if (Number.isFinite(value) && value > 0) return value
+    }
+  }
+  return null
+}
+
+/** Text from the first match of `from` up to `to` (or `chars` ahead). */
+function spanBetween(text, from, to, chars = 420) {
+  const start = text.search(from)
+  if (start === -1) return ''
+  const rest = text.slice(start)
+  const end = to ? rest.slice(1).search(to) : -1
+  return end === -1 ? rest.slice(0, chars) : rest.slice(0, end + 1)
+}
+
+/**
+ * Convert a quoted percentage to a multiplier of the BASE hourly rate.
+ *
+ * Kept to 4 decimal places, not 2. "150% of the casual hourly rate" is exactly
+ * 1.875 x base; rounding that to 1.88 overpays an 8-hour shift by $1.11 at
+ * $27.65/hr. Round the money at the end, never the rate.
+ */
+const round4 = (value) => Math.round(value * 10000) / 10000
+const toBaseMultiplier = (pct, basis, casualLoading) =>
+  pct == null ? null : round4(basis === 'casual_rate' ? (pct / 100) * (1 + casualLoading) : pct / 100)
+
+/**
+ * @returns {{ weekend, warnings }} weekend day rates as base-rate multipliers,
+ *   with null wherever the clause text did not state one.
+ */
+export function parseDayPenalties({ weekendText, publicHolidayText, casualLoading, awardCode }) {
+  const warnings = []
+  // PDF extraction wraps lines mid-phrase ("of the ordinary hourly\nrate"), so
+  // prose is matched against a whitespace-flattened copy. Row/table patterns
+  // stay anchored to the original lines.
+  const flatWeekend = weekendText.replace(/\s+/g, ' ')
+  const flatPublicHoliday = publicHolidayText.replace(/\s+/g, ' ')
+  const day = () => ({ standard: null, casual: null })
+  const weekend = { standard: {}, casual: {} }
+  const set = (key, standard, casual) => {
+    weekend.standard[key] = standard
+    weekend.casual[key] = casual
+  }
+
+  // --- Saturday and Sunday ---------------------------------------------------
+  // Table layout: "Saturday and Sunday 150% 175%" (full/part-time, casual).
+  const bothTable = weekendText.match(new RegExp(String.raw`Saturday and Sunday\s+${PCT}\s+${PCT}`, 'i'))
+  if (bothTable) {
+    const standard = toBaseMultiplier(Number(bothTable[1]), 'ordinary_rate', casualLoading)
+    const casual = toBaseMultiplier(Number(bothTable[2]), 'ordinary_rate', casualLoading)
+    set('saturday', standard, casual)
+    set('sunday', standard, casual)
+  } else {
+    // Prose layout: one sentence per day, each naming a midnight-to-midnight span.
+    // "midnight on Friday" (clause 23.1) vs "midnight Friday" (the casual
+    // sub-clause) — without the optional "on" the span lands on the wrong one.
+    const satSpan = spanBetween(flatWeekend, /midnight (?:on )?Friday and\s+midnight (?:on )?Saturday/i, /midnight (?:on )?Saturday and\s+midnight (?:on )?Sunday/i)
+    const sunSpan = spanBetween(flatWeekend, /midnight (?:on )?Saturday and\s+midnight (?:on )?Sunday/i, null)
+
+    // A rate only counts for a day if it sits in text that names that day.
+    // Without this, MA000049's single Sunday sentence answers for Saturday too.
+    const dayWindow = (label) => {
+      const index = flatWeekend.search(new RegExp(String.raw`\b${label}s?\b`, 'i'))
+      return index === -1 ? '' : flatWeekend.slice(index, index + 340)
+    }
+    const readDay = (span, label) => {
+      const source = span || dayWindow(label)
+      if (!source) return { standard: null, casual: null }
+      // Narrow to the sentence that actually names this day. A combined clause
+      // ("Public holidays and Sunday work") states two rates; only the sentence
+      // mentioning Sunday sets the Sunday rate. Then drop anything from the word
+      // "casual" onward, so a casual figure cannot answer for the standard one.
+      // A phrase that names the day AND the rate together is unambiguous by
+      // construction ("200% of the minimum hourly rate for work done on Sundays").
+      const dayAnchored = firstPct(flatWeekend, [
+        new RegExp(String.raw`${PCT}\s+of the (?:minimum|ordinary) hourly rate for work done on ${label}s?`, 'i'),
+        new RegExp(String.raw`work done on ${label}s?[^.;]{0,60}?${PCT}`, 'i'),
+      ])
+      const dayRe = new RegExp(String.raw`\b${label}s?\b`, 'i')
+      const sentences = source.split(/(?<=[.;:])\s+/)
+      const daySentence = sentences.find((sentence) => dayRe.test(sentence) && /\d\s*%|time and/i.test(sentence))
+      const standardSource = (daySentence || source).split(/casual/i)[0] || source
+      const standardPct = firstPct(standardSource, [
+        new RegExp(String.raw`paid\s+${PCT}\s+of the (?:minimum|ordinary)`, 'i'),
+        new RegExp(String.raw`rate of pay must be\s+${PCT}`, 'i'),
+        new RegExp(String.raw`must be paid at the rate of\s+${PCT}`, 'i'),
+        new RegExp(String.raw`${PCT}\s+of the (?:minimum|ordinary) hourly rate`, 'i'),
+        new RegExp(String.raw`^${label}[^\n]{0,24}?\s+${PCT}`, 'im'),
+      ]) ?? wordRate(standardSource) // "at the rate of time and a half"
+
+      // If the day's text quotes more than one distinct hourly-rate percentage,
+      // we cannot tell which belongs to this day. Record nothing rather than
+      // pick one. (MA000027's Saturday window carries both 150% and 175%.)
+      const quoted = new Set(
+        [...standardSource.matchAll(new RegExp(String.raw`${PCT}\s+of the (?:minimum|ordinary) hourly rate`, 'gi'))]
+          .map((match) => match[1]),
+      )
+      const ambiguous = dayAnchored == null && quoted.size > 1
+
+      // The casual figure is often stated in a separate casual sub-clause, so it
+      // is matched against the whole weekend clause but anchored on this day.
+      const midnightSpan = label === 'Saturday'
+        ? String.raw`midnight (?:on )?Friday and\s*midnight (?:on )?Saturday`
+        : String.raw`midnight (?:on )?Saturday and\s*midnight (?:on )?Sunday`
+      const casualOfCasual = firstPct(source, [new RegExp(String.raw`${PCT}\s+of the casual hourly rate`, 'i')])
+      const casualOfOrdinary = casualOfCasual == null
+        ? (() => {
+          const direct = firstPct(flatWeekend, [new RegExp(String.raw`${midnightSpan}\s*[–—-]\s*${PCT}\s+of the ordinary`, 'i')])
+          if (direct != null) return direct
+          const row = weekendText.match(new RegExp(String.raw`^${label}[^\n]{0,24}?\s+${PCT}\s+${PCT}`, 'im'))
+          return row ? Number(row[2]) : null // column 3 = casual
+        })()
+        : null
+      return {
+        standard: ambiguous ? null : toBaseMultiplier(dayAnchored ?? standardPct, 'ordinary_rate', casualLoading),
+        casual: casualOfCasual != null
+          ? toBaseMultiplier(casualOfCasual, 'casual_rate', casualLoading)
+          : toBaseMultiplier(casualOfOrdinary, 'ordinary_rate', casualLoading),
+      }
+    }
+    const saturday = weekendText ? readDay(satSpan, 'Saturday') : day()
+    const sunday = weekendText ? readDay(sunSpan, 'Sunday') : day()
+    set('saturday', saturday.standard, saturday.casual)
+    set('sunday', sunday.standard, sunday.casual)
+  }
+
+  // --- Public holidays -------------------------------------------------------
+  // Some awards print the public holiday row inside the same penalty table as
+  // Saturday and Sunday, in the weekend clause rather than the holidays clause.
+  const phTable = (publicHolidayText.match(new RegExp(String.raw`Public holidays?[^\n]{0,24}?\s+${PCT}\s+${PCT}`, 'i'))
+    || weekendText.match(new RegExp(String.raw`Public holidays?[^\n]{0,24}?\s+${PCT}\s+${PCT}`, 'i')))
+  if (phTable) {
+    set('public_holiday',
+      toBaseMultiplier(Number(phTable[1]), 'ordinary_rate', casualLoading),
+      toBaseMultiplier(Number(phTable[2]), 'ordinary_rate', casualLoading))
+  } else {
+    const standardPct = firstPct(flatPublicHoliday, [
+      new RegExp(String.raw`full-?time and part-?time employee[s]?,?\s*${PCT}`, 'i'),
+      // Anchor on the words "public holiday" so a Sunday rate in the same
+      // combined clause cannot answer for the public holiday.
+      new RegExp(String.raw`public holidays?[\s\S]{0,160}?${PCT}\s+of the minimum hourly rate`, 'i'),
+      new RegExp(String.raw`public holidays?[\s\S]{0,160}?rate of\s+${PCT}`, 'i'),
+    ])
+    const casualOfCasual = firstPct(flatPublicHoliday, [
+      new RegExp(String.raw`casual employee[s]?,?\s*${PCT}\s+of the casual hourly rate`, 'i'),
+    ])
+    const casualOfOrdinary = casualOfCasual == null
+      ? firstPct(flatPublicHoliday, [new RegExp(String.raw`casual employee[s]?,?\s*${PCT}`, 'i')])
+      : null
+    set('public_holiday',
+      toBaseMultiplier(standardPct, 'ordinary_rate', casualLoading),
+      casualOfCasual != null
+        ? toBaseMultiplier(casualOfCasual, 'casual_rate', casualLoading)
+        : toBaseMultiplier(casualOfOrdinary, 'ordinary_rate', casualLoading))
+  }
+
+  for (const key of ['saturday', 'sunday', 'public_holiday']) {
+    for (const bucket of ['standard', 'casual']) {
+      if (weekend[bucket][key] == null) {
+        warnings.push(`${awardCode}: the ${bucket} ${key.replace('_', ' ')} penalty could not be read from the award text; no rate was recorded and none was assumed.`)
+      }
+    }
+  }
+  return { weekend, warnings }
+}
+
+/**
+ * The rate table emits a row for a classification group AND for its pay points,
+ * so a group can appear twice with different rates. Where the classification
+ * name carries its annual salary ("Senior Principal Specialist — 159,515") the
+ * hourly rate can be checked against it: salary / 52 weeks / 38 hours. Use that
+ * to pick the right row; where nothing settles it, drop the rate rather than
+ * guess, because guessing here underpays a real person.
+ */
+const SALARY_SUFFIX_RE = /\s*[—–-]?\s*(\d{2,3},\d{3})\s*$/
+const STANDARD_WEEK_HOURS = 38
+
+function reconcileLevels(levels) {
+  const warnings = []
+  const annualOf = (name) => {
+    const match = String(name).match(SALARY_SUFFIX_RE)
+    return match ? Number(match[1].replace(/,/g, '')) : null
+  }
+  const baseName = (name) => String(name).replace(SALARY_SUFFIX_RE, '').replace(/\s*[—–-]\s*$/, '').trim()
+
+  const groups = new Map()
+  for (const level of levels) {
+    const key = normalizeLevel(baseName(level.employeeLevel))
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(level)
+  }
+
+  const kept = []
+  for (const group of groups.values()) {
+    let chosen = group[0]
+    if (group.length > 1) {
+      const corroborated = group.filter((level) => {
+        const annual = annualOf(level.employeeLevel)
+        return annual != null && Math.abs(annual / 52 / STANDARD_WEEK_HOURS - level.basePayRateHourly) < 0.02
+      })
+      if (corroborated.length === 1) {
+        chosen = corroborated[0]
+        const dropped = group.filter((l) => l !== chosen).map((l) => l.basePayRateHourly).join(', ')
+        warnings.push(`Classification "${baseName(chosen.employeeLevel)}" was parsed ${group.length} times ($${dropped} vs $${chosen.basePayRateHourly}); kept $${chosen.basePayRateHourly}, which matches the annual salary printed in the table.`)
+      } else {
+        chosen = { ...group[0], basePayRateHourly: null, weeklyRate: null }
+        warnings.push(`Classification "${baseName(group[0].employeeLevel)}" was parsed ${group.length} times with conflicting rates (${group.map((l) => `$${l.basePayRateHourly}`).join(', ')}) and nothing in the table settles which is correct. No rate was recorded.`)
+      }
+    }
+    const name = baseName(chosen.employeeLevel) || chosen.employeeLevel
+    kept.push({ ...chosen, employeeLevel: name, levelCode: deriveLevelCode(name) })
+  }
+  return { levels: kept, warnings }
 }
 
 export function parseOfficialAwardDocument(text, sourceName = 'award-document') {
@@ -902,6 +1159,18 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
     baseRate: findClauseRef(clauseIndex, [/minimum (?:weekly |hourly )?(?:wages|rates)/i, /minimum rates/i, /minimum wages/i, /classifications and minimum/i]),
     casualLoading: findClauseRef(clauseIndex, [/casual employees/i]),
     overtime: findClauseRef(clauseIndex, [/^overtime$/i, /overtime/i]),
+    // Ordinary-hours day penalties live in their own clause. Match it before
+    // anything containing "overtime", and never fall back to public holidays.
+    // Exact titles only. A loose /penalty rates/ matches "Shiftwork penalty
+    // rates" and "Overtime penalty rates", neither of which sets the ordinary-
+    // hours day penalties.
+    weekendPenalties: findClauseRef(clauseIndex, [
+      /^saturday and sunday work$/i,
+      /^penalty rates$/i,
+      /^penalty rates and shiftwork$/i,
+      /^public holidays? and sunday work$/i, // combined clause (e.g. MA000049)
+    ]),
+    publicHolidays: findClauseRef(clauseIndex, [/^public holidays$/i, /public holidays and sunday/i, /public holiday/i]),
     penalties: findClauseRef(clauseIndex, [/public holidays and sunday/i, /public holiday/i, /penalty rates/i]),
     allowancesClause: findClauseRef(clauseIndex, [/^allowances$/i, /allowances/i]),
     allowancesSchedule: findClauseRef(clauseIndex, [/monetary allowances/i]),
@@ -918,6 +1187,11 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
   if (!parsedLevels.length) {
     warnings.push(`No classification rates were parsed from ${sourceName} (${slots.baseRate || 'minimum rates clause not found'}).`)
   }
+  // The rate table emits a row for a classification group and for each of its
+  // pay points, so the same classification can appear twice at different rates.
+  const reconciled = reconcileLevels(parsedLevels)
+  parsedLevels = reconciled.levels
+  warnings.push(...reconciled.warnings)
 
   const scheduleARegion = officialSection(lines, /^Schedule A\s*[—–-]\s*Skill Level Descriptions$/i, /^Schedule B\b/)
   const scheduleByLevel = {}
@@ -940,51 +1214,67 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
   const casualLoadingPct = firstNumberMatch(casualText, [/(\d+)%\s+loading/i], 25)
   const casualLoading = round2(casualLoadingPct / 100)
 
-  const overtimeBand = overtimeText.match(/(\d+)%[^.]*?for the first (\d+) hours and (\d+)%/i)
+  // The overtime band wraps across lines in the extracted PDF text
+  // ("for the first 2 hours and\n200% after"), so match against a flattened copy.
+  // The old defaults (3 hours, 150/200) were how "Overtime — first 3 hours" got
+  // into every award; no award in the library actually says three.
+  const flatOvertime = overtimeText.replace(/\s+/g, ' ')
+  const overtimeBand = flatOvertime.match(/(\d+)%[^.]*?for the first (\d+) hours[,]? and (\d+)%/i)
   const firstTwoMultiplier = overtimeBand ? round2(Number(overtimeBand[1]) / 100) : 1.5
-  const firstBandHours = overtimeBand ? Number(overtimeBand[2]) : 3
+  const firstBandHours = overtimeBand ? Number(overtimeBand[2]) : null
   const afterTwoMultiplier = overtimeBand ? round2(Number(overtimeBand[3]) / 100) : 2
+  if (!overtimeBand) warnings.push(`${awardCode}: the overtime band ("first N hours") could not be read from the award text.`)
   const overtimeSundayMultiplier = round2(firstNumberMatch(overtimeText, [/Sunday[\s\S]{0,160}?(\d+)% of the minimum hourly rate/i], 200) / 100)
-  const publicHolidayMultiplier = round2(firstNumberMatch(penaltyText, [/(\d+)% of the minimum hourly rate[\s\S]{0,80}?public holiday/i, /public holiday[\s\S]{0,120}?(\d+)% of the minimum hourly rate/i], 250) / 100)
-  const sundayOrdinaryMultiplier = round2(firstNumberMatch(penaltyText, [/(\d+)% of the minimum hourly rate for work done on Sundays/i, /Sundays?[\s\S]{0,120}?(\d+)% of the minimum hourly rate/i], 200) / 100)
+  // An absent clause must yield NO text. clauseBodySection would otherwise hand
+  // back an arbitrary region and a regex would happily read a night-shift rate
+  // as a Sunday penalty.
+  const bodyOf = (ref) => (ref ? clauseBodySection(lines, ref, clauseIndex, /^\d+[A-Z]?\.\s+[A-Z]/).join('\n') : '')
+  const weekendText = bodyOf(slots.weekendPenalties)
+  const publicHolidayText = bodyOf(slots.publicHolidays)
   const dailyThreshold = firstNumberMatch(ordinaryText, [/more than (\d+(?:\.\d+)?) ordinary hours on any one day/i], 10)
   const weeklyThreshold = firstNumberMatch(ordinaryText, [/will be (\d+) or an average/i, /average of (\d+) per week/i], 38)
 
-  const weekend = {
-    standard: {
-      saturday: firstTwoMultiplier,
-      sunday: sundayOrdinaryMultiplier,
-      public_holiday: publicHolidayMultiplier,
-    },
-    casual: {
-      saturday: round2(firstTwoMultiplier + casualLoading),
-      sunday: round2(sundayOrdinaryMultiplier + casualLoading),
-      public_holiday: round2(publicHolidayMultiplier + casualLoading),
-    },
+  const { weekend, warnings: penaltyWarnings } = parseDayPenalties({
+    weekendText,
+    publicHolidayText,
+    casualLoading,
+    awardCode,
+  })
+  warnings.push(...penaltyWarnings)
+  if (!slots.weekendPenalties) {
+    warnings.push(`${awardCode}: no Saturday/Sunday penalty clause was located; weekend penalties were not recorded.`)
   }
+  const publicHolidayMultiplier = weekend.standard.public_holiday
 
   const references = {
     ordinaryHours: slots.ordinaryHours,
     baseRate: slots.baseRate,
     casualLoading: slots.casualLoading,
+    weekendPenalties: slots.weekendPenalties,
+    publicHolidays: slots.publicHolidays,
     penalties: slots.penalties,
     eveningNight: findClauseRef(clauseIndex, [/shiftwork penalty/i]),
     overtime: slots.overtime,
     allowances: [slots.allowancesClause, slots.allowancesSchedule].filter(Boolean).join(' / '),
   }
 
+  const overtimePublicHolidayMultiplier = round2(firstNumberMatch(overtimeText, [/Public holidays?\s*[—–-]\s*(\d+)%/i, /Public holidays?[\s\S]{0,80}?(\d+)% of the minimum hourly rate/i], null) / 100) || null
+
+  // A rate we could not read is omitted. Never emit a penalty row with a value
+  // we invented, and never attribute a day penalty to the overtime clause.
   const penaltyRates = [
-    { type: 'Saturday', mode: 'multiplier', value: weekend.standard.saturday, unit: 'hour', employment: 'standard', trigger: 'day:saturday', clause: references.overtime },
-    { type: 'Saturday', mode: 'multiplier', value: weekend.casual.saturday, unit: 'hour', employment: 'casual', trigger: 'day:saturday', clause: references.overtime },
-    { type: 'Sunday', mode: 'multiplier', value: weekend.standard.sunday, unit: 'hour', employment: 'standard', trigger: 'day:sunday', clause: references.penalties },
-    { type: 'Sunday', mode: 'multiplier', value: weekend.casual.sunday, unit: 'hour', employment: 'casual', trigger: 'day:sunday', clause: references.penalties },
-    { type: 'Public holiday', mode: 'multiplier', value: weekend.standard.public_holiday, unit: 'hour', employment: 'standard', trigger: 'day:public_holiday', clause: references.penalties },
-    { type: 'Public holiday', mode: 'multiplier', value: weekend.casual.public_holiday, unit: 'hour', employment: 'casual', trigger: 'day:public_holiday', clause: references.penalties },
-    { type: `Overtime — first ${firstBandHours} hours`, mode: 'multiplier', value: firstTwoMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:first_band', clause: references.overtime },
-    { type: `Overtime — after ${firstBandHours} hours`, mode: 'multiplier', value: afterTwoMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:after_first_band', clause: references.overtime },
-    { type: 'Overtime — Sunday', mode: 'multiplier', value: overtimeSundayMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:sunday', clause: references.overtime },
-    { type: 'Overtime — public holiday', mode: 'multiplier', value: publicHolidayMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:public_holiday', clause: references.penalties },
-  ]
+    { type: 'Saturday', value: weekend.standard.saturday, employment: 'standard', trigger: 'day:saturday', clause: references.weekendPenalties },
+    { type: 'Saturday', value: weekend.casual.saturday, employment: 'casual', trigger: 'day:saturday', clause: references.weekendPenalties },
+    { type: 'Sunday', value: weekend.standard.sunday, employment: 'standard', trigger: 'day:sunday', clause: references.weekendPenalties },
+    { type: 'Sunday', value: weekend.casual.sunday, employment: 'casual', trigger: 'day:sunday', clause: references.weekendPenalties },
+    { type: 'Public holiday', value: weekend.standard.public_holiday, employment: 'standard', trigger: 'day:public_holiday', clause: references.publicHolidays },
+    { type: 'Public holiday', value: weekend.casual.public_holiday, employment: 'casual', trigger: 'day:public_holiday', clause: references.publicHolidays },
+    { type: firstBandHours ? `Overtime — first ${firstBandHours} hours` : 'Overtime — first band', value: firstTwoMultiplier, employment: 'standard', trigger: 'overtime:first_band', clause: references.overtime },
+    { type: firstBandHours ? `Overtime — after ${firstBandHours} hours` : 'Overtime — after first band', value: afterTwoMultiplier, employment: 'standard', trigger: 'overtime:after_first_band', clause: references.overtime },
+    { type: 'Overtime — Sunday', value: overtimeSundayMultiplier, employment: 'standard', trigger: 'overtime:sunday', clause: references.overtime },
+    { type: 'Overtime — public holiday', value: overtimePublicHolidayMultiplier, employment: 'standard', trigger: 'overtime:public_holiday', clause: references.overtime },
+  ].filter((rate) => rate.value != null)
+    .map((rate) => ({ ...rate, mode: 'multiplier', unit: 'hour' }))
 
   const { allowances: allowancesAll, penalties: penaltyRatesAll } =
     mergeHealthcareEntitlements(allowances, penaltyRates, lines, clauseIndex)
@@ -1050,12 +1340,51 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
   }
 }
 
+const MONTHS = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+}
+
+// Every FWC consolidated award opens by declaring which amendments it contains:
+//   "This Fair Work Commission consolidated modern award incorporates all
+//    amendments up to and including 1 July 2026 (PR799315 and PR799472)."
+// That date — not the day we downloaded the file — is what says whether the
+// minimum rates inside reflect the latest Annual Wage Review. The FWC publishes
+// the varied award BEFORE its operative date, so a document fetched in late
+// June can already carry the rates that operate from 1 July.
+const AMENDED_TO_RE =
+  /incorporates\s+all\s+amendments\s+up\s+to\s+and\s+including\s+(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s*(?:\(([^)]*)\))?/i
+
+/**
+ * The amendment date an award document declares about itself.
+ * @param {string} text  raw award text
+ * @returns {{ amendedTo: string, variations: string[] }}  amendedTo is ISO, or ''
+ */
+export function parseAmendedTo(text) {
+  // The declaration wraps across lines in extracted PDF text.
+  const flat = String(text || '').slice(0, 4000).replace(/\s+/g, ' ')
+  const match = flat.match(AMENDED_TO_RE)
+  if (!match) return { amendedTo: '', variations: [] }
+
+  const [, day, monthName, year, refs] = match
+  const month = MONTHS[monthName.toLowerCase()]
+  if (!month) return { amendedTo: '', variations: [] }
+
+  const dayNum = Number(day)
+  if (dayNum < 1 || dayNum > 31) return { amendedTo: '', variations: [] }
+
+  const amendedTo = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+  const variations = (refs || '').match(/PR\d+/gi)?.map((ref) => ref.toUpperCase()) || []
+  return { amendedTo, variations }
+}
+
 export function parseAwardDocument(text, sourceName = 'award-document') {
+  const amendment = parseAmendedTo(text)
   if (/^SECTION 01$/m.test(cleanText(text))) {
-    return parseRulebookAwardDocument(text, sourceName)
+    return { ...parseRulebookAwardDocument(text, sourceName), ...amendment }
   }
   if (isOfficialAwardDocument(text)) {
-    return parseOfficialAwardDocument(text, sourceName)
+    return { ...parseOfficialAwardDocument(text, sourceName), ...amendment }
   }
-  return parseRulebookAwardDocument(text, sourceName)
+  return { ...parseRulebookAwardDocument(text, sourceName), ...amendment }
 }

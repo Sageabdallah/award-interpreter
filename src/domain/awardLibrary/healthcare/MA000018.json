@@ -2,10 +2,18 @@
   "parsedAward": {
     "awardCode": "MA000018",
     "awardTitle": "Aged Care Award 2010",
+    "amendedTo": "2026-07-01",
+    "variations": [
+      "PR799280",
+      "PR799299",
+      "PR799456"
+    ],
     "references": {
       "ordinaryHours": "cl. 22",
       "baseRate": "cl. 14",
       "casualLoading": "",
+      "weekendPenalties": "cl. 23",
+      "publicHolidays": "cl. 29",
       "penalties": "cl. 29",
       "eveningNight": "",
       "overtime": "cl. 25",
@@ -168,93 +176,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -278,6 +268,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -289,13 +281,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -303,11 +295,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -327,93 +319,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -437,6 +411,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -448,13 +424,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -462,11 +438,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -486,93 +462,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -596,6 +554,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -607,13 +567,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -621,11 +581,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -645,93 +605,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -755,6 +697,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -766,13 +710,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -780,11 +724,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -804,93 +748,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -914,6 +840,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -925,13 +853,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -939,11 +867,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -963,93 +891,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1073,6 +983,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1084,13 +996,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1098,11 +1010,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1122,93 +1034,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1232,6 +1126,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1243,13 +1139,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1257,11 +1153,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1281,93 +1177,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1391,6 +1269,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1402,13 +1282,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1416,11 +1296,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1440,93 +1320,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1550,6 +1412,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1561,13 +1425,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1575,11 +1439,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1599,93 +1463,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1709,6 +1555,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1720,13 +1568,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1734,11 +1582,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1758,93 +1606,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -1868,6 +1698,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -1879,13 +1711,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -1893,11 +1725,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -1917,93 +1749,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -2027,6 +1841,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -2038,13 +1854,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -2052,11 +1868,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -2076,93 +1892,75 @@
         "penaltyRates": [
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Saturday",
-            "mode": "multiplier",
             "value": 1.75,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:saturday",
-            "clause": "cl. 25"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Sunday",
+            "value": 1.75,
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 23",
             "mode": "multiplier",
+            "unit": "hour"
+          },
+          {
+            "type": "Sunday",
             "value": 2,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Sunday",
-            "mode": "multiplier",
-            "value": 2.25,
-            "unit": "hour",
             "employment": "casual",
             "trigger": "day:sunday",
-            "clause": "cl. 29"
+            "clause": "cl. 23",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.5,
-            "unit": "hour",
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Public holiday",
-            "mode": "multiplier",
-            "value": 2.75,
-            "unit": "hour",
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "clause": "cl. 29"
-          },
-          {
-            "type": "Overtime — first 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — first band",
             "value": 1.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
-            "type": "Overtime — after 3 hours",
-            "mode": "multiplier",
+            "type": "Overtime — after first band",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:after_first_band",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — Sunday",
-            "mode": "multiplier",
             "value": 2,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:sunday",
-            "clause": "cl. 25"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Overtime — public holiday",
-            "mode": "multiplier",
             "value": 2.5,
-            "unit": "hour",
             "employment": "standard",
             "trigger": "overtime:public_holiday",
-            "clause": "cl. 29"
+            "clause": "cl. 25",
+            "mode": "multiplier",
+            "unit": "hour"
           },
           {
             "type": "Night shift loading",
@@ -2186,6 +1984,8 @@
           "ordinaryHours": "cl. 22",
           "baseRate": "cl. 14",
           "casualLoading": "",
+          "weekendPenalties": "cl. 23",
+          "publicHolidays": "cl. 29",
           "penalties": "cl. 29",
           "eveningNight": "",
           "overtime": "cl. 25",
@@ -2197,13 +1997,13 @@
           "weekend": {
             "standard": {
               "saturday": 1.5,
-              "sunday": 2,
-              "public_holiday": 2.5
+              "sunday": 1.75,
+              "public_holiday": null
             },
             "casual": {
               "saturday": 1.75,
-              "sunday": 2.25,
-              "public_holiday": 2.75
+              "sunday": 2,
+              "public_holiday": null
             }
           },
           "flatLoadings": [],
@@ -2211,11 +2011,11 @@
             "weeklyThreshold": 38,
             "dailyThreshold": 10,
             "casualDailyThreshold": 10,
-            "firstBandHours": 3,
+            "firstBandHours": null,
             "firstTwoMultiplier": 1.5,
             "afterTwoMultiplier": 2,
             "sundayMultiplier": 2,
-            "publicHolidayMultiplier": 2.5
+            "publicHolidayMultiplier": null
           }
         },
         "sourceName": "MA000018 (fwc-pdf)",
@@ -2280,7 +2080,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -2312,11 +2112,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel1-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel1-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -2326,31 +2151,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel1-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -2369,71 +2169,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel1-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel1-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -2447,10 +2190,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -2464,7 +2207,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -2481,7 +2224,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel1-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -2494,11 +2237,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel1-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel1-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -2574,7 +2317,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -2606,11 +2349,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel2-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel2-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -2620,31 +2388,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel2-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -2663,71 +2406,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel2-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel2-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -2741,10 +2427,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -2758,7 +2444,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -2775,7 +2461,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel2-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -2788,11 +2474,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel2-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel2-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -2868,7 +2554,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -2900,11 +2586,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel3-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel3-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -2914,31 +2625,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel3-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -2957,71 +2643,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel3-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel3-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -3035,10 +2664,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -3052,7 +2681,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -3069,7 +2698,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel3-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -3082,11 +2711,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel3-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel3-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -3162,7 +2791,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -3194,11 +2823,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel4-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel4-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -3208,31 +2862,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel4-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -3251,71 +2880,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel4-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel4-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -3329,10 +2901,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -3346,7 +2918,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -3363,7 +2935,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel4-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -3376,11 +2948,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel4-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel4-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -3456,7 +3028,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -3488,11 +3060,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel5-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel5-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -3502,31 +3099,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel5-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -3545,71 +3117,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel5-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel5-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -3623,10 +3138,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -3640,7 +3155,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -3657,7 +3172,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel5-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -3670,11 +3185,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel5-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel5-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -3750,7 +3265,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -3782,11 +3297,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel6-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel6-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -3796,31 +3336,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel6-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -3839,71 +3354,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel6-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel6-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -3917,10 +3375,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -3934,7 +3392,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -3951,7 +3409,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel6-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -3964,11 +3422,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel6-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel6-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -4044,7 +3502,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -4076,11 +3534,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeegenerallevel7-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeegenerallevel7-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -4090,31 +3573,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel7-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -4133,71 +3591,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel7-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel7-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-6",
+            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -4211,10 +3612,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-7",
+            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -4228,7 +3629,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-8",
+            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -4245,7 +3646,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-9",
+            "id": "ma000018-agedcareemployeegenerallevel7-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -4258,11 +3659,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeegenerallevel7-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeegenerallevel7-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -4338,7 +3739,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -4370,11 +3771,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeedirectcarelevel1introductory-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -4384,31 +3810,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -4427,71 +3828,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-6",
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -4505,10 +3849,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-7",
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -4522,7 +3866,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-8",
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -4539,7 +3883,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-9",
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -4552,11 +3896,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeedirectcarelevel1introductory-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -4632,7 +3976,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -4664,11 +4008,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-carer-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-carer-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -4678,31 +4047,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-carer-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -4721,71 +4065,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-carer-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-carer-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-carer-overtime-pen-6",
+            "id": "ma000018-carer-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -4799,10 +4086,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-carer-overtime-pen-7",
+            "id": "ma000018-carer-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -4816,7 +4103,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-carer-overtime-pen-8",
+            "id": "ma000018-carer-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -4833,7 +4120,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-carer-overtime-pen-9",
+            "id": "ma000018-carer-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -4846,11 +4133,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-carer-shift_loading-pen-10",
+            "id": "ma000018-carer-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -4926,7 +4213,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -4958,11 +4245,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeedirectcarelevel3qualified-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -4972,31 +4284,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -5015,71 +4302,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-6",
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -5093,10 +4323,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-7",
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -5110,7 +4340,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-8",
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -5127,7 +4357,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-9",
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -5140,11 +4370,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeedirectcarelevel3qualified-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -5220,7 +4450,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -5252,11 +4482,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeedirectcarelevel4senior-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -5266,31 +4521,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -5309,71 +4539,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-6",
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -5387,10 +4560,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-7",
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -5404,7 +4577,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-8",
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -5421,7 +4594,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-9",
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -5434,11 +4607,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel4senior-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeedirectcarelevel4senior-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -5514,7 +4687,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -5546,11 +4719,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-specialist-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-specialist-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -5560,31 +4758,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-specialist-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -5603,71 +4776,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-specialist-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-specialist-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-specialist-overtime-pen-6",
+            "id": "ma000018-specialist-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -5681,10 +4797,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-specialist-overtime-pen-7",
+            "id": "ma000018-specialist-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -5698,7 +4814,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-specialist-overtime-pen-8",
+            "id": "ma000018-specialist-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -5715,7 +4831,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-specialist-overtime-pen-9",
+            "id": "ma000018-specialist-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -5728,11 +4844,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-specialist-shift_loading-pen-10",
+            "id": "ma000018-specialist-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -5808,7 +4924,7 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
@@ -5840,11 +4956,36 @@
                 }
               }
             ],
-            "clauseRef": "cl. 25",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
             "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 23",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-weekend_penalty-pen-3",
             "category": "weekend_penalty",
             "title": "Sunday",
             "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
@@ -5854,31 +4995,6 @@
               "appliesTo": "base_rate",
               "unit": "hour"
             },
-            "employment": "standard",
-            "trigger": "day:sunday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "Sunday",
-                "match": {
-                  "day": "sunday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-weekend_penalty-pen-3",
-            "category": "weekend_penalty",
-            "title": "Sunday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
-            "rate": {
-              "multiplier": 2.25,
-              "percent": 225,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
             "employment": "casual",
             "trigger": "day:sunday",
             "conditions": [
@@ -5897,71 +5013,14 @@
                 }
               }
             ],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 23",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-public_holiday-pen-4",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
-            "rate": {
-              "multiplier": 2.5,
-              "percent": 250,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "standard",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-public_holiday-pen-5",
-            "category": "public_holiday",
-            "title": "Public holiday",
-            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
-            "rate": {
-              "multiplier": 2.75,
-              "percent": 275,
-              "appliesTo": "base_rate",
-              "unit": "hour"
-            },
-            "employment": "casual",
-            "trigger": "day:public_holiday",
-            "conditions": [
-              {
-                "kind": "day",
-                "text": "public holiday",
-                "match": {
-                  "day": "public_holiday"
-                }
-              },
-              {
-                "kind": "employment",
-                "text": "casual employees",
-                "match": {
-                  "employment": "casual"
-                }
-              }
-            ],
-            "clauseRef": "cl. 29",
-            "confidence": "high"
-          },
-          {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-6",
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-4",
             "category": "overtime",
-            "title": "Overtime — first 3 hours",
-            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "title": "Overtime — first band",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first band).",
             "rate": {
               "multiplier": 1.5,
               "percent": 150,
@@ -5975,10 +5034,10 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-7",
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-5",
             "category": "overtime",
-            "title": "Overtime — after 3 hours",
-            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "title": "Overtime — after first band",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after first band).",
             "rate": {
               "multiplier": 2,
               "percent": 200,
@@ -5992,7 +5051,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-8",
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-6",
             "category": "overtime",
             "title": "Overtime — Sunday",
             "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
@@ -6009,7 +5068,7 @@
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-9",
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-overtime-pen-7",
             "category": "overtime",
             "title": "Overtime — public holiday",
             "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
@@ -6022,11 +5081,11 @@
             "employment": "standard",
             "trigger": "overtime:public_holiday",
             "conditions": [],
-            "clauseRef": "cl. 29",
+            "clauseRef": "cl. 25",
             "confidence": "high"
           },
           {
-            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-shift_loading-pen-10",
+            "id": "ma000018-agedcareemployeedirectcarelevel6teamleader-shift_loading-pen-8",
             "category": "shift_loading",
             "title": "Night shift loading",
             "plainLanguage": "Extra -85% loading for working a night shift (15% of the ordinary rate).",
@@ -6061,7 +5120,7 @@
       "engine": "deterministic-parser",
       "parserVersion": "interp-1.0.0",
       "cacheFingerprint": "",
-      "generatedAt": "2026-06-25T06:49:28.589Z"
+      "generatedAt": "2026-07-09T10:46:50.551Z"
     },
     "schemaVersion": "1.0.0"
   },
@@ -6069,6 +5128,6 @@
     "kind": "fwc-pdf",
     "url": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000018.pdf",
     "htmlUrl": "https://awards.fairwork.gov.au/MA000018.html",
-    "fetchedAt": "2026-06-25T06:49:28.589Z"
+    "fetchedAt": "2026-07-09T10:46:50.551Z"
   }
 }

@@ -46,9 +46,15 @@ describe('official FWC consolidated award document (MA000049, amendments to 23 J
     expect(gso1.rules.overtime.firstTwoMultiplier).toBe(1.5)
     expect(gso1.rules.overtime.afterTwoMultiplier).toBe(2)
     expect(gso1.rules.overtime.dailyThreshold).toBe(10)
+    // cl. 31 "Public holidays and Sunday work": Sunday 200%, public holiday 250%.
     expect(gso1.rules.weekend.standard.sunday).toBe(2)
     expect(gso1.rules.weekend.standard.public_holiday).toBe(2.5)
-    expect(gso1.rules.weekend.casual.sunday).toBe(2.25)
+    // MA000049 states no Saturday penalty and no casual day rates. The parser
+    // used to synthesise them (standard + casual loading); it now records null
+    // and warns, because an invented rate is invisible and a missing one is not.
+    expect(gso1.rules.weekend.standard.saturday).toBeNull()
+    expect(gso1.rules.weekend.casual.sunday).toBeNull()
+    expect(parsed.parseWarnings.some((w) => /casual sunday penalty could not be read/i.test(w))).toBe(true)
     expect(gso1.rules.casualLoading).toBe(0.25)
   })
 
@@ -97,7 +103,14 @@ describe('official FWC consolidated award document (MA000049, amendments to 23 J
 
     expect(parsedCache.awardCodes).toEqual(['MA000049'])
     expect(results.rows).toHaveLength(5)
-    expect(results.rows.every((row) => row.validationErrors.length === 0)).toBe(true)
+
+    // Any employee who worked a day whose penalty rate MA000049 does not state
+    // is flagged for manual review rather than quietly paid at the base rate.
+    for (const row of results.rows) {
+      for (const issue of row.validationErrors) {
+        expect(issue).toMatch(/MA000049 does not record a .* penalty rate for (saturday|sunday|public holiday)/)
+      }
+    }
 
     const amelia = results.rows.find((row) => row.employeeName === 'Amelia Hart')
     expect(amelia.basePay).toBe(25.17)
@@ -112,17 +125,24 @@ describe('official FWC consolidated award document (MA000049, amendments to 23 J
     expect(firstAid.appliedAmount).toBe(21.43)
     expect(firstAid.clause).toBe('cl. 21.2(c) / Sch C')
 
+    // Ethan is casual and worked a Sunday. MA000049 states a standard Sunday
+    // rate but no casual one, so the Sunday penalty is not paid and the row is
+    // flagged. The casual loading, which the award does state, is still paid.
     const ethan = results.rows.find((row) => row.employeeName === 'Ethan Cole')
-    expect(ethan.totalCalculatedPay).toBe(463.14)
-    const sunday = ethan.interpretation.extras.find((extra) => /sunday/i.test(extra.type))
-    expect(sunday.applied).toBe(true)
-    expect(sunday.clause).toBe('cl. 31')
+    expect(ethan.validationErrors.join(' ')).toMatch(/does not record a casual penalty rate for sunday/)
+    const casualLoading = ethan.extrasAllowances.items.find((item) => /casual loading/i.test(item.type))
+    expect(casualLoading).toBeTruthy()
+    expect(ethan.totalCalculatedPay).toBeGreaterThan(ethan.ordinaryPay)
 
     expect(ethan.interpretation.workSummary.sundayHours).toBe(8)
     expect(ethan.interpretation.workSummary.publicHolidayHours).toBe(0)
-    expect(ethan.interpretation.workSummary.weekendAmount).toBe(257.3)
-    expect(ethan.interpretation.workSummary.aboveBase).toBe(257.3)
-    expect(ethan.effectiveHourlyRate).toBe(57.89)
+    // No Sunday penalty is payable (the award states none for casuals), so the
+    // weekend amount is zero; what lifts him above base is the casual loading.
+    expect(ethan.interpretation.workSummary.weekendAmount).toBe(0)
+    expect(ethan.interpretation.workSummary.aboveBase).toBeGreaterThan(0)
+    // base 25.73 + 25% casual loading. Previously 57.89, which included a
+    // Sunday penalty synthesised from a rate the award never states.
+    expect(ethan.effectiveHourlyRate).toBeCloseTo(32.16, 2)
 
     expect(amelia.effectiveHourlyRate).toBe(25.17)
     expect(amelia.interpretation.workSummary.sundayHours).toBe(0)

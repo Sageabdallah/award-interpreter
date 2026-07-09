@@ -155,6 +155,11 @@ async function seedOne(industry, award, { inDir, outDir, sourcesDir, generatedAt
       parsedAward: {
         awardCode: parsed.awardCode,
         awardTitle: parsed.awardTitle,
+        // Declared by the document: "incorporates all amendments up to and
+        // including <date>". This is what tells the app whether these rates
+        // survived the last Annual Wage Review. See domain/rateValidity.js.
+        amendedTo: parsed.amendedTo || '',
+        variations: parsed.variations || [],
         references: parsed.references,
         clauseIndex: parsed.clauseIndex,
         classificationRows: parsed.classificationRows,

@@ -67,7 +67,9 @@ describe('buildInterpretationTableRows (flat clause-level display rows)', () => 
 
     const saturday = naRows.find((row) => row.kind === 'penalty' && row.trigger === 'day:saturday' && row.employment === 'standard')
     expect(saturday.valueLabel).toBe('×1.50 (150%)')
-    expect(saturday.clauseRef).toBe('cl. 19')
+    // MA000034 cl. 21 "Saturday and Sunday work". This previously asserted
+    // cl. 19 ("Overtime") because the parser read the overtime table.
+    expect(saturday.clauseRef).toBe('cl. 21')
     expect(saturday.categoryLabel).toBe('Weekend')
     expect(saturday.conditionsText).toContain('Saturday')
   })
