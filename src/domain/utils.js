@@ -230,24 +230,6 @@ export async function sha256HexFromFiles(files = []) {
   return digestBytes(concatUint8Arrays(chunks))
 }
 
-export function formatDateKey(value = '') {
-  const parts = String(value).split(/[/-]/).map((part) => part.trim())
-  if (parts.length !== 3) return String(value)
-  const [dd, mm, yyyy] = parts
-  const normalizedYear = /^\d{2}$/.test(yyyy) ? `20${yyyy}` : yyyy
-  return `${normalizedYear.padStart(4, '0')}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
-}
-
-export function getWeekBucket(dateString = '') {
-  const iso = formatDateKey(dateString)
-  const date = new Date(`${iso}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return iso
-  const day = date.getDay() || 7
-  const monday = new Date(date)
-  monday.setDate(date.getDate() - day + 1)
-  return monday.toISOString().slice(0, 10)
-}
-
 export function sumAmounts(items = []) {
   return round2(items.reduce((sum, item) => sum + (Number(item?.amount) || 0), 0))
 }

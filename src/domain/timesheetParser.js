@@ -1,8 +1,7 @@
 import { readSpreadsheetRows } from './fileReaders.js'
+import { UNKNOWN_WEEK, parseTimesheetDate, weekBucketFor } from './timesheetDates.js'
 import {
   durationHours,
-  formatDateKey,
-  getWeekBucket,
   normalizeHeader,
   round2,
 } from './utils.js'
@@ -28,6 +27,7 @@ function rowIsBlank(row = []) {
 
 export function parseTimesheetRows(rows, sourceName = 'timesheet') {
   const meta = {}
+  const parseWarnings = []
   const headerIndex = rows.findIndex((row) => {
     const normalized = row.map((cell) => normalizeHeader(cell))
     return normalized.includes('employeeid') && normalized.includes('name') && normalized.includes('date')
@@ -51,14 +51,25 @@ export function parseTimesheetRows(rows, sourceName = 'timesheet') {
     const record = Object.fromEntries(headers.map((header, index) => [header, String(row[index] ?? '').trim()]))
     const hours = Number(record.hours || durationHours(record.start, record.finish) || 0)
     if (!record.employeeName || !record.date) continue
+
+    // A shift with an unreadable date is kept — the hours were worked — but its
+    // dateKey is left empty so nothing downstream mistakes the raw cell for a
+    // date. Such shifts share one week bucket rather than each forming their
+    // own: lumping them together can only overstate weekly overtime, and an
+    // error in that direction favours the employee.
+    const parsedDate = parseTimesheetDate(record.date, { day: record.day })
+    if (!parsedDate.ok) {
+      parseWarnings.push(`${record.employeeName}: the date ${parsedDate.reason}. This shift was not checked against the public holiday calendar and is excluded from weekly overtime grouping.`)
+    }
+
     shifts.push({
       employeeId: record.employeeId || '',
       employeeName: record.employeeName,
       jobRole: record.jobRole || '',
       employmentType: record.employmentType || '',
-      date: record.date,
-      dateKey: formatDateKey(record.date),
-      weekBucket: getWeekBucket(record.date),
+      date: parsedDate.ok ? parsedDate.iso : record.date,
+      dateKey: parsedDate.ok ? parsedDate.iso : '',
+      weekBucket: parsedDate.ok ? weekBucketFor(parsedDate.iso) : UNKNOWN_WEEK,
       day: record.day || '',
       start: record.start || '',
       finish: record.finish || '',
@@ -98,6 +109,8 @@ export function parseTimesheetRows(rows, sourceName = 'timesheet') {
     },
     shifts,
     employees,
+    // One notice per distinct problem, not one per shift.
+    parseWarnings: [...new Set(parseWarnings)],
     totalHours: round2(shifts.reduce((sum, shift) => sum + shift.hours, 0)),
   }
 }
