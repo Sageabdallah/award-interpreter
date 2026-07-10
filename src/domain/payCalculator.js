@@ -68,11 +68,17 @@ function getEmploymentBucket(value = '') {
 }
 
 /**
+ * @param {Map<object, number>} overtimeHoursByShift  hours of each shift already
+ *   attributed to overtime by calculateOvertimeItems. Overtime rates are paid in
+ *   substitution for, and are not cumulative upon, weekend/public holiday
+ *   penalties and casual loading (e.g. MA000018 cl. 25.1(a)(ii), MA000034
+ *   cl. 19.1(c)/19.2(c)) — so those hours are excluded from this calculation
+ *   rather than being paid both a penalty loading and an overtime uplift.
  * @returns {{ items, issues }} `issues` names any day the employee worked whose
  *   penalty rate the parser could not read from the award. A null multiplier
  *   would otherwise be skipped silently, underpaying that shift.
  */
-function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType, holidays) {
+function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType, holidays, overtimeHoursByShift) {
   const items = []
   const missingRates = new Set()
   const refs = level.references || {}
@@ -84,21 +90,25 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
   for (const shift of shifts) {
     const day = normalizeDay(shift.day)
     const holiday = holidays.resolve(shift)
+    const overtimeHours = overtimeHoursByShift.get(shift) || 0
+    const penaltyHours = round2(Math.max(0, shift.hours - overtimeHours))
     if (holiday.isHoliday) {
       const multiplier = weekendRules.public_holiday
       // An unknown penalty is flagged, but we still pay the loadings we do know
       // (casual loading, shift loadings) rather than dropping to the base rate.
       if (multiplier == null) missingRates.add('public holiday')
       if (multiplier) {
-        items.push({
-          type: 'Public holiday penalty',
-          category: 'penalty',
-          amount: round2(shift.hours * baseRate * (multiplier - 1)),
-          unit: 'shift',
-          detail: `${shift.date} · ${shift.hours} hrs · ${holiday.name}`,
-          clause: refs.penalties || '',
-          meaning: 'extra money for working a public holiday',
-        })
+        if (penaltyHours > 0) {
+          items.push({
+            type: 'Public holiday penalty',
+            category: 'penalty',
+            amount: round2(penaltyHours * baseRate * (multiplier - 1)),
+            unit: 'shift',
+            detail: `${shift.date} · ${penaltyHours} hrs · ${holiday.name}`,
+            clause: refs.penalties || '',
+            meaning: 'extra money for working a public holiday',
+          })
+        }
         continue
       }
     }
@@ -106,26 +116,28 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
       const multiplier = weekendRules[day]
       if (multiplier == null) missingRates.add(day)
       if (multiplier) {
-        items.push({
-          type: `${shift.day} penalty`,
-          category: 'penalty',
-          amount: round2(shift.hours * baseRate * (multiplier - 1)),
-          unit: 'shift',
-          detail: `${shift.date} · ${shift.hours} hrs`,
-          clause: refs.penalties || '',
-          meaning: `extra money for working ${day === 'saturday' ? 'Saturday' : 'Sunday'}`,
-        })
+        if (penaltyHours > 0) {
+          items.push({
+            type: `${shift.day} penalty`,
+            category: 'penalty',
+            amount: round2(penaltyHours * baseRate * (multiplier - 1)),
+            unit: 'shift',
+            detail: `${shift.date} · ${penaltyHours} hrs`,
+            clause: refs.penalties || '',
+            meaning: `extra money for working ${day === 'saturday' ? 'Saturday' : 'Sunday'}`,
+          })
+        }
         continue
       }
     }
 
-    if (employmentBucket === 'casual') {
+    if (employmentBucket === 'casual' && penaltyHours > 0) {
       items.push({
         type: 'Casual loading',
         category: 'penalty',
-        amount: round2(shift.hours * baseRate * (level.rules.casualLoading || 0.25)),
+        amount: round2(penaltyHours * baseRate * (level.rules.casualLoading || 0.25)),
         unit: 'shift',
-        detail: `${shift.date} · ${shift.hours} hrs`,
+        detail: `${shift.date} · ${penaltyHours} hrs`,
         clause: refs.casualLoading || '',
         meaning: 'casual loading paid instead of paid leave entitlements',
       })
@@ -157,12 +169,21 @@ function calculateWeekendAndLoadingItems(level, shifts, baseRate, employmentType
   return { items, issues }
 }
 
+/**
+ * @returns {{ items, overtimeHoursByShift: Map<object, number> }} `overtimeHoursByShift`
+ *   totals each shift's daily + weekly overtime hours so calculateWeekendAndLoadingItems
+ *   can exclude them from the penalty/casual-loading calculation — overtime rates
+ *   substitute for those loadings rather than stacking on top of them.
+ */
 function calculateOvertimeItems(level, shifts, baseRate, employmentType, holidays) {
   const overtime = level.rules.overtime
   const dailyThreshold = getEmploymentBucket(employmentType) === 'casual'
     ? overtime.casualDailyThreshold
     : overtime.dailyThreshold
   const items = []
+  const overtimeHoursByShift = new Map()
+  const addOvertimeHours = (shift, hours) =>
+    overtimeHoursByShift.set(shift, round2((overtimeHoursByShift.get(shift) || 0) + hours))
   const shiftsByWeek = shifts.reduce((map, shift) => {
     map[shift.weekBucket] = [...(map[shift.weekBucket] || []), shift]
     return map
@@ -173,6 +194,7 @@ function calculateOvertimeItems(level, shifts, baseRate, employmentType, holiday
     const overtimeHours = Math.max(0, round2(shift.hours - dailyThreshold))
     if (!overtimeHours) continue
     dailyOvertimeByShift.set(shift, overtimeHours)
+    addOvertimeHours(shift, overtimeHours)
     const day = normalizeDay(shift.day)
     const multiplier = holidays.isHoliday(shift)
       ? overtime.publicHolidayMultiplier
@@ -202,6 +224,7 @@ function calculateOvertimeItems(level, shifts, baseRate, employmentType, holiday
       if (!available) continue
       const overtimeHours = Math.min(available, remainingWeeklyOvertime)
       const day = normalizeDay(shift.day)
+      addOvertimeHours(shift, overtimeHours)
 
       if (holidays.isHoliday(shift)) {
         items.push({
@@ -251,11 +274,14 @@ function calculateOvertimeItems(level, shifts, baseRate, employmentType, holiday
   }
 
   const overtimeClause = (level.references || {}).overtime || ''
-  return items.map((item) => ({
-    ...item,
-    clause: overtimeClause,
-    meaning: 'extra money for hours beyond the award overtime triggers',
-  }))
+  return {
+    items: items.map((item) => ({
+      ...item,
+      clause: overtimeClause,
+      meaning: 'extra money for hours beyond the award overtime triggers',
+    })),
+    overtimeHoursByShift,
+  }
 }
 
 function calculateAllowanceItems(level, employee, baseRate, overtimeItems) {
@@ -481,10 +507,13 @@ export function calculateTimesheetResults(parsedCache, timesheetData, options = 
 
     const basePay = profile.effectiveBasePayRateHourly ?? awardLevel.basePayRateHourly ?? 0
     const ordinaryPay = round2(employee.totalHours * basePay)
-    const weekendResult = calculateWeekendAndLoadingItems(awardLevel, employee.shifts, basePay, employee.employmentType, holidays)
+    const overtimeResult = calculateOvertimeItems(awardLevel, employee.shifts, basePay, employee.employmentType, holidays)
+    const weekendResult = calculateWeekendAndLoadingItems(
+      awardLevel, employee.shifts, basePay, employee.employmentType, holidays, overtimeResult.overtimeHoursByShift,
+    )
     const penaltyItems = [
       ...weekendResult.items,
-      ...calculateOvertimeItems(awardLevel, employee.shifts, basePay, employee.employmentType, holidays),
+      ...overtimeResult.items,
     ]
     const allowanceItems = calculateAllowanceItems(awardLevel, employee, basePay, penaltyItems)
     const extrasItems = [...allowanceItems, ...penaltyItems]
