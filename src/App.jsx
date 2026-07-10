@@ -38,20 +38,26 @@ import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
 import isoftMark from './assets/isoft-i.png'
 import isoftWordmark from './assets/isoft-wordmark.png'
 
-// iSOFT ANZ white + red. --ochre is the brand-accent slot (now iSOFT red);
-// sage stays for verified/matched; --red is a deeper crimson kept distinct for
-// validation errors so the audit signal never collides with the brand red.
+// iSOFT ANZ corporate design system. --ochre is the brand-accent slot (iSOFT
+// red); sage stays for verified/matched; --red is a deeper crimson kept
+// distinct for validation errors so the audit signal never collides with the
+// brand red — errors always pair the crimson with an icon + tinted background.
+// Spacing scale: 4 / 8 / 12 / 16 / 24 / 32. Radii: 8 / 12 / 16.
 const COLORS = {
-  paper: '#F4F5F7',
-  ink: '#1A1B1E',
+  paper: '#F7F8FA',
+  ink: '#1A1D23',
   ochre: '#E11B22',
   sage: '#2F7D57',
   red: '#B0121F',
   card: '#FFFFFF',
-  muted: '#6B6F76',
-  line: 'rgba(20,22,28,0.12)',
+  muted: '#5F6570',
+  line: 'rgba(16,20,28,0.10)',
+  warn: '#B26A00',
+  brandTint: 'rgba(225,27,34,0.06)',
+  errorTint: 'rgba(176,18,31,0.07)',
+  successTint: 'rgba(47,125,87,0.10)',
 }
-const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
+const SERIF = "'Inter Tight', system-ui, -apple-system, sans-serif"
 const BODY = "'Inter Tight', system-ui, -apple-system, sans-serif"
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
 const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
@@ -175,6 +181,14 @@ const GLOBAL_CSS = `
     --sage:${COLORS.sage}; --red:${COLORS.red}; --card:${COLORS.card};
     --muted:${COLORS.muted}; --line:${COLORS.line};
     --serif:${SERIF}; --body:${BODY}; --mono:${MONO};
+    --brand:${COLORS.ochre}; --brand-strong:#C4141B; --brand-tint:${COLORS.brandTint};
+    --error-bg:${COLORS.errorTint}; --error-border:rgba(176,18,31,0.35);
+    --warn:${COLORS.warn}; --warn-bg:rgba(178,106,0,0.08);
+    --surface-2:#F2F4F7; --line-strong:rgba(16,20,28,0.22);
+    --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --shadow-sm:0 1px 2px rgba(16,20,28,0.06);
+    --shadow-md:0 2px 8px -2px rgba(16,20,28,0.08), 0 1px 2px rgba(16,20,28,0.05);
+    --shadow-lg:0 16px 40px -16px rgba(16,20,28,0.22);
   }
   * { box-sizing: border-box; }
   html, body, #root { height: 100%; }
@@ -195,79 +209,67 @@ const GLOBAL_CSS = `
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-  @keyframes blob {
-    0%, 100% { transform: translate(0,0) scale(1); }
-    33% { transform: translate(28px,-26px) scale(1.07); }
-    66% { transform: translate(-22px,20px) scale(0.96); }
-  }
 
   .fade-up { animation: fadeUp 0.55s cubic-bezier(0.2,0.7,0.2,1) both; }
   .spin { animation: spin 0.9s linear infinite; }
   .mono { font-family: var(--mono); }
 
-  .bg-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(to right, rgba(20,22,28,0.045) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(20,22,28,0.045) 1px, transparent 1px);
-    background-size: 40px 40px;
-    -webkit-mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
-    mask-image: radial-gradient(ellipse 85% 65% at 50% 35%, #000 35%, transparent 100%);
-  }
-  .blob { position: absolute; border-radius: 50%; filter: blur(72px); opacity: 0.55; }
-  .blob-1 { width: 540px; height: 540px; top: -180px; left: -130px;
-    background: radial-gradient(circle at 35% 35%, rgba(225,27,34,0.42), transparent 70%);
-    animation: blob 20s ease-in-out infinite; }
-  .blob-2 { width: 500px; height: 500px; bottom: -200px; right: -120px;
-    background: radial-gradient(circle at 65% 65%, rgba(20,22,28,0.10), transparent 70%);
-    animation: blob 26s ease-in-out infinite reverse; }
-  .blob-3 { width: 380px; height: 380px; top: 42%; left: 56%;
-    background: radial-gradient(circle at 50% 50%, rgba(225,27,34,0.16), transparent 70%);
-    animation: blob 30s ease-in-out infinite; }
+  .bg-wash { position: absolute; inset: 0;
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--paper) 260px); }
+
+  .appbar { position: sticky; top: 0; z-index: 50; background: var(--card);
+    border-bottom: 1px solid var(--line); border-top: 3px solid var(--brand);
+    box-shadow: var(--shadow-sm); }
+  .appbar-inner { max-width: 1080px; margin: 0 auto; padding: 10px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; }
 
   .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
-    padding: 38px 28px 72px; min-height: 100vh; }
+    padding: 32px 28px 72px; min-height: 100vh; }
 
-  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.22em;
+  .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--muted); }
-  .display { font-family: var(--serif); font-weight: 500; letter-spacing: -0.015em;
-    line-height: 1.02; margin: 0; color: var(--ink); }
+  .display { font-family: var(--serif); font-weight: 650; letter-spacing: -0.025em;
+    line-height: 1.08; margin: 0; color: var(--ink); }
 
   .btn { font-family: var(--body); font-size: 14px; font-weight: 500;
-    border: 1px solid var(--line); border-radius: 11px; padding: 10px 16px;
-    background: transparent; color: var(--ink); cursor: pointer;
+    border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 16px;
+    background: var(--card); color: var(--ink); cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px;
-    transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease; text-decoration: none; }
-  .btn:hover { background: rgba(20,22,28,0.05); border-color: rgba(20,22,28,0.24); }
-  .btn:active { transform: translateY(1px); }
+    transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
+    text-decoration: none; }
+  .btn:hover:not(:disabled) { border-color: var(--line-strong); box-shadow: var(--shadow-sm); }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .btn-primary { font-family: var(--body); font-size: 15px; font-weight: 600;
-    border: 1px solid var(--ochre); border-radius: 13px; padding: 15px 28px;
-    background: var(--ochre); color: #FFFFFF; cursor: pointer;
+  .btn-primary { font-family: var(--body); font-size: 14px; font-weight: 600;
+    border: 1px solid var(--brand); border-radius: var(--r-sm); padding: 11px 20px;
+    background: var(--brand); color: #FFFFFF; cursor: pointer;
     display: inline-flex; align-items: center; gap: 10px;
     transition: background 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
-    box-shadow: 0 10px 30px -14px rgba(225,27,34,0.45); text-decoration: none; }
-  .btn-primary:hover:not(:disabled) { background: #B0121F; border-color: #B0121F;
-    box-shadow: 0 14px 34px -12px rgba(225,27,34,0.55); transform: translateY(-1px); }
-  .btn-primary:active:not(:disabled) { transform: translateY(0); }
-  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed;
-    box-shadow: none; background: transparent; color: var(--muted); border-color: var(--line); }
+    text-decoration: none; }
+  .btn-primary:hover:not(:disabled) { background: var(--brand-strong); border-color: var(--brand-strong);
+    box-shadow: var(--shadow-sm); }
+  .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+  .btn-primary:disabled { cursor: not-allowed; box-shadow: none;
+    background: var(--surface-2); color: var(--muted); border-color: transparent; }
 
-  .ucard { background: var(--card); border: 1px solid var(--line); border-radius: 18px;
-    padding: 26px 26px 22px; position: relative; overflow: hidden;
+  .ucard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 24px; position: relative; overflow: hidden;
+    box-shadow: var(--shadow-sm);
     transition: border-color 0.18s ease, box-shadow 0.18s ease; }
-  .ucard.ready { border-color: rgba(47,125,87,0.5); box-shadow: 0 18px 40px -28px rgba(47,125,87,0.5); }
+  .ucard.ready { border-color: rgba(47,125,87,0.45); }
 
-  .dropzone { border: 1.5px dashed rgba(20,22,28,0.26); border-radius: 13px;
-    padding: 26px 18px; display: flex; flex-direction: column; align-items: center;
-    gap: 10px; text-align: center; cursor: pointer; background: rgba(244,245,247,0.5);
+  .dropzone { border: 1.5px dashed var(--line-strong); border-radius: var(--r-md);
+    padding: 24px 16px; display: flex; flex-direction: column; align-items: center;
+    gap: 10px; text-align: center; cursor: pointer; background: var(--surface-2);
     transition: border-color 0.16s ease, background 0.16s ease; }
-  .dropzone:hover { border-color: var(--ochre); background: rgba(225,27,34,0.05); }
-  .dropzone.over { border-color: var(--ochre); border-style: solid;
+  .dropzone:hover { border-color: var(--brand); background: var(--brand-tint); }
+  .dropzone.over { border-color: var(--brand); border-style: solid;
     background: rgba(225,27,34,0.1); }
 
-  .chip { display: flex; align-items: center; gap: 13px; border: 1px solid var(--line);
-    border-radius: 13px; padding: 13px 14px; background: var(--paper); }
+  .chip { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 12px 16px; background: var(--card); }
   .icon-x { display: grid; place-items: center; width: 30px; height: 30px;
     border-radius: 8px; border: 1px solid var(--line); background: transparent;
     color: var(--muted); cursor: pointer; transition: all 0.15s ease; flex-shrink: 0; }
@@ -276,10 +278,10 @@ const GLOBAL_CSS = `
   .pill { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     border-radius: 999px; padding: 7px 14px; background: var(--card);
     font-size: 13px; color: var(--ink); }
-  .step { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px;
-    border: 1px solid transparent; border-radius: 14px; transition: all 0.3s ease; }
+  .step { display: flex; align-items: flex-start; gap: 16px; padding: 16px 20px;
+    border: 1px solid transparent; border-radius: var(--r-md); transition: all 0.3s ease; }
   .step.active { background: var(--card); border-color: var(--line);
-    box-shadow: 0 14px 34px -26px rgba(20,22,28,0.5); }
+    box-shadow: var(--shadow-md); }
   .step.done { opacity: 0.62; }
   .step-icon { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
     display: grid; place-items: center; }
@@ -287,17 +289,18 @@ const GLOBAL_CSS = `
     border: 1.5px solid rgba(20,22,28,0.28); }
 
   .trow { display: grid; align-items: center; gap: 14px; padding: 16px 18px;
-    cursor: pointer; transition: background 0.15s ease; border-radius: 12px; }
-  .trow:hover { background: rgba(20,22,28,0.035); }
-  .thead { display: grid; gap: 14px; padding: 0 18px 12px;
-    border-bottom: 1px solid var(--line); }
+    cursor: pointer; transition: background 0.15s ease; border-radius: var(--r-sm); }
+  .rowwrap:nth-child(even) .trow { background: rgba(16,20,28,0.015); }
+  .trow:hover { background: rgba(16,20,28,0.045); }
+  .thead { display: grid; gap: 14px; padding: 0 18px 10px;
+    background: var(--card); border-bottom: 1px solid var(--line-strong); }
   .th { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--muted); }
   .rowwrap { border-bottom: 1px solid var(--line); }
   .rowwrap:last-child { border-bottom: none; }
   .panel { padding: 6px 18px 28px; }
   .panel-inner { background: var(--paper); border: 1px solid var(--line);
-    border-radius: 14px; padding: 24px; }
+    border-radius: var(--r-md); padding: 24px; }
   .panel-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
   .leader { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
@@ -308,15 +311,15 @@ const GLOBAL_CSS = `
   .leader-total { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
   .leader-total .leader-label, .leader-total .leader-amt { font-weight: 600; font-size: 14px; }
   .flag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
-    color: #B0121F; background: rgba(225,27,34,0.08);
-    border: 1px solid rgba(225,27,34,0.30); border-radius: 10px; padding: 9px 13px; }
+    color: var(--warn); background: var(--warn-bg);
+    border: 1px solid rgba(178,106,0,0.3); border-radius: var(--r-sm); padding: 9px 13px; }
 
   .clause-ref { position: relative; cursor: help;
     border-bottom: 1px dotted rgba(20,22,28,0.35); }
   .clause-tip { position: absolute; bottom: calc(100% + 9px); left: 50%;
     transform: translateX(-50%); background: var(--ink); color: var(--paper);
     font-family: var(--body); font-size: 12px; font-weight: 400; line-height: 1.55;
-    padding: 10px 13px; border-radius: 10px; width: max-content; max-width: 300px;
+    padding: 10px 13px; border-radius: var(--r-sm); width: max-content; max-width: 300px;
     text-align: left; white-space: normal; letter-spacing: 0;
     opacity: 0; visibility: hidden; transition: opacity 0.13s ease;
     pointer-events: none; z-index: 60;
@@ -325,11 +328,11 @@ const GLOBAL_CSS = `
     transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
   .clause-ref:hover .clause-tip { opacity: 1; visibility: visible; }
   .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
-  .danger-flag { color: var(--red); background: rgba(176,18,31,0.08); border-color: rgba(176,18,31,0.3); }
+  .danger-flag { color: var(--red); background: var(--error-bg); border-color: var(--error-border); }
 
   .stepper { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
   .snode { display: inline-flex; align-items: center; gap: 7px; border: none;
-    background: transparent; padding: 7px 9px; border-radius: 10px;
+    background: transparent; padding: 7px 9px; border-radius: var(--r-sm);
     font-family: var(--body); font-size: 12.5px; font-weight: 500; color: var(--muted);
     cursor: default; transition: background 0.15s ease, color 0.15s ease; }
   .snode:not(:disabled) { cursor: pointer; }
@@ -346,13 +349,13 @@ const GLOBAL_CSS = `
   .sticky-bar { position: sticky; bottom: 16px; z-index: 40;
     background: rgba(255,255,255,0.94);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-    border: 1px solid var(--line); border-radius: 16px; padding: 15px 20px;
-    box-shadow: 0 18px 44px -20px rgba(20,22,28,0.38);
+    border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 20px;
+    box-shadow: var(--shadow-lg);
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap; }
 
   .filter-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
-    border-radius: 10px; background: var(--card); padding: 8px 12px;
+    border-radius: var(--r-sm); background: var(--card); padding: 8px 12px;
     flex: 1; min-width: 220px; max-width: 430px;
     transition: border-color 0.15s ease; }
   .filter-wrap:focus-within { border-color: rgba(225,27,34,0.5); }
@@ -384,12 +387,15 @@ const GLOBAL_CSS = `
     display: flex; align-items: center; justify-content: space-between;
     gap: 14px; flex-wrap: wrap; }
 
-  .emp-group { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 18px 18px 8px; margin-bottom: 16px; }
+  .emp-group { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm); padding: 16px 16px 8px; margin-bottom: 16px; }
   .ts-head, .ts-row { display: grid; gap: 12px; align-items: center;
     grid-template-columns: 0.9fr 0.6fr 0.7fr 0.7fr 0.7fr 0.6fr 1.8fr; }
   .ts-head { padding: 0 10px 10px; border-bottom: 1px solid var(--line); }
-  .ts-row { padding: 9px 10px; border-bottom: 1px solid var(--line); }
+  .ts-row { padding: 9px 10px; border-bottom: 1px solid var(--line);
+    transition: background 0.15s ease; }
+  .ts-row:nth-child(even) { background: rgba(16,20,28,0.015); }
+  .ts-row:hover { background: rgba(16,20,28,0.045); }
   .ts-row:last-child { border-bottom: none; }
   .table-scroll { overflow-x: auto; }
   .table-inner { min-width: 920px; }
@@ -413,10 +419,7 @@ const GLOBAL_CSS = `
 function Background() {
   return (
     <div aria-hidden style={{ position: 'fixed', inset: 0, overflow: 'hidden', pointerEvents: 'none', zIndex: 0 }}>
-      <div className="bg-grid" />
-      <div className="blob blob-1" />
-      <div className="blob blob-2" />
-      <div className="blob blob-3" />
+      <div className="bg-wash" />
     </div>
   )
 }
@@ -473,7 +476,7 @@ function SideHint({ children }) {
   )
 }
 
-const SIGNAL_COLORS = { error: COLORS.red, warn: '#B26A00', info: COLORS.muted }
+const SIGNAL_COLORS = { error: COLORS.red, warn: COLORS.warn, info: COLORS.muted }
 
 function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }) {
   const analytics = React.useMemo(
@@ -496,7 +499,7 @@ function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }
     <aside className="side-panel" role="dialog" aria-label="Workforce analytics" style={{
       position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 92vw)', zIndex: 70,
       background: COLORS.card, borderLeft: `1px solid ${COLORS.line}`,
-      boxShadow: '-18px 0 44px rgba(20,22,28,0.13)', overflowY: 'auto', fontFamily: BODY,
+      boxShadow: 'var(--shadow-lg)', overflowY: 'auto', fontFamily: BODY,
     }}>
       <div style={{
         position: 'sticky', top: 0, background: COLORS.card, zIndex: 1,
@@ -513,7 +516,7 @@ function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }
             </div>
           </div>
         </div>
-        <button onClick={onClose} title="Close analytics" style={{ background: 'none', border: 'none', cursor: 'pointer', color: COLORS.muted, padding: 4 }}>
+        <button className="icon-x" onClick={onClose} title="Close analytics" aria-label="Close analytics">
           <X size={17} strokeWidth={2} />
         </button>
       </div>
@@ -609,7 +612,7 @@ function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }
                   title={`${part.label}: ${audFmt.format(part.amount)}`}
                   style={{
                     width: `${(part.amount / pay.gross) * 100}%`,
-                    background: i === 0 ? COLORS.ink : [COLORS.ochre, '#B26A00', COLORS.sage, '#5A6B9A', COLORS.muted][(i - 1) % 5],
+                    background: i === 0 ? COLORS.ink : [COLORS.ochre, COLORS.warn, COLORS.sage, '#5A6B9A', COLORS.muted][(i - 1) % 5],
                   }}
                 />
               ))}
@@ -681,13 +684,14 @@ const STAGE_NAMES = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results'
 // via the title attribute instead of failing silently.
 function Masthead({ stage, canGo, onGo, showAnalytics, onOpenAnalytics }) {
   return (
-    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 46 }}>
+    <header className="appbar">
+      <div className="appbar-inner">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src={isoftMark} alt="iSOFT" style={{ height: 34, width: 'auto', display: 'block' }} />
-        <div style={{ width: 1, height: 30, background: COLORS.line }} />
+        <img src={isoftWordmark} alt="iSOFT" style={{ height: 20, width: 'auto', display: 'block' }} />
+        <div style={{ width: 1, height: 26, background: COLORS.line }} />
         <div>
-          <div style={{ fontFamily: SERIF, fontWeight: 600, fontSize: 16.5, lineHeight: 1 }}>Axi&thinsp;·&thinsp;WFM</div>
-          <div className="eyebrow" style={{ marginTop: 4 }}>Award Interpreter</div>
+          <div style={{ fontFamily: BODY, fontWeight: 650, fontSize: 15, lineHeight: 1 }}>Axi&thinsp;·&thinsp;WFM</div>
+          <div className="eyebrow" style={{ marginTop: 3 }}>Award Interpreter</div>
         </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -727,6 +731,7 @@ function Masthead({ stage, canGo, onGo, showAnalytics, onOpenAnalytics }) {
             <BarChart3 size={15} strokeWidth={2} color={COLORS.ochre} /> Analytics
           </button>
         )}
+      </div>
       </div>
     </header>
   )
@@ -790,7 +795,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
             <Icon size={22} strokeWidth={1.6} />
           </div>
           <div>
-            <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>{title}</div>
+            <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600 }}>{title}</div>
             <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>{subtitle}</div>
           </div>
         </div>
@@ -811,7 +816,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
       {file ? (
         <div className="chip fade-up">
           <div style={{
-            width: 38, height: 38, borderRadius: 9, background: 'rgba(47,125,87,0.14)',
+            width: 38, height: 38, borderRadius: 8, background: 'rgba(47,125,87,0.14)',
             border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center',
             color: COLORS.sage, flexShrink: 0,
           }}>
@@ -865,7 +870,7 @@ function StepRow({ step, status, delay }) {
   return (
     <div className={`step ${status} fade-up`} style={{ animationDelay: `${delay}ms` }}>
       <div className="step-icon" style={{
-        background: status === 'done' ? 'rgba(47,125,87,0.15)' : status === 'active' ? 'rgba(225,27,34,0.12)' : 'transparent',
+        background: status === 'done' ? 'rgba(47,125,87,0.15)' : status === 'active' ? 'rgba(225,27,34,0.10)' : 'transparent',
         border: status === 'pending' ? `1px solid ${COLORS.line}` : 'none',
         marginTop: 1,
       }}>
@@ -875,7 +880,7 @@ function StepRow({ step, status, delay }) {
       </div>
       <div style={{ flex: 1 }}>
         <div style={{
-          fontSize: 16, fontWeight: 500, fontFamily: status === 'active' ? SERIF : BODY,
+          fontSize: 16, fontWeight: 500, fontFamily: BODY,
           color: status === 'pending' ? COLORS.muted : COLORS.ink,
         }}>
           {step.label}
@@ -940,7 +945,7 @@ function StatCard({ icon: Icon, label, value, caption, accent }) {
         </div>
         <span className="th">{label}</span>
       </div>
-      <div style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 500, letterSpacing: '-0.01em', lineHeight: 1 }}>
+      <div style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 650, letterSpacing: '-0.02em', lineHeight: 1 }}>
         {value}
       </div>
       <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>{caption}</div>
@@ -956,7 +961,7 @@ function IndustrySelector({ industry, onSetIndustry }) {
     fontFamily: BODY,
     fontSize: 13,
     opacity: disabled ? 0.5 : 1,
-    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(225,27,34,0.1)', color: COLORS.ink } : {}),
+    ...(selected ? { borderColor: COLORS.ochre, background: 'rgba(225,27,34,0.08)', color: COLORS.ink } : {}),
   })
   return (
     <div className="panel-inner" style={{ marginBottom: 26, padding: '18px 20px' }}>
@@ -1017,7 +1022,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
     <div className="fade-up">
       <div style={{ marginBottom: 36, maxWidth: 640 }}>
         <div className="eyebrow" style={{ marginBottom: 14 }}>01 — Upload</div>
-        <h1 className="display" style={{ fontSize: 'clamp(34px, 5vw, 52px)' }}>
+        <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
           Parse the award stack.
         </h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 16 }}>
@@ -1113,7 +1118,7 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
           <Sparkles size={13} strokeWidth={1.8} /> 02 — Processing
         </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+        <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
           Building the award cache&hellip;
         </h1>
       </div>
@@ -1285,7 +1290,7 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
         </span>
       </div>
       {explainOpen && (
-        <div style={{ padding: '10px 14px 14px', background: 'rgba(225,27,34,0.05)', borderBottom: `1px solid ${COLORS.line}` }}>
+        <div style={{ padding: '10px 14px 14px', background: 'var(--surface-2)', borderBottom: `1px solid ${COLORS.line}` }}>
           <RowExplanation awardCode={row.awardCode} row={row} />
         </div>
       )}
@@ -1421,7 +1426,7 @@ function AwardInterpretationSection({ parsedCache }) {
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
                 <span className="mono" style={{ fontSize: 12.5, color: COLORS.ochre, fontWeight: 600 }}>{code}</span>
-                <span style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 500 }}>{interp.awardTitle}</span>
+                <span style={{ fontFamily: SERIF, fontSize: 18, fontWeight: 600 }}>{interp.awardTitle}</span>
                 {hasMatch(interp) && <BadgeCheck size={15} strokeWidth={1.8} color={COLORS.sage} style={{ alignSelf: 'center' }} />}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -1451,6 +1456,8 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
   // No agreement uploaded → interpret-only: the preloaded award library is the
   // whole payload, and there are no employee profiles to run a timesheet against.
   const interpretOnly = parsedCache.employeeProfiles.length === 0
+  // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
+  const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
@@ -1459,7 +1466,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
             ? <><Scale size={13} strokeWidth={1.8} /> 03 — Interpretation</>
             : <><CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet</>}
         </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.4vw, 44px)' }}>
+        <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
           {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
@@ -1511,7 +1518,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                 <BadgeCheck size={22} strokeWidth={1.6} />
               </div>
               <div>
-                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 500 }}>Cached interpretation state</div>
+                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600 }}>Cached interpretation state</div>
                 <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
               </div>
             </div>
@@ -1540,6 +1547,13 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
       {timesheetError && (
         <div style={{ marginBottom: 18 }}>
           <Flag danger>{timesheetError}</Flag>
+        </div>
+      )}
+
+      {parsingTimesheet && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '14px 16px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
+          <Loader2 className="spin" size={16} strokeWidth={2.2} color={COLORS.ochre} />
+          <span style={{ fontSize: 13.5, color: COLORS.muted }}>Parsing timesheet…</span>
         </div>
       )}
 
@@ -1594,7 +1608,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
             {interpretOnly
               ? `${Object.keys(parsedCache.interpretationsByCode).length} awards interpreted`
-              : (timesheetData ? `${timesheetData.employees.length} employees` : 'Awaiting upload')}
+              : (timesheetData ? `${timesheetData.employees.length} employees` : parsingTimesheet ? 'Parsing…' : 'Awaiting upload')}
           </span>
           {!interpretOnly && timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
         </div>
@@ -1927,14 +1941,14 @@ function InterpretationCard({ row }) {
   return (
     <div style={{
       background: COLORS.card,
-      border: `1px solid ${hasIssues ? 'rgba(176,18,31,0.4)' : COLORS.line}`,
+      border: `1px solid ${hasIssues ? 'var(--error-border)' : COLORS.line}`,
       borderRadius: 16,
       padding: '18px 22px 14px',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
-            <span style={{ fontFamily: SERIF, fontSize: 18.5, fontWeight: 500 }}>{row.employeeName}</span>
+            <span style={{ fontFamily: SERIF, fontSize: 18.5, fontWeight: 600 }}>{row.employeeName}</span>
             <span style={{ fontSize: 12, color: COLORS.muted }}>{row.employmentType || '—'} · {row.totalHours} hrs</span>
           </div>
           <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 3 }}>
@@ -2028,7 +2042,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
           <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
             <BadgeCheck size={14} strokeWidth={1.9} /> Calculation complete
           </div>
-          <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>
+          <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
             {results.stats.employees} employees calculated
           </h1>
         </div>
@@ -2049,7 +2063,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
         <StatCard icon={AlertTriangle} label="Validation rows" value={`${results.stats.validationErrors}`} caption="employees needing manual review" accent={COLORS.red} />
       </div>
 
-      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 18, padding: '20px 4px 8px' }}>
+      <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '20px 4px 8px' }}>
         <div className="table-scroll">
           <div className="table-inner">
             <div className="thead" style={{ gridTemplateColumns: RESULTS_GRID }}>
@@ -2063,6 +2077,11 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
               <span className="th" aria-hidden="true" />
             </div>
             <div>
+              {results.rows.length === 0 && (
+                <div style={{ padding: '28px 18px', fontSize: 13.5, color: COLORS.muted, textAlign: 'center' }}>
+                  No employees matched this run. Check that the timesheet belongs to the uploaded document set.
+                </div>
+              )}
               {results.rows.map((row) => (
                 <ResultRow
                   key={row.id}
@@ -2114,7 +2133,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
           <CheckCircle2 size={14} strokeWidth={1.9} /> 05 — Confirmation
         </div>
-        <h1 className="display" style={{ fontSize: 'clamp(30px, 4.6vw, 46px)' }}>Pay dispersed.</h1>
+        <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>Pay dispersed.</h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 16 }}>
           Payroll has been dispersed for the period. Send a confirmation to the payroll mailbox below.
         </p>
@@ -2138,8 +2157,8 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           aria-label="Confirmation email recipient"
           style={{
             width: '100%', maxWidth: 420, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
-            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'rgba(176,18,31,0.5)'}`,
-            borderRadius: 10, padding: '11px 13px', outline: 'none',
+            background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'var(--error-border)'}`,
+            borderRadius: 8, padding: '11px 13px', outline: 'none',
           }}
         />
         <div className="email-preview">
@@ -2153,7 +2172,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           className="btn-primary"
           href={valid ? mailto : undefined}
           aria-disabled={!valid}
-          style={!valid ? { opacity: 0.4, pointerEvents: 'none', background: 'transparent', color: COLORS.muted, borderColor: COLORS.line, boxShadow: 'none' } : {}}
+          style={!valid ? { pointerEvents: 'none', background: 'var(--surface-2)', color: COLORS.muted, borderColor: 'transparent', boxShadow: 'none' } : {}}
         >
           <Send size={17} strokeWidth={2} /> Send confirmation email
         </a>
@@ -2170,9 +2189,9 @@ function Footer() {
   return (
     <div className="footer">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src={isoftWordmark} alt="iSOFT" style={{ height: 17, width: 'auto', display: 'block' }} />
+        <img src={isoftMark} alt="iSOFT" style={{ height: 18, width: 'auto', display: 'block' }} />
         <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
-          ANZ · AXI·WFM AWARD INTERPRETATION
+          iSOFT ANZ · AXI·WFM AWARD INTERPRETATION
         </span>
       </div>
       <span style={{ fontSize: 12, color: COLORS.muted, maxWidth: 420, textAlign: 'right' }}>
@@ -2224,25 +2243,6 @@ export default function App() {
     setAnalyticsOpen(false)
     dispatch({ type: 'reset' })
   }
-
-  useEffect(() => {
-    const FONT_ID = 'axi-google-fonts'
-    if (document.getElementById(FONT_ID)) return
-    const defs = [
-      { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-      { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
-      {
-        rel: 'stylesheet',
-        id: FONT_ID,
-        href: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap',
-      },
-    ]
-    defs.forEach((attrs) => {
-      const link = document.createElement('link')
-      Object.entries(attrs).forEach(([key, value]) => link.setAttribute(key, value))
-      document.head.appendChild(link)
-    })
-  }, [])
 
   useEffect(() => {
     if (state.stage !== 2) return undefined
@@ -2347,15 +2347,14 @@ export default function App() {
     <>
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <Background />
+      <Masthead
+        stage={state.stage}
+        canGo={canGo}
+        onGo={goTo}
+        showAnalytics={state.stage >= 3 && Boolean(state.parsedCache)}
+        onOpenAnalytics={() => setAnalyticsOpen(true)}
+      />
       <div className="app-shell">
-        <Masthead
-          stage={state.stage}
-          canGo={canGo}
-          onGo={goTo}
-          showAnalytics={state.stage >= 3 && Boolean(state.parsedCache)}
-          onOpenAnalytics={() => setAnalyticsOpen(true)}
-        />
-
         {state.stage === 1 && (
           <UploadStage
             documents={state.documents}
