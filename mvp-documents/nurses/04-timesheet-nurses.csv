@@ -1,0 +1,28 @@
+﻿Pay Period,20/07/2026 - 26/07/2026
+Business,Wattle Grove Private Hospital Pty Ltd
+Generated,10/07/2026
+
+Employee ID,Name,Role,Employment Type,Date,Day,Start,Finish,Break Mins,Hours,Location,Notes
+NUR-001,Charlotte Mercer,Nursing Assistant,Full-time,20/07/2026,Monday,07:00,15:30,30,8,Wattle Grove,
+NUR-001,Charlotte Mercer,Nursing Assistant,Full-time,22/07/2026,Wednesday,07:00,15:30,30,8,Wattle Grove,
+NUR-001,Charlotte Mercer,Nursing Assistant,Full-time,25/07/2026,Saturday,07:00,15:30,30,8,Wattle Grove,
+NUR-002,Oliver Tan,Enrolled Nurse,Full-time,20/07/2026,Monday,07:00,15:30,30,8,Wattle Grove,
+NUR-002,Oliver Tan,Enrolled Nurse,Full-time,21/07/2026,Tuesday,07:00,15:30,30,8,Wattle Grove,
+NUR-002,Oliver Tan,Enrolled Nurse,Full-time,26/07/2026,Sunday,07:00,15:30,30,8,Wattle Grove,
+NUR-003,Isabelle Fraser,Registered Nurse,Full-time,20/07/2026,Monday,07:00,15:30,30,8,Wattle Grove,
+NUR-003,Isabelle Fraser,Registered Nurse,Full-time,21/07/2026,Tuesday,07:00,19:30,30,12,Wattle Grove,double shift — ward cover
+NUR-003,Isabelle Fraser,Registered Nurse,Full-time,23/07/2026,Thursday,07:00,15:30,30,8,Wattle Grove,
+NUR-004,Ethan Walker,Registered Nurse,Full-time,21/07/2026,Tuesday,22:00,06:00,0,8,Wattle Grove,night duty
+NUR-004,Ethan Walker,Registered Nurse,Full-time,22/07/2026,Wednesday,22:00,06:00,0,8,Wattle Grove,night duty
+NUR-004,Ethan Walker,Registered Nurse,Full-time,23/07/2026,Thursday,22:00,06:00,0,8,Wattle Grove,night duty
+NUR-005,Mia Kowalski,Student Enrolled Nurse,Casual,21/07/2026,Tuesday,09:00,15:00,0,6,Wattle Grove,
+NUR-005,Mia Kowalski,Student Enrolled Nurse,Casual,23/07/2026,Thursday,09:00,15:00,0,6,Wattle Grove,
+NUR-005,Mia Kowalski,Student Enrolled Nurse,Casual,25/07/2026,Saturday,09:00,15:00,0,6,Wattle Grove,
+NUR-006,Priya Raman,Clinical Nurse,Full-time,20/07/2026,Monday,07:00,15:30,30,8,Wattle Grove,
+NUR-006,Priya Raman,Clinical Nurse,Full-time,23/07/2026,Thursday,07:00,15:30,30,8,Wattle Grove,Public holiday — local show day
+NUR-006,Priya Raman,Clinical Nurse,Full-time,24/07/2026,Friday,07:00,15:30,30,8,Wattle Grove,
+NUR-007,Noah Bennett,Nurse Practitioner,Full-time,21/07/2026,Tuesday,08:00,16:30,30,8,Wattle Grove,
+NUR-007,Noah Bennett,Nurse Practitioner,Full-time,23/07/2026,Thursday,08:00,16:30,30,8,Wattle Grove,
+NUR-008,Harriet Singh,Supervising Enrolled Nurse,Part-time,20/07/2026,Monday,07:00,15:30,30,8,Wattle Grove,
+NUR-008,Harriet Singh,Supervising Enrolled Nurse,Part-time,22/07/2026,Wednesday,07:00,15:30,30,8,Wattle Grove,
+NUR-008,Harriet Singh,Supervising Enrolled Nurse,Part-time,24/07/2026,Friday,07:00,15:30,30,8,Wattle Grove,

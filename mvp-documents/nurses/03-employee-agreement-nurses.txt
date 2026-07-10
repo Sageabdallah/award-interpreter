@@ -1,0 +1,59 @@
+AXI-WFM EMPLOYEE AGREEMENT REGISTER
+Wattle Grove Private Hospital Pty Ltd
+Operative from 1 July 2026 — nursing workforce, all classifications under the Nurses Award 2020 (MA000034).
+
+Employee: Charlotte Mercer
+Employee ID: NUR-001
+Award Code: MA000034
+Employee Level: Nursing assistant
+Job Role: Nursing Assistant
+Base Pay Rate: $27.65/hr
+
+Employee: Oliver Tan
+Employee ID: NUR-002
+Award Code: MA000034
+Employee Level: Enrolled nurse
+Job Role: Enrolled Nurse
+Base Pay Rate: $30.00/hr
+
+Employee: Isabelle Fraser
+Employee ID: NUR-003
+Award Code: MA000034
+Employee Level: Registered nurse—level 1
+Job Role: Registered Nurse
+Base Pay Rate: $32.09/hr
+
+Employee: Ethan Walker
+Employee ID: NUR-004
+Award Code: MA000034
+Employee Level: Registered nurse—level 2
+Job Role: Registered Nurse
+Base Pay Rate: $39.59/hr
+
+Employee: Mia Kowalski
+Employee ID: NUR-005
+Award Code: MA000034
+Employee Level: Student enrolled nurse
+Job Role: Student Enrolled Nurse
+Base Pay Rate: $25.69/hr
+
+Employee: Priya Raman
+Employee ID: NUR-006
+Award Code: MA000034
+Employee Level: Registered nurse—level 3
+Job Role: Clinical Nurse
+Base Pay Rate: $42.93/hr
+
+Employee: Noah Bennett
+Employee ID: NUR-007
+Award Code: MA000034
+Employee Level: Nurse practitioner—other than aged care employees
+Job Role: Nurse Practitioner
+Base Pay Rate: $52.00/hr
+
+Employee: Harriet Singh
+Employee ID: NUR-008
+Award Code: MA000034
+Employee Level: Enrolled nurse supervising other direct care employees
+Job Role: Supervising Enrolled Nurse
+Base Pay Rate: $38.86/hr
