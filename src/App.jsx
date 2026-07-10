@@ -20,6 +20,7 @@ import {
   Mail,
   RotateCcw,
   Scale,
+  Search,
   Send,
   Sparkles,
   UploadCloud,
@@ -53,7 +54,7 @@ const COLORS = {
 const SERIF = "'Fraunces', Georgia, 'Times New Roman', serif"
 const BODY = "'Inter Tight', system-ui, -apple-system, sans-serif"
 const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
-const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr'
+const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
 const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
 const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
@@ -326,6 +327,59 @@ const GLOBAL_CSS = `
   .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
   .danger-flag { color: var(--red); background: rgba(176,18,31,0.08); border-color: rgba(176,18,31,0.3); }
 
+  .stepper { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+  .snode { display: inline-flex; align-items: center; gap: 7px; border: none;
+    background: transparent; padding: 7px 9px; border-radius: 10px;
+    font-family: var(--body); font-size: 12.5px; font-weight: 500; color: var(--muted);
+    cursor: default; transition: background 0.15s ease, color 0.15s ease; }
+  .snode:not(:disabled) { cursor: pointer; }
+  .snode:not(:disabled):hover { background: rgba(20,22,28,0.05); color: var(--ink); }
+  .snode.current { color: var(--ink); font-weight: 600; }
+  .snode-num { width: 21px; height: 21px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center; font-family: var(--mono); font-size: 10.5px;
+    border: 1px solid var(--line); color: var(--muted); background: var(--card);
+    transition: all 0.15s ease; }
+  .snode.current .snode-num { background: var(--ochre); border-color: var(--ochre); color: #fff; }
+  .snode.done .snode-num { background: rgba(47,125,87,0.13); border-color: rgba(47,125,87,0.45); color: var(--sage); }
+  .snode-sep { width: 12px; height: 1px; background: var(--line); flex-shrink: 0; }
+
+  .sticky-bar { position: sticky; bottom: 16px; z-index: 40;
+    background: rgba(255,255,255,0.94);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 16px; padding: 15px 20px;
+    box-shadow: 0 18px 44px -20px rgba(20,22,28,0.38);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; }
+
+  .filter-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--card); padding: 8px 12px;
+    flex: 1; min-width: 220px; max-width: 430px;
+    transition: border-color 0.15s ease; }
+  .filter-wrap:focus-within { border-color: rgba(225,27,34,0.5); }
+  .filter-input { border: none; outline: none; background: transparent;
+    font-family: var(--body); font-size: 13px; color: var(--ink); flex: 1; min-width: 0; }
+  .filter-input::placeholder { color: var(--muted); }
+
+  .btn-armed { border-color: rgba(176,18,31,0.5); color: var(--red); background: rgba(176,18,31,0.06); }
+  .btn-armed:hover { background: rgba(176,18,31,0.1); border-color: rgba(176,18,31,0.6); }
+
+  @keyframes slideIn { from { transform: translateX(34px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .side-backdrop { position: fixed; inset: 0; z-index: 65;
+    background: rgba(20,22,28,0.3); animation: fadeIn 0.2s ease both; }
+  .side-panel { animation: slideIn 0.26s cubic-bezier(0.2,0.7,0.2,1) both; }
+
+  .btn:focus-visible, .btn-primary:focus-visible, .pill:focus-visible, .icon-x:focus-visible,
+  .dropzone:focus-visible, .trow:focus-visible, .snode:focus-visible {
+    outline: 2px solid var(--ochre); outline-offset: 2px; }
+  input:focus-visible { outline: 2px solid rgba(225,27,34,0.45); outline-offset: 1px; }
+
+  @media (max-width: 1010px) {
+    .snode-label { display: none; }
+    .snode { padding: 7px 6px; }
+    .snode-sep { width: 8px; }
+  }
+
   .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
     display: flex; align-items: center; justify-content: space-between;
     gap: 14px; flex-wrap: wrap; }
@@ -426,12 +480,20 @@ function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }
     () => buildAnalytics({ parsedCache, timesheetData, results }),
     [parsedCache, timesheetData, results],
   )
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = (event) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
   if (!open) return null
   const { workforce, hours, pay, compliance } = analytics
   const maxWeekday = hours ? Math.max(...hours.byWeekday.map((day) => day.hours), 0.01) : 0
 
   return (
-    <aside style={{
+    <>
+    <div className="side-backdrop" onClick={onClose} aria-hidden="true" />
+    <aside className="side-panel" role="dialog" aria-label="Workforce analytics" style={{
       position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 92vw)', zIndex: 70,
       background: COLORS.card, borderLeft: `1px solid ${COLORS.line}`,
       boxShadow: '-18px 0 44px rgba(20,22,28,0.13)', overflowY: 'auto', fontFamily: BODY,
@@ -608,32 +670,18 @@ function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }
         After-hours share is estimated from rostered spans (breaks are not position-aware).
       </div>
     </aside>
+    </>
   )
 }
 
-function AnalyticsToggle({ onOpen }) {
-  return (
-    <button
-      onClick={onOpen}
-      title="Open workforce analytics"
-      style={{
-        position: 'fixed', right: 20, bottom: 20, zIndex: 60,
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '11px 17px', borderRadius: 24, border: 'none', cursor: 'pointer',
-        background: COLORS.ink, color: '#fff', fontFamily: BODY, fontSize: 13, fontWeight: 600,
-        boxShadow: '0 8px 22px rgba(20,22,28,0.28)',
-      }}
-    >
-      <BarChart3 size={15} strokeWidth={2.1} color={COLORS.ochre} />
-      Analytics
-    </button>
-  )
-}
+const STAGE_NAMES = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
 
-function Masthead({ stage }) {
-  const names = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
+// Clickable progress stepper: every completed, unlocked stage is one click away
+// (stage 2 is transient and never a target). Locked stages explain themselves
+// via the title attribute instead of failing silently.
+function Masthead({ stage, canGo, onGo, showAnalytics, onOpenAnalytics }) {
   return (
-    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 46 }}>
+    <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 46 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <img src={isoftMark} alt="iSOFT" style={{ height: 34, width: 'auto', display: 'block' }} />
         <div style={{ width: 1, height: 30, background: COLORS.line }} />
@@ -642,14 +690,43 @@ function Masthead({ stage }) {
           <div className="eyebrow" style={{ marginTop: 4 }}>Award Interpreter</div>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span className="mono" style={{ fontSize: 11, letterSpacing: '0.14em', color: COLORS.muted }}>
-          STAGE 0{stage} / 05
-        </span>
-        <span style={{ width: 4, height: 4, borderRadius: '50%', background: COLORS.muted }} />
-        <span className="mono" style={{ fontSize: 11, letterSpacing: '0.14em', color: COLORS.ink }}>
-          {names[stage].toUpperCase()}
-        </span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <nav className="stepper" aria-label="Stages">
+          {[1, 2, 3, 4, 5].map((node) => {
+            const current = node === stage
+            const done = node < stage
+            const clickable = !current && canGo(node)
+            const title = current
+              ? `Current stage — ${STAGE_NAMES[node]}`
+              : clickable
+                ? `Go to ${STAGE_NAMES[node]}`
+                : node === 2
+                  ? 'Processing runs automatically'
+                  : 'Complete the earlier stages to unlock'
+            return (
+              <React.Fragment key={node}>
+                {node > 1 && <span className="snode-sep" aria-hidden="true" />}
+                <button
+                  className={`snode${current ? ' current' : ''}${done ? ' done' : ''}`}
+                  disabled={!clickable}
+                  onClick={() => onGo(node)}
+                  title={title}
+                  aria-current={current ? 'step' : undefined}
+                >
+                  <span className="snode-num">
+                    {done ? <Check size={12} strokeWidth={2.6} /> : node}
+                  </span>
+                  <span className="snode-label">{STAGE_NAMES[node]}</span>
+                </button>
+              </React.Fragment>
+            )
+          })}
+        </nav>
+        {showAnalytics && (
+          <button className="btn" onClick={onOpenAnalytics} style={{ padding: '8px 13px', fontSize: 13 }}>
+            <BarChart3 size={15} strokeWidth={2} color={COLORS.ochre} /> Analytics
+          </button>
+        )}
       </div>
     </header>
   )
@@ -658,10 +735,29 @@ function Masthead({ stage }) {
 function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file, onFile, onRemove }) {
   const inputRef = useRef(null)
   const [over, setOver] = useState(false)
+  const [fileError, setFileError] = useState('')
   const dragDepth = useRef(0)
+  const errorTimer = useRef(null)
+
+  useEffect(() => () => clearTimeout(errorTimer.current), [])
 
   const stop = (event) => { event.preventDefault(); event.stopPropagation() }
   const openPicker = () => inputRef.current?.click()
+
+  // The picker filters by `accept`, but drag-and-drop bypasses it — catch the
+  // wrong file type here with a plain message instead of a parse error later.
+  const tryFile = (chosen) => {
+    const extension = /\.[^.]+$/.exec(chosen.name || '')?.[0]?.toLowerCase() || ''
+    const allowed = accept.split(',').map((ext) => ext.trim().toLowerCase())
+    if (!allowed.includes(extension)) {
+      setFileError(`“${chosen.name}” isn’t supported here — this slot takes ${formats}.`)
+      clearTimeout(errorTimer.current)
+      errorTimer.current = setTimeout(() => setFileError(''), 6000)
+      return
+    }
+    setFileError('')
+    onFile(chosen)
+  }
 
   const handleEnter = (event) => { stop(event); dragDepth.current += 1; setOver(true) }
   const handleOver = (event) => stop(event)
@@ -675,11 +771,11 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
     dragDepth.current = 0
     setOver(false)
     const chosen = event.dataTransfer.files?.[0]
-    if (chosen) onFile(chosen)
+    if (chosen) tryFile(chosen)
   }
   const handlePick = (event) => {
     const chosen = event.target.files?.[0]
-    if (chosen) onFile(chosen)
+    if (chosen) tryFile(chosen)
     event.target.value = ''
   }
 
@@ -755,6 +851,12 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
           </div>
         </div>
       )}
+      {fileError && (
+        <div className="fade-up" style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginTop: 12, fontSize: 12.5, color: COLORS.red, lineHeight: 1.5 }}>
+          <AlertTriangle size={14} strokeWidth={1.9} style={{ flexShrink: 0, marginTop: 2 }} />
+          {fileError}
+        </div>
+      )}
     </div>
   )
 }
@@ -795,6 +897,31 @@ function Flag({ children, danger = false }) {
       <AlertTriangle size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
       {children}
     </span>
+  )
+}
+
+// Two-step reset: the first click arms the button for 3 seconds instead of
+// silently discarding uploaded documents and calculated results.
+function ConfirmButton({ onConfirm, confirmLabel, children }) {
+  const [armed, setArmed] = useState(false)
+  const timer = useRef(null)
+  useEffect(() => () => clearTimeout(timer.current), [])
+  const handleClick = () => {
+    if (armed) {
+      clearTimeout(timer.current)
+      setArmed(false)
+      onConfirm()
+      return
+    }
+    setArmed(true)
+    timer.current = setTimeout(() => setArmed(false), 3000)
+  }
+  return (
+    <button className={`btn${armed ? ' btn-armed' : ''}`} onClick={handleClick}>
+      {armed
+        ? <><AlertTriangle size={15} strokeWidth={1.9} /> {confirmLabel}</>
+        : children}
+    </button>
   )
 }
 
@@ -938,19 +1065,36 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
         />
       </div>
 
-      <div style={{ marginTop: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{
-            width: 9, height: 9, borderRadius: '50%',
-            background: ready ? COLORS.sage : 'rgba(20,22,28,0.25)',
-            boxShadow: ready ? '0 0 0 4px rgba(47,125,87,0.18)' : 'none',
-            transition: 'all 0.2s ease',
-          }} />
-          <span style={{ fontSize: 14.5, fontWeight: 500, color: ready ? COLORS.sage : COLORS.muted }}>
-            {ready
-              ? (hasUploads ? 'Ready to build the parsed cache' : 'Ready to interpret the preloaded award library')
-              : 'Select a preloaded industry — or upload an award — to continue'}
-          </span>
+      <div style={{ marginTop: 34, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 260 }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>This run will include</div>
+          {[
+            {
+              ok: ready,
+              label: 'Award interpretation — every level, every clause',
+              hint: 'pick an industry or upload an award',
+            },
+            {
+              ok: Boolean(documents.agreement),
+              label: 'Employee matching & timesheet pay run',
+              hint: 'add the employee agreement',
+            },
+            {
+              ok: Boolean(documents.compliance),
+              label: 'Compliance cross-reference',
+              hint: 'add the compliance document',
+            },
+          ].map((item) => (
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 0' }}>
+              {item.ok
+                ? <CheckCircle2 size={16} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0 }} />
+                : <span style={{ width: 16, display: 'grid', placeItems: 'center', flexShrink: 0 }}><span className="dot-pending" /></span>}
+              <span style={{ fontSize: 13.5, color: item.ok ? COLORS.ink : COLORS.muted, fontWeight: item.ok ? 500 : 400 }}>
+                {item.label}
+                {!item.ok && <span style={{ color: COLORS.muted, fontWeight: 400 }}> — {item.hint}</span>}
+              </span>
+            </div>
+          ))}
         </div>
         <button className="btn-primary" disabled={!ready} onClick={onContinue}>
           {hasUploads ? 'Parse documents' : 'Interpret preloaded awards'}
@@ -1021,6 +1165,11 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
       {error && (
         <div style={{ marginTop: 24 }}>
           <Flag danger>{error}</Flag>
+          <div style={{ marginTop: 12, fontSize: 12.5, color: COLORS.muted, lineHeight: 1.6, maxWidth: 560 }}>
+            Common causes: a file sitting in the wrong slot (e.g. an agreement in the award slot),
+            a scanned image-only PDF with no readable text, or a document without the expected
+            award tables. Go back, check each slot, and try again.
+          </div>
           <div style={{ marginTop: 14 }}>
             <button className="btn" onClick={onBack}>
               <ArrowLeft size={15} strokeWidth={1.9} /> Back to upload
@@ -1146,14 +1295,49 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
 
 function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
   const [showAll, setShowAll] = useState(false)
+  const [query, setQuery] = useState('')
   // Stable partition: levels matched by agreement profiles surface first.
   const ordered = [
     ...rows.filter((row) => matchedKeys.has(row.levelKey)),
     ...rows.filter((row) => !matchedKeys.has(row.levelKey)),
   ]
-  const visible = showAll ? ordered : ordered.slice(0, INTERP_ROW_CAP)
+  // The filter searches every clause row, not just the capped slice — finding
+  // "night" or "meal" must not depend on having clicked "Show all" first.
+  const needle = query.trim().toLowerCase()
+  const filtered = needle
+    ? ordered.filter((row) =>
+        [row.employeeLevel, row.levelCode, row.categoryLabel, row.title, row.plainLanguage, row.valueLabel, row.clauseRef, row.conditionsText]
+          .filter(Boolean)
+          .some((field) => String(field).toLowerCase().includes(needle)))
+    : ordered
+  const visible = needle || showAll ? filtered : filtered.slice(0, INTERP_ROW_CAP)
   return (
     <div style={{ padding: '0 6px 12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '2px 12px 12px', flexWrap: 'wrap' }}>
+        <div className="filter-wrap">
+          <Search size={14} strokeWidth={1.9} color={COLORS.muted} style={{ flexShrink: 0 }} />
+          <input
+            className="filter-input"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Filter clauses — try “night”, “overtime”, “meal”"
+            aria-label="Filter clause rows"
+          />
+          {query && (
+            <button
+              className="icon-x"
+              style={{ width: 22, height: 22, border: 'none' }}
+              onClick={() => setQuery('')}
+              aria-label="Clear filter"
+            >
+              <X size={13} />
+            </button>
+          )}
+        </div>
+        <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>
+          {needle ? `${filtered.length} of ${ordered.length} rows` : `${ordered.length} rows`}
+        </span>
+      </div>
       <div className="table-scroll">
         <div className="table-inner" style={{ minWidth: 760 }}>
           <div className="thead" style={{ gridTemplateColumns: FLAT_INTERP_GRID }}>
@@ -1173,12 +1357,17 @@ function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, 
               ragAvailable={ragAvailable}
             />
           ))}
+          {needle && filtered.length === 0 && (
+            <div style={{ padding: '16px 18px', fontSize: 13, color: COLORS.muted }}>
+              No clause rows match “{query.trim()}”.
+            </div>
+          )}
         </div>
       </div>
-      {!showAll && ordered.length > INTERP_ROW_CAP && (
+      {!needle && !showAll && filtered.length > INTERP_ROW_CAP && (
         <div style={{ padding: '12px 12px 4px' }}>
           <button className="btn" onClick={() => setShowAll(true)}>
-            <ChevronDown size={15} strokeWidth={1.9} /> Show all {ordered.length} clause rows
+            <ChevronDown size={15} strokeWidth={1.9} /> Show all {filtered.length} clause rows
           </button>
         </div>
       )}
@@ -1399,7 +1588,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
       </>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+      <div className="sticky-bar" style={{ marginTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <span className="eyebrow">{interpretOnly ? 'Interpretation status' : 'Timesheet status'}</span>
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
@@ -1451,6 +1640,13 @@ function ResultRow({ row, isOpen, onToggle }) {
         <span className="mono" style={{ fontSize: 13.5 }}>{fmt(row.basePay)}<span style={{ color: COLORS.muted, fontSize: 11 }}>/hr</span></span>
         <span className="mono" style={{ fontSize: 13.5 }}>{fmt(row.extrasAllowances.total)}</span>
         <span className="mono" style={{ fontSize: 14.5, fontWeight: 600 }}>{fmt(row.totalCalculatedPay)}</span>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.9}
+          color={COLORS.muted}
+          aria-hidden="true"
+          style={{ justifySelf: 'end', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s ease' }}
+        />
       </div>
 
       {isOpen && (
@@ -1836,13 +2032,13 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
             {results.stats.employees} employees calculated
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: 11 }}>
+        <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
           <button className="btn" onClick={onExport}>
             <Download size={16} strokeWidth={1.9} /> Export CSV
           </button>
-          <button className="btn" onClick={onReset}>
+          <ConfirmButton onConfirm={onReset} confirmLabel="Discard results & start over?">
             <RotateCcw size={15} strokeWidth={1.9} /> New interpretation
-          </button>
+          </ConfirmButton>
         </div>
       </div>
 
@@ -1864,6 +2060,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
               <span className="th">Base Pay</span>
               <span className="th">Extras / Allowances</span>
               <span className="th">Total Calculated Pay</span>
+              <span className="th" aria-hidden="true" />
             </div>
             <div>
               {results.rows.map((row) => (
@@ -1881,7 +2078,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
 
       <InterpretationTable rows={results.rows} />
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginTop: 22, padding: '18px 22px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16 }}>
+      <div className="sticky-bar" style={{ marginTop: 22 }}>
         <div>
           <span className="eyebrow">Ready to disperse</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
@@ -1961,7 +2158,9 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           <Send size={17} strokeWidth={2} /> Send confirmation email
         </a>
         <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to results</button>
-        <button className="btn" onClick={onReset}><RotateCcw size={15} strokeWidth={1.9} /> New interpretation</button>
+        <ConfirmButton onConfirm={onReset} confirmLabel="Discard this run & start over?">
+          <RotateCcw size={15} strokeWidth={1.9} /> New interpretation
+        </ConfirmButton>
       </div>
     </div>
   )
@@ -1991,6 +2190,40 @@ export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [expandedRowId, setExpandedRowId] = useState(null)
   const [analyticsOpen, setAnalyticsOpen] = useState(false)
+  // Highest stage reached this run — completed stages stay one click away in
+  // the masthead stepper. Prerequisites still gate each target, so a stale
+  // maxStage after documents change can never open an empty stage.
+  const [maxStage, setMaxStage] = useState(1)
+
+  useEffect(() => {
+    setMaxStage((current) => Math.max(current, state.stage))
+  }, [state.stage])
+
+  useEffect(() => {
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
+  }, [state.stage])
+
+  const canGo = (target) => {
+    if (target === state.stage || target === 2) return false
+    if (target === 1) return true
+    if (target > maxStage || !state.parsedCache) return false
+    if (target === 3) return true
+    return Boolean(state.results)
+  }
+
+  const goTo = (target) => {
+    if (!canGo(target)) return
+    setExpandedRowId(null)
+    dispatch({ type: 'setStage', stage: target })
+  }
+
+  const handleReset = () => {
+    setExpandedRowId(null)
+    setMaxStage(1)
+    setAnalyticsOpen(false)
+    dispatch({ type: 'reset' })
+  }
 
   useEffect(() => {
     const FONT_ID = 'axi-google-fonts'
@@ -2115,7 +2348,13 @@ export default function App() {
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
       <Background />
       <div className="app-shell">
-        <Masthead stage={state.stage} />
+        <Masthead
+          stage={state.stage}
+          canGo={canGo}
+          onGo={goTo}
+          showAnalytics={state.stage >= 3 && Boolean(state.parsedCache)}
+          onOpenAnalytics={() => setAnalyticsOpen(true)}
+        />
 
         {state.stage === 1 && (
           <UploadStage
@@ -2155,7 +2394,7 @@ export default function App() {
             expandedRowId={expandedRowId}
             onToggleRow={setExpandedRowId}
             onExport={handleExport}
-            onReset={() => { setExpandedRowId(null); dispatch({ type: 'reset' }) }}
+            onReset={handleReset}
             onDisperse={() => dispatch({ type: 'setStage', stage: 5 })}
           />
         )}
@@ -2165,7 +2404,7 @@ export default function App() {
             results={state.results}
             timesheetMeta={state.timesheetData?.meta || {}}
             onBack={() => dispatch({ type: 'setStage', stage: 4 })}
-            onReset={() => { setExpandedRowId(null); dispatch({ type: 'reset' }) }}
+            onReset={handleReset}
           />
         )}
 
@@ -2173,16 +2412,13 @@ export default function App() {
       </div>
 
       {state.stage >= 3 && state.parsedCache && (
-        <>
-          {!analyticsOpen && <AnalyticsToggle onOpen={() => setAnalyticsOpen(true)} />}
-          <AnalyticsSidebar
-            parsedCache={state.parsedCache}
-            timesheetData={state.timesheetData}
-            results={state.results}
-            open={analyticsOpen}
-            onClose={() => setAnalyticsOpen(false)}
-          />
-        </>
+        <AnalyticsSidebar
+          parsedCache={state.parsedCache}
+          timesheetData={state.timesheetData}
+          results={state.results}
+          open={analyticsOpen}
+          onClose={() => setAnalyticsOpen(false)}
+        />
       )}
     </>
   )

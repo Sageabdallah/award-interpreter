@@ -1,0 +1,27 @@
+﻿Pay Period,13/07/2026 - 19/07/2026
+Business,Coral Bay Health Group Pty Ltd
+Generated,10/07/2026
+
+Employee ID,Name,Role,Employment Type,Date,Day,Start,Finish,Break Mins,Hours,Location,Notes
+CH-001,Priya Sharma,Pharmacist,Full-time,13/07/2026,Monday,07:00,15:30,30,8,Coral Bay,
+CH-001,Priya Sharma,Pharmacist,Full-time,15/07/2026,Wednesday,07:00,15:30,30,8,Coral Bay,
+CH-001,Priya Sharma,Pharmacist,Full-time,18/07/2026,Saturday,07:00,15:30,30,8,Coral Bay,
+CH-002,Dylan Foster,Pharmacy Assistant,Casual,14/07/2026,Tuesday,09:00,15:00,0,6,Coral Bay,
+CH-002,Dylan Foster,Pharmacy Assistant,Casual,16/07/2026,Thursday,09:00,15:00,0,6,Coral Bay,
+CH-003,Margaret Chen,Care Supervisor,Part-time,13/07/2026,Monday,07:00,15:30,30,8,Coral Bay,
+CH-003,Margaret Chen,Care Supervisor,Part-time,15/07/2026,Wednesday,07:00,15:30,30,8,Coral Bay,
+CH-003,Margaret Chen,Care Supervisor,Part-time,19/07/2026,Sunday,07:00,15:30,30,8,Coral Bay,
+CH-004,Tomas Rivera,Allied Health Assistant,Full-time,13/07/2026,Monday,08:00,16:30,30,8,Coral Bay,
+CH-004,Tomas Rivera,Allied Health Assistant,Full-time,14/07/2026,Tuesday,08:00,16:30,30,8,Coral Bay,
+CH-004,Tomas Rivera,Allied Health Assistant,Full-time,17/07/2026,Friday,08:00,16:30,30,8,Coral Bay,Public holiday — local show day
+CH-005,Amelia Barnes,Registrar,Full-time,13/07/2026,Monday,07:00,15:30,30,8,Coral Bay,
+CH-005,Amelia Barnes,Registrar,Full-time,14/07/2026,Tuesday,07:00,19:30,30,12,Coral Bay,extended surgical list
+CH-005,Amelia Barnes,Registrar,Full-time,16/07/2026,Thursday,07:00,15:30,30,8,Coral Bay,
+CH-006,Noah Williams,Registered Nurse,Full-time,14/07/2026,Tuesday,22:00,06:00,0,8,Coral Bay,night duty
+CH-006,Noah Williams,Registered Nurse,Full-time,15/07/2026,Wednesday,22:00,06:00,0,8,Coral Bay,night duty
+CH-006,Noah Williams,Registered Nurse,Full-time,16/07/2026,Thursday,22:00,06:00,0,8,Coral Bay,night duty
+CH-007,Zoe Papadopoulos,Paramedic,Full-time,15/07/2026,Wednesday,08:00,16:30,30,8,Coral Bay,
+CH-007,Zoe Papadopoulos,Paramedic,Full-time,18/07/2026,Saturday,08:00,16:30,30,8,Coral Bay,
+CH-007,Zoe Papadopoulos,Paramedic,Full-time,19/07/2026,Sunday,08:00,16:30,30,8,Coral Bay,
+CH-008,Ethan Nguyen,Patient Transport Officer,Full-time,14/07/2026,Tuesday,08:00,16:30,30,8,Coral Bay,
+CH-008,Ethan Nguyen,Patient Transport Officer,Full-time,17/07/2026,Friday,08:00,16:30,30,8,Coral Bay,

@@ -1,0 +1,19 @@
+AXI-WFM COMPLIANCE REVIEW
+Coral Bay Health Group Pty Ltd — external payroll audit, July 2026
+
+Employee: Ethan Nguyen
+Employee ID: CH-008
+Award Code: MA000098
+Employee Level: Patient Transport Officer
+Note: Agreement rate $33.50/hr sits above the award minimum of $32.05/hr. Confirm the over-award payment is documented in the employment contract.
+Expected Base Pay Rate: $32.05/hr
+
+Employee: Dylan Foster
+Employee ID: CH-002
+Award Code: MA000012
+Employee Level: Pharmacy assistant level 2
+Note: Casual engagement — verify the 25% casual loading is itemised separately on payslips (cl. 11).
+
+Award Code: MA000034
+Employee Level: Registered nurse—level 2
+Note: Night duty rostering detected. Night shift loading (cl. 20) is shown in the interpretation table for review; confirm rostered night spans before payment.

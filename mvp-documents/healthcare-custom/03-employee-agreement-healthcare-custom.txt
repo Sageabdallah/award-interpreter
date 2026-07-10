@@ -1,0 +1,60 @@
+AXI-WFM EMPLOYEE AGREEMENT REGISTER
+Coral Bay Health Group Pty Ltd
+Operative from 1 July 2026 — healthcare industry award library (preloaded)
+One agreement per seeded healthcare award: the register spans all six library awards.
+
+Employee: Priya Sharma
+Employee ID: CH-001
+Award Code: MA000012
+Employee Level: Pharmacist
+Job Role: Pharmacist
+Base Pay Rate: $41.74/hr
+
+Employee: Dylan Foster
+Employee ID: CH-002
+Award Code: MA000012
+Employee Level: Pharmacy assistant level 2
+Job Role: Pharmacy Assistant
+Base Pay Rate: $28.45/hr
+
+Employee: Margaret Chen
+Employee ID: CH-003
+Award Code: MA000018
+Employee Level: Aged care employee—general—level 6
+Job Role: Care Supervisor
+Base Pay Rate: $33.05/hr
+
+Employee: Tomas Rivera
+Employee ID: CH-004
+Award Code: MA000027
+Employee Level: Employees other than dental assistants and pathology collectors — Level 4
+Job Role: Allied Health Assistant
+Base Pay Rate: $29.45/hr
+
+Employee: Amelia Barnes
+Employee ID: CH-005
+Award Code: MA000031
+Employee Level: Registrar
+Job Role: Registrar
+Base Pay Rate: $40.61/hr
+
+Employee: Noah Williams
+Employee ID: CH-006
+Award Code: MA000034
+Employee Level: Registered nurse—level 2
+Job Role: Registered Nurse
+Base Pay Rate: $39.59/hr
+
+Employee: Zoe Papadopoulos
+Employee ID: CH-007
+Award Code: MA000098
+Employee Level: Ambulance Officer
+Job Role: Paramedic
+Base Pay Rate: $34.46/hr
+
+Employee: Ethan Nguyen
+Employee ID: CH-008
+Award Code: MA000098
+Employee Level: Patient Transport Officer
+Job Role: Patient Transport Officer
+Base Pay Rate: $33.50/hr
