@@ -349,6 +349,17 @@ export const ROW_VALUE_TYPES = Object.freeze(['fixed', 'rate', 'info'])
  * @property {string} clauseRef
  * @property {string} confidence     one of CONFIDENCE, or '' for info rows
  * @property {string} source         one of ROW_SOURCES
+ * @property {RowDetail} [detail]    entitlement/penalty rows only — structured
+ *                                   data behind the flat labels, for the
+ *                                   expandable per-clause detail table
+ *
+ * @typedef {Object} RowDetail
+ * @property {Condition[]} conditions
+ * @property {MoneyValue|null} value  when the row is a fixed amount
+ * @property {RateSpec|null} rate     when the row is a multiplier
+ * @property {string} scheduleRef
+ * @property {string} origin          '' for regex-parsed rows
+ * @property {string} rawText         raw amount text from the source document
  */
 
 /**

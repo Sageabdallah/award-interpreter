@@ -47,7 +47,7 @@ describe('Healthcare demo pack (preloaded library, no award document upload)', (
     expect(parsedCache.sourcesByCode.MA000018).toBe('preloaded')
     expect(parsedCache.interpretationsByCode.MA000018.industry).toBe('healthcare')
 
-    expect(results.rows).toHaveLength(6)
+    expect(results.rows).toHaveLength(7)
     expect(results.rows.every((row) => row.validationErrors.length === 0)).toBe(true)
 
     const byName = Object.fromEntries(results.rows.map((row) => [row.employeeName, row]))
@@ -69,6 +69,10 @@ describe('Healthcare demo pack (preloaded library, no award document upload)', (
     // Ahmed — sleepover note is parse-visible but engine-inert
     expect(byName['Ahmed Hassan'].totalCalculatedPay).toBe(619.56)
     expect(byName['Ahmed Hassan'].extrasAllowances.items).toHaveLength(0)
+    // Sage — payslip email demo row: RN level 2, Saturday penalty ×1.5
+    // (16h × 39.59 = 633.44 base + 8 × 39.59 × 0.5 = 158.36)
+    expect(byName['Sage Abdallah'].basePay).toBe(39.59)
+    expect(byName['Sage Abdallah'].totalCalculatedPay).toBe(791.80)
   })
 
   it('renders flat clause-level table rows for the preloaded awards', async () => {

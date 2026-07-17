@@ -36,7 +36,7 @@ import { chunksToPromptBlock } from '../server/rag/retrieve.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
-const MODEL = process.env.MODEL_ID || 'claude-opus-4-8'
+const MODEL = process.env.MODEL_ID || 'claude-sonnet-4-6'
 
 function parseArgs(argv) {
   const args = {}
@@ -121,6 +121,7 @@ for (const code of codes) {
     schema: EXTRACTION_SCHEMA,
     effort: 'high',
     maxTokens: 8192,
+    thinking: true, // offline batch extraction — keep deep reasoning, latency doesn't matter here
   })
   console.log(`  model returned ${output.allowances.length} allowances, ${output.shiftLoadings.length} shift loadings, ${output.notes.length} notes (${usage.inputTokens} in / ${usage.outputTokens} out)`)
   output.notes.forEach((note) => console.log(`  note: ${note}`))

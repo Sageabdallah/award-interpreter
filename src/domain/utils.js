@@ -231,9 +231,16 @@ export async function sha256HexFromFiles(files = []) {
 }
 
 export function formatDateKey(value = '') {
-  const parts = String(value).split(/[/-]/).map((part) => part.trim())
+  const text = String(value).trim()
+  // Already an ISO key — pass through instead of mangling it as dd/mm/yyyy.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text
+  const parts = text.split(/[/-]/).map((part) => part.trim())
   if (parts.length !== 3) return String(value)
   const [dd, mm, yyyy] = parts
+  // An impossible day or month (e.g. US-ordered 7/16/2026) must come back
+  // unparseable: a silently wrong key would pass downstream pattern checks
+  // and then fail every date comparison without a warning.
+  if (Number(mm) > 12 || Number(mm) < 1 || Number(dd) > 31 || Number(dd) < 1) return String(value)
   const normalizedYear = /^\d{2}$/.test(yyyy) ? `20${yyyy}` : yyyy
   return `${normalizedYear.padStart(4, '0')}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
 }

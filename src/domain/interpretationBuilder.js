@@ -405,6 +405,14 @@ export function buildInterpretationTableRows(interpretation, { source = 'uploade
         conditionsText: (e.conditions || []).map((c) => c.text).join('; '),
         clauseRef: e.clauseRef,
         confidence: e.confidence,
+        detail: {
+          conditions: (e.conditions || []).map(({ kind, text }) => ({ kind, text })),
+          value: e.value || null,
+          rate: e.rate || null,
+          scheduleRef: e.scheduleRef || '',
+          origin: e.origin || '',
+          rawText: e.rawText || '',
+        },
       }))
     }
 
@@ -422,6 +430,14 @@ export function buildInterpretationTableRows(interpretation, { source = 'uploade
         trigger: p.trigger || '',
         clauseRef: p.clauseRef,
         confidence: p.confidence,
+        detail: {
+          conditions: (p.conditions || []).map(({ kind, text }) => ({ kind, text })),
+          value: null,
+          rate: p.rate || null,
+          scheduleRef: '',
+          origin: p.origin || '',
+          rawText: '',
+        },
       }))
     }
   }

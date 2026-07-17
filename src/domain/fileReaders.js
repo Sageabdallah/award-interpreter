@@ -103,7 +103,7 @@ export async function readSpreadsheetRows(file) {
   if (!file) return []
   const name = file.name.toLowerCase()
   if (name.endsWith('.pdf')) {
-    throw new Error(`PDF timesheets are not supported in v1: ${file.name}`)
+    throw new Error(`PDF spreadsheets are not supported in v1: ${file.name}`)
   }
 
   let workbook
@@ -112,7 +112,8 @@ export async function readSpreadsheetRows(file) {
   } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
     workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
   } else {
-    throw new Error(`Unsupported timesheet format: ${file.name}`)
+    // Generic wording: this reader serves timesheets AND leave requests.
+    throw new Error(`Unsupported spreadsheet format: ${file.name} — use CSV or XLSX.`)
   }
 
   const firstSheetName = workbook.SheetNames[0]

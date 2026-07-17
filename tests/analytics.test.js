@@ -48,21 +48,22 @@ describe('buildAnalytics on the healthcare demo pack', () => {
 
     expect(analytics.payPeriod).toContain('06/07/2026')
     const { workforce } = analytics
-    expect(workforce.headcount).toBe(6)
-    expect(workforce.matched).toBe(6)
+    expect(workforce.headcount).toBe(7)
+    expect(workforce.matched).toBe(7)
     expect(workforce.unmatchedNames).toEqual([])
 
     const familyLabels = Object.fromEntries(workforce.roleFamilies.map((f) => [f.label, f.employees]))
-    // 2 nursing assistants, 1 enrolled nurse, 1 registered nurse, 1 carer, 1 aged-care general
+    // 2 nursing assistants, 1 enrolled nurse, 2 registered nurses (levels 1
+    // and 2 collapse into one family), 1 carer, 1 aged-care general
     expect(familyLabels['Nursing assistant']).toBe(2)
-    expect(familyLabels['Registered nurse']).toBe(1)
+    expect(familyLabels['Registered nurse']).toBe(2)
     expect(familyLabels['Enrolled nurse']).toBe(1)
 
     const employment = Object.fromEntries(workforce.employmentMix.map((e) => [e.label, e.employees]))
-    expect(employment['full-time'] + (employment['part-time'] || 0) + (employment.casual || 0)).toBe(6)
+    expect(employment['full-time'] + (employment['part-time'] || 0) + (employment.casual || 0)).toBe(7)
 
     const awards = Object.fromEntries(workforce.byAward.map((a) => [a.label, a.employees]))
-    expect(awards.MA000034 + awards.MA000018).toBe(6)
+    expect(awards.MA000034 + awards.MA000018).toBe(7)
   })
 
   it('computes hour distribution, weekend share and roster flags', async () => {

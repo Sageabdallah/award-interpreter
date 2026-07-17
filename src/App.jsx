@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -7,6 +7,11 @@ import {
   Banknote,
   BarChart3,
   CalendarClock,
+  CalendarPlus,
+  Database,
+  LayoutDashboard,
+  Settings as SettingsGlyph,
+  Users,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -24,18 +29,28 @@ import {
   Send,
   Sparkles,
   UploadCloud,
-  Users,
   X,
 } from 'lucide-react'
-import { buildAnalytics } from './domain/analytics.js'
+import AnalyticsWorkspace from './analytics/AnalyticsWorkspace.jsx'
+import DashboardShell from './shell/DashboardShell.jsx'
+import { AiExtractPage, BulkShiftsPage, DashboardHome, EmployeesPage, SettingsPage } from './shell/pages.jsx'
+import EngineWorkspace from './engines/EngineWorkspace.jsx'
+import { LIVE_ENGINES, engineAvailable, engineById } from './engines/catalogue.js'
+import { buildComplianceRisk } from './engines/complianceRisk.js'
+import { buildFatigueAssessments } from './engines/fatigueRisk.js'
+import { buildAlertFeed } from './engines/anomalyAlerts.js'
+import { runPayAnomalyDetector } from './engines/payAnomaly.js'
+import { buildRosterProposal } from './engines/rosterOptimisation.js'
+import { buildUnallocatedWorklist } from './engines/unallocatedShifts.js'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
+import { appendAssignmentsToTimesheet, appendShiftsToTimesheet } from './domain/bulkShifts.js'
+import { parseLeaveRequestFile } from './domain/leaveParser.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
 import { parseTimesheetFile } from './domain/timesheetParser.js'
 import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
-import isoftMark from './assets/isoft-i.png'
 import isoftWordmark from './assets/isoft-wordmark.png'
 
 // iSOFT ANZ corporate design system. --ochre is the brand-accent slot (iSOFT
@@ -63,7 +78,14 @@ const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
 const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
 const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
+const ROSTER_BADGE_MAX_SHIFTS = 80
 const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
+// Demo payslip dispatch: employees carry no email addresses in this data
+// model, so every payslip routes to one confirmed inbox (editable on the
+// Pay Run page). NOTE: delivery here via Resend requires a verified domain
+// at resend.com/domains — until then Resend testing mode only accepts the
+// account owner's own address (sageabdallah10@gmail.com).
+const PAYSLIP_DEMO_RECIPIENT = 'sage.abdallah@isoftanz.com.au'
 const PARSE_STEPS = [
   { label: 'Hashing the document set', detail: 'Computing the cache fingerprint for the uploaded rule documents and preloaded award library' },
   { label: 'Parsing award records', detail: 'Extracting award code, title, employee levels, rates, allowances and penalties from uploads and the preloaded industry library' },
@@ -86,7 +108,18 @@ const initialState = {
   timesheetData: null,
   timesheetError: '',
   results: null,
+  leaveFile: null,
+  leaveData: null,
+  leaveError: '',
+  leaveDecisions: [],
+  shiftFills: [],
+  adHocUnallocated: [],
 }
+
+// Parsed leave requests are validated against the cache and timesheet, so any
+// change to either invalidates them — along with the decisions made on them,
+// the shift fills those decisions produced, and ad-hoc unallocated duties.
+const leaveReset = { leaveFile: null, leaveData: null, leaveError: '', leaveDecisions: [], shiftFills: [], adHocUnallocated: [] }
 
 function reducer(state, action) {
   switch (action.type) {
@@ -100,6 +133,7 @@ function reducer(state, action) {
         timesheetData: null,
         timesheetError: '',
         results: null,
+        ...leaveReset,
       }
     case 'setIndustry':
       // Changing the preloaded library invalidates the cache exactly like
@@ -113,6 +147,7 @@ function reducer(state, action) {
         timesheetData: null,
         timesheetError: '',
         results: null,
+        ...leaveReset,
       }
     case 'setStage':
       return { ...state, stage: action.stage }
@@ -123,13 +158,38 @@ function reducer(state, action) {
     case 'setParsedCache':
       return { ...state, parsedCache: action.cache, processingError: '', stepIndex: PARSE_STEPS.length }
     case 'setTimesheetStart':
-      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: '', results: null }
+      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: '', results: null, ...leaveReset }
     case 'setTimesheetSuccess':
-      return { ...state, timesheetFile: action.file, timesheetData: action.data, timesheetError: action.error || '', results: null }
+      return { ...state, timesheetFile: action.file, timesheetData: action.data, timesheetError: action.error || '', results: null, ...leaveReset }
     case 'setTimesheetError':
-      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: action.error, results: null }
+      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: action.error, results: null, ...leaveReset }
     case 'setResults':
       return { ...state, results: action.results }
+    case 'setLeave':
+      // A new leave file orphans decisions made on the previous one.
+      return { ...state, leaveFile: action.file, leaveData: action.data || null, leaveError: action.error || '', leaveDecisions: [], shiftFills: [] }
+    case 'addLeaveDecision':
+      return { ...state, leaveDecisions: [...state.leaveDecisions, action.record] }
+    case 'addShiftFill':
+      return { ...state, shiftFills: [...state.shiftFills, action.fill] }
+    case 'setBulkTimesheet':
+      // Bulk ad-hoc shifts joined the roster: results and leave state are
+      // invalidated exactly as a timesheet re-upload would, but ad-hoc
+      // unallocated duties survive (they reprice against the new roster).
+      return {
+        ...state,
+        timesheetData: action.timesheetData,
+        timesheetError: '',
+        results: null,
+        stage: state.stage > 4 ? 4 : state.stage,
+        leaveFile: null,
+        leaveData: null,
+        leaveError: '',
+        leaveDecisions: [],
+        shiftFills: [],
+      }
+    case 'addAdHocUnallocated':
+      return { ...state, adHocUnallocated: [...state.adHocUnallocated, ...action.entries] }
     case 'reset':
       return initialState
     default:
@@ -217,14 +277,9 @@ const GLOBAL_CSS = `
   .bg-wash { position: absolute; inset: 0;
     background: linear-gradient(180deg, #FFFFFF 0%, var(--paper) 260px); }
 
-  .appbar { position: sticky; top: 0; z-index: 50; background: var(--card);
-    border-bottom: 1px solid var(--line); border-top: 3px solid var(--brand);
-    box-shadow: var(--shadow-sm); }
-  .appbar-inner { max-width: 1080px; margin: 0 auto; padding: 10px 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; }
-
-  .app-shell { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto;
+  .layout { position: relative; z-index: 1; display: flex; align-items: flex-start;
+    max-width: 1360px; margin: 0 auto; }
+  .app-shell { flex: 1; min-width: 0; max-width: 1080px; margin: 0 auto;
     padding: 32px 28px 72px; min-height: 100vh; }
 
   .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
@@ -326,25 +381,25 @@ const GLOBAL_CSS = `
     box-shadow: 0 12px 30px -10px rgba(20,22,28,0.55); }
   .clause-tip::after { content: ''; position: absolute; top: 100%; left: var(--tip-arrow, 50%);
     transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--ink); }
-  .clause-ref:hover .clause-tip { opacity: 1; visibility: visible; }
+  .clause-ref:hover .clause-tip, .clause-ref:focus-visible .clause-tip { opacity: 1; visibility: visible; }
   .clause-tip-right { left: auto; right: -6px; transform: none; --tip-arrow: 85%; }
-  .danger-flag { color: var(--red); background: var(--error-bg); border-color: var(--error-border); }
 
-  .stepper { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
-  .snode { display: inline-flex; align-items: center; gap: 7px; border: none;
-    background: transparent; padding: 7px 9px; border-radius: var(--r-sm);
-    font-family: var(--body); font-size: 12.5px; font-weight: 500; color: var(--muted);
-    cursor: default; transition: background 0.15s ease, color 0.15s ease; }
-  .snode:not(:disabled) { cursor: pointer; }
-  .snode:not(:disabled):hover { background: rgba(20,22,28,0.05); color: var(--ink); }
-  .snode.current { color: var(--ink); font-weight: 600; }
-  .snode-num { width: 21px; height: 21px; border-radius: 50%; flex-shrink: 0;
-    display: grid; place-items: center; font-family: var(--mono); font-size: 10.5px;
-    border: 1px solid var(--line); color: var(--muted); background: var(--card);
-    transition: all 0.15s ease; }
-  .snode.current .snode-num { background: var(--ochre); border-color: var(--ochre); color: #fff; }
-  .snode.done .snode-num { background: rgba(47,125,87,0.13); border-color: rgba(47,125,87,0.45); color: var(--sage); }
-  .snode-sep { width: 12px; height: 1px; background: var(--line); flex-shrink: 0; }
+  .detail-btn { display: inline-flex; align-items: center; gap: 3px;
+    border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card);
+    padding: 3px 7px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted); cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease; flex-shrink: 0; }
+  .detail-btn:hover, .detail-btn[aria-expanded="true"] {
+    color: var(--ochre); border-color: rgba(225,27,34,0.45); }
+  .detail-panel { margin: 2px 14px 14px; border: 1px solid var(--line);
+    border-radius: var(--r-md); background: var(--surface-2); overflow: hidden; }
+  .detail-grid { display: grid; grid-template-columns: 1.7fr 1.05fr 1.45fr 1fr;
+    gap: 12px; padding: 9px 16px; align-items: start; }
+  .detail-grid + .detail-grid { border-top: 1px solid var(--line); }
+  .detail-foot { display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex-wrap: wrap; padding: 10px 16px;
+    border-top: 1px solid var(--line-strong); background: var(--card); }
+  .danger-flag { color: var(--red); background: var(--error-bg); border-color: var(--error-border); }
 
   .sticky-bar { position: sticky; bottom: 16px; z-index: 40;
     background: rgba(255,255,255,0.94);
@@ -366,21 +421,12 @@ const GLOBAL_CSS = `
   .btn-armed { border-color: rgba(176,18,31,0.5); color: var(--red); background: rgba(176,18,31,0.06); }
   .btn-armed:hover { background: rgba(176,18,31,0.1); border-color: rgba(176,18,31,0.6); }
 
-  @keyframes slideIn { from { transform: translateX(34px); opacity: 0; } to { transform: none; opacity: 1; } }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  .side-backdrop { position: fixed; inset: 0; z-index: 65;
-    background: rgba(20,22,28,0.3); animation: fadeIn 0.2s ease both; }
-  .side-panel { animation: slideIn 0.26s cubic-bezier(0.2,0.7,0.2,1) both; }
-
   .btn:focus-visible, .btn-primary:focus-visible, .pill:focus-visible, .icon-x:focus-visible,
-  .dropzone:focus-visible, .trow:focus-visible, .snode:focus-visible {
+  .dropzone:focus-visible, .trow:focus-visible {
     outline: 2px solid var(--ochre); outline-offset: 2px; }
   input:focus-visible { outline: 2px solid rgba(225,27,34,0.45); outline-offset: 1px; }
 
   @media (max-width: 1010px) {
-    .snode-label { display: none; }
-    .snode { padding: 7px 6px; }
-    .snode-sep { width: 8px; }
   }
 
   .footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
@@ -424,318 +470,7 @@ function Background() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Analytics sidebar — read-only aggregations from src/domain/analytics.js.
-// Additive: a floating toggle + fixed right panel; nothing in the stage flow
-// changes. Sections light up as data arrives (timesheet → workforce/hours,
-// calculated pay → cost analytics).
-// ---------------------------------------------------------------------------
 
-const pctFmt = (value) => `${Math.round((value || 0) * 100)}%`
-
-function SideSection({ icon: Icon, title, children }) {
-  return (
-    <div style={{ padding: '18px 20px', borderBottom: `1px solid ${COLORS.line}` }}>
-      <div className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 13 }}>
-        <Icon size={12.5} strokeWidth={1.9} color={COLORS.ochre} /> {title}
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function SideStat({ label, value, sub }) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div className="mono" style={{ fontSize: 19, fontWeight: 600, lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 3, lineHeight: 1.3 }}>{label}{sub ? <span style={{ display: 'block' }}>{sub}</span> : null}</div>
-    </div>
-  )
-}
-
-function MiniBarRow({ label, value, max, display, color = COLORS.ochre }) {
-  const width = max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 0
-  return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12, marginBottom: 3 }}>
-        <span style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
-        <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted, flexShrink: 0 }}>{display}</span>
-      </div>
-      <div style={{ height: 5, borderRadius: 3, background: 'rgba(20,22,28,0.07)' }}>
-        <div style={{ height: '100%', width: `${width}%`, borderRadius: 3, background: color, transition: 'width 0.3s ease' }} />
-      </div>
-    </div>
-  )
-}
-
-function SideHint({ children }) {
-  return (
-    <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.5, padding: '10px 12px', background: 'rgba(20,22,28,0.04)', borderRadius: 8 }}>
-      {children}
-    </div>
-  )
-}
-
-const SIGNAL_COLORS = { error: COLORS.red, warn: COLORS.warn, info: COLORS.muted }
-
-function AnalyticsSidebar({ parsedCache, timesheetData, results, open, onClose }) {
-  const analytics = React.useMemo(
-    () => buildAnalytics({ parsedCache, timesheetData, results }),
-    [parsedCache, timesheetData, results],
-  )
-  useEffect(() => {
-    if (!open) return undefined
-    const onKey = (event) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-  if (!open) return null
-  const { workforce, hours, pay, compliance } = analytics
-  const maxWeekday = hours ? Math.max(...hours.byWeekday.map((day) => day.hours), 0.01) : 0
-
-  return (
-    <>
-    <div className="side-backdrop" onClick={onClose} aria-hidden="true" />
-    <aside className="side-panel" role="dialog" aria-label="Workforce analytics" style={{
-      position: 'fixed', top: 0, right: 0, bottom: 0, width: 'min(380px, 92vw)', zIndex: 70,
-      background: COLORS.card, borderLeft: `1px solid ${COLORS.line}`,
-      boxShadow: 'var(--shadow-lg)', overflowY: 'auto', fontFamily: BODY,
-    }}>
-      <div style={{
-        position: 'sticky', top: 0, background: COLORS.card, zIndex: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', borderBottom: `1px solid ${COLORS.line}`,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <BarChart3 size={16} strokeWidth={2} color={COLORS.ochre} />
-          <div>
-            <div style={{ fontFamily: SERIF, fontSize: 16.5, fontWeight: 600, lineHeight: 1 }}>Workforce analytics</div>
-            <div style={{ fontSize: 11, color: COLORS.muted, marginTop: 3 }}>
-              {analytics.payPeriod ? `Pay period ${analytics.payPeriod}` : 'Live from the current session'}
-              {analytics.business ? ` · ${analytics.business}` : ''}
-            </div>
-          </div>
-        </div>
-        <button className="icon-x" onClick={onClose} title="Close analytics" aria-label="Close analytics">
-          <X size={17} strokeWidth={2} />
-        </button>
-      </div>
-
-      <SideSection icon={Users} title="Workforce — who worked">
-        {workforce ? (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
-              <SideStat label="employees rostered" value={workforce.headcount} />
-              <SideStat label="matched to agreements" value={`${workforce.matched}/${workforce.headcount}`} />
-              <SideStat label="total hours" value={hours?.totalHours ?? '—'} />
-            </div>
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>BY ROLE FAMILY</div>
-            {workforce.roleFamilies.map((family) => (
-              <MiniBarRow
-                key={family.label}
-                label={family.label}
-                value={family.employees}
-                max={workforce.roleFamilies[0]?.employees || 1}
-                display={`${family.employees} · ${family.hours}h`}
-              />
-            ))}
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>EMPLOYMENT MIX</div>
-            {workforce.employmentMix.map((mix) => (
-              <MiniBarRow
-                key={mix.label}
-                label={mix.label}
-                value={mix.hours}
-                max={workforce.employmentMix.reduce((top, m) => Math.max(top, m.hours), 0.01)}
-                display={`${mix.employees} · ${mix.hours}h`}
-                color={COLORS.sage}
-              />
-            ))}
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>BY AWARD</div>
-            {workforce.byAward.map((award) => (
-              <MiniBarRow
-                key={award.label}
-                label={award.label}
-                value={award.hours}
-                max={workforce.byAward.reduce((top, a) => Math.max(top, a.hours), 0.01)}
-                display={`${award.employees} · ${award.hours}h`}
-              />
-            ))}
-          </>
-        ) : (
-          <SideHint>Upload a timesheet to see who worked this pay period — headcount by role family (e.g. how many nurses), employment mix and per-award hours.</SideHint>
-        )}
-      </SideSection>
-
-      <SideSection icon={Clock} title="Hours & rostering">
-        {hours ? (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
-              <SideStat label="avg hrs / employee" value={hours.avgHoursPerEmployee} />
-              <SideStat label="weekend share" value={pctFmt(hours.weekendShare)} sub={`${hours.weekendHours}h`} />
-              <SideStat label="after-hours share" value={pctFmt(hours.afterHoursShare)} sub="outside 7am–7pm" />
-            </div>
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>HOURS BY WEEKDAY</div>
-            {hours.byWeekday.map((day) => (
-              <MiniBarRow
-                key={day.label}
-                label={day.label.slice(0, 3)}
-                value={day.hours}
-                max={maxWeekday}
-                display={`${day.hours}h · ${day.shifts} shifts`}
-                color={day.label === 'Saturday' || day.label === 'Sunday' ? COLORS.ochre : COLORS.sage}
-              />
-            ))}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 11, fontSize: 11.5, color: COLORS.muted }}>
-              <span className="pill" style={{ fontSize: 11 }}>{hours.shifts} shifts · avg {hours.avgShiftHours}h</span>
-              {hours.overnightShifts > 0 && <span className="pill" style={{ fontSize: 11 }}>{hours.overnightShifts} overnight</span>}
-              {hours.longShifts.length > 0 && <span className="pill" style={{ fontSize: 11 }}>{hours.longShifts.length} over 10h</span>}
-            </div>
-          </>
-        ) : (
-          <SideHint>Weekday distribution, weekend and after-hours shares, overnight and 10h+ shifts appear here once a timesheet is loaded.</SideHint>
-        )}
-      </SideSection>
-
-      <SideSection icon={Banknote} title="Pay & cost">
-        {pay ? (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 15 }}>
-              <SideStat label="gross this period" value={audFmt.format(pay.gross)} />
-              <SideStat label="penalty burden" value={pctFmt(pay.penaltyBurden)} sub="paid above base" />
-              <SideStat label="avg effective rate" value={`${audFmt.format(pay.avgEffectiveRate)}/h`} />
-            </div>
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '0 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>COST COMPOSITION</div>
-            <div style={{ display: 'flex', height: 9, borderRadius: 5, overflow: 'hidden', marginBottom: 9 }}>
-              {pay.composition.map((part, i) => (
-                <div
-                  key={part.label}
-                  title={`${part.label}: ${audFmt.format(part.amount)}`}
-                  style={{
-                    width: `${(part.amount / pay.gross) * 100}%`,
-                    background: i === 0 ? COLORS.ink : [COLORS.ochre, COLORS.warn, COLORS.sage, '#5A6B9A', COLORS.muted][(i - 1) % 5],
-                  }}
-                />
-              ))}
-            </div>
-            {pay.composition.map((part) => (
-              <MiniBarRow
-                key={part.label}
-                label={part.label}
-                value={part.amount}
-                max={pay.composition[0]?.amount || 1}
-                display={audFmt.format(part.amount)}
-                color={part.label === 'Base pay' ? COLORS.ink : COLORS.ochre}
-              />
-            ))}
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>COST BY ROLE FAMILY</div>
-            {pay.costByFamily.map((family) => (
-              <MiniBarRow
-                key={family.label}
-                label={family.label}
-                value={family.amount}
-                max={pay.costByFamily[0]?.amount || 1}
-                display={audFmt.format(family.amount)}
-                color={COLORS.sage}
-              />
-            ))}
-            <div style={{ fontSize: 11, color: COLORS.muted, margin: '13px 0 7px', fontWeight: 600, letterSpacing: '0.04em' }}>TOP EARNERS</div>
-            {pay.topEarners.map((earner) => (
-              <div key={earner.employeeName} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 12.5, padding: '4px 0' }}>
-                <span style={{ fontWeight: 500 }}>{earner.employeeName}</span>
-                <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>
-                  {audFmt.format(earner.total)} · {earner.hours}h · {audFmt.format(earner.effectiveRate)}/h
-                </span>
-              </div>
-            ))}
-          </>
-        ) : (
-          <SideHint>
-            {timesheetData
-              ? 'Run “Calculate pay” to unlock cost analytics — gross, penalty burden, cost composition and top earners.'
-              : 'Cost analytics unlock after a timesheet is uploaded and pay is calculated.'}
-          </SideHint>
-        )}
-      </SideSection>
-
-      <SideSection icon={AlertTriangle} title="Compliance signals">
-        {compliance.signals.length ? compliance.signals.map((signal, i) => (
-          <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.45, padding: '5px 0', color: SIGNAL_COLORS[signal.severity] || COLORS.muted }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', marginTop: 4, flexShrink: 0, background: SIGNAL_COLORS[signal.severity] || COLORS.muted }} />
-            {signal.text}
-          </div>
-        )) : (
-          <SideHint>No compliance signals on the current data set.</SideHint>
-        )}
-      </SideSection>
-
-      <div style={{ padding: '13px 20px 22px', fontSize: 10.5, color: COLORS.muted, lineHeight: 1.5 }}>
-        Deterministic aggregations from the parsed cache, timesheet and calculated pay — no AI involved.
-        After-hours share is estimated from rostered spans (breaks are not position-aware).
-      </div>
-    </aside>
-    </>
-  )
-}
-
-const STAGE_NAMES = { 1: 'Upload', 2: 'Processing', 3: 'Timesheet', 4: 'Results', 5: 'Confirmation' }
-
-// Clickable progress stepper: every completed, unlocked stage is one click away
-// (stage 2 is transient and never a target). Locked stages explain themselves
-// via the title attribute instead of failing silently.
-function Masthead({ stage, canGo, onGo, showAnalytics, onOpenAnalytics }) {
-  return (
-    <header className="appbar">
-      <div className="appbar-inner">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src={isoftWordmark} alt="iSOFT" style={{ height: 20, width: 'auto', display: 'block' }} />
-        <div style={{ width: 1, height: 26, background: COLORS.line }} />
-        <div>
-          <div style={{ fontFamily: BODY, fontWeight: 650, fontSize: 15, lineHeight: 1 }}>Axi&thinsp;·&thinsp;WFM</div>
-          <div className="eyebrow" style={{ marginTop: 3 }}>Award Interpreter</div>
-        </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <nav className="stepper" aria-label="Stages">
-          {[1, 2, 3, 4, 5].map((node) => {
-            const current = node === stage
-            const done = node < stage
-            const clickable = !current && canGo(node)
-            const title = current
-              ? `Current stage — ${STAGE_NAMES[node]}`
-              : clickable
-                ? `Go to ${STAGE_NAMES[node]}`
-                : node === 2
-                  ? 'Processing runs automatically'
-                  : 'Complete the earlier stages to unlock'
-            return (
-              <React.Fragment key={node}>
-                {node > 1 && <span className="snode-sep" aria-hidden="true" />}
-                <button
-                  className={`snode${current ? ' current' : ''}${done ? ' done' : ''}`}
-                  disabled={!clickable}
-                  onClick={() => onGo(node)}
-                  title={title}
-                  aria-current={current ? 'step' : undefined}
-                >
-                  <span className="snode-num">
-                    {done ? <Check size={12} strokeWidth={2.6} /> : node}
-                  </span>
-                  <span className="snode-label">{STAGE_NAMES[node]}</span>
-                </button>
-              </React.Fragment>
-            )
-          })}
-        </nav>
-        {showAnalytics && (
-          <button className="btn" onClick={onOpenAnalytics} style={{ padding: '8px 13px', fontSize: 13 }}>
-            <BarChart3 size={15} strokeWidth={2} color={COLORS.ochre} /> Analytics
-          </button>
-        )}
-      </div>
-      </div>
-    </header>
-  )
-}
 
 function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file, onFile, onRemove }) {
   const inputRef = useRef(null)
@@ -1021,7 +756,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 36, maxWidth: 640 }}>
-        <div className="eyebrow" style={{ marginBottom: 14 }}>01 — Upload</div>
+        <div className="eyebrow" style={{ marginBottom: 14 }}>Data &amp; Documents</div>
         <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
           Parse the award stack.
         </h1>
@@ -1116,7 +851,7 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
     <div className="fade-up">
       <div style={{ marginBottom: 28, maxWidth: 640 }}>
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Sparkles size={13} strokeWidth={1.8} /> 02 — Processing
+          <Sparkles size={13} strokeWidth={1.8} /> Data &amp; Documents · Processing
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
           Building the award cache&hellip;
@@ -1186,20 +921,30 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
   )
 }
 
-// Feature-detect the optional RAG server (server/index.js). The app is fully
+// Feature-detect the optional server (server/index.js). The app is fully
 // functional without it; when present, interpretation rows gain an "explain"
-// affordance grounded in the official award text.
-function useRagServer() {
-  const [available, setAvailable] = useState(false)
+// affordance and the Confirmation stage can dispatch payslip emails.
+// `mail` is the server's transport mode: 'smtp' or 'outlook' (real delivery),
+// 'dry-run' (generated, not sent), or 'none'.
+function useServerHealth() {
+  const [health, setHealth] = useState(null)
   useEffect(() => {
     let cancelled = false
     fetch('/api/health')
       .then((r) => (r.ok ? r.json() : null))
-      .then((health) => { if (!cancelled && health?.ok) setAvailable(true) })
+      .then((data) => { if (!cancelled && data?.ok) setHealth(data) })
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
-  return available
+  return {
+    available: Boolean(health?.ok),
+    mail: health?.mail || 'none',
+    mailAccount: health?.mailAccount || '',
+    outlookConfigured: Boolean(health?.outlookConfigured),
+    backend: health?.backend || '',
+    awards: health?.awards || [],
+    awardTitles: health?.awardTitles || {},
+  }
 }
 
 function RowExplanation({ awardCode, row }) {
@@ -1246,7 +991,110 @@ function RowExplanation({ awardCode, row }) {
   )
 }
 
-function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, ragAvailable }) {
+// Hover glossary for the terms the detail table leans on. Rendered through the
+// existing clause-ref tooltip styles so definitions look like clause tooltips.
+const EMPLOYMENT_DETAIL_LABELS = { standard: 'Full-time & part-time', casual: 'Casual employees', all: 'All employees', '': 'All employees' }
+const RATE_BASE_TERMS = {
+  base_rate: { label: 'base rate', definition: 'The minimum ordinary hourly rate for this classification, before any loadings, penalties or allowances.' },
+  ordinary_rate: { label: 'ordinary rate', definition: 'The rate paid for ordinary hours of work — the amount this loading percentage is applied on top of.' },
+  casual_rate: { label: 'casual rate', definition: 'The base rate plus the casual loading.' },
+}
+const BASIS_DETAIL_LABELS = {
+  per_hour_worked: 'per hour worked', per_shift: 'per shift', per_day_worked: 'per day worked',
+  per_week: 'per week', per_year: 'per year', per_occasion: 'per occasion', per_night: 'per night',
+  per_km: 'per kilometre', per_engagement: 'per engagement', flat: 'as a flat amount',
+  percentage_of_rate: 'as a percentage of the rate',
+}
+
+function Term({ label, definition }) {
+  if (!definition) return <>{label}</>
+  return (
+    <span className="clause-ref" tabIndex={0}>
+      {label}
+      <span className="clause-tip">{definition}</span>
+    </span>
+  )
+}
+
+function DetailValue({ detail }) {
+  if (detail.rate && typeof detail.rate.multiplier === 'number') {
+    const term = RATE_BASE_TERMS[detail.rate.appliesTo] || RATE_BASE_TERMS.base_rate
+    return <>×{Number(detail.rate.multiplier).toFixed(2)} — {detail.rate.percent}% of the <Term {...term} /></>
+  }
+  if (detail.value && typeof detail.value.amount === 'number') {
+    return <>${Number(detail.value.amount).toFixed(2)} {BASIS_DETAIL_LABELS[detail.value.basis] || ''}</>
+  }
+  return <>—</>
+}
+
+function DetailLine({ row, primaryClauseRef, clauseIndex, purposeMap }) {
+  const detail = row.detail || {}
+  // Employment scoping renders in its own column, so keep it out of Condition.
+  const conditions = (detail.conditions || []).filter((c) => c.kind !== 'employment').map((c) => c.text)
+  const notes = []
+  if (detail.scheduleRef) {
+    notes.push(<span key="sch">also <ClauseRef refText={detail.scheduleRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 10.5 }} /></span>)
+  }
+  if (row.clauseRef && row.clauseRef !== primaryClauseRef) {
+    notes.push(<span key="ref">see <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 10.5 }} /></span>)
+  }
+  if (row.confidence && row.confidence !== 'high') notes.push(<span key="conf">{row.confidence}-confidence parse</span>)
+  if (detail.origin) notes.push(<span key="origin">grounded extraction ({detail.origin})</span>)
+  return (
+    <div className="detail-grid">
+      <span style={{ fontSize: 12, lineHeight: 1.5 }}>{conditions.length ? conditions.join('; ') : row.title}</span>
+      <span style={{ fontSize: 12 }}>{EMPLOYMENT_DETAIL_LABELS[row.employment] ?? EMPLOYMENT_DETAIL_LABELS['']}</span>
+      <span className="mono" style={{ fontSize: 11.5 }}><DetailValue detail={detail} /></span>
+      <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {notes.length ? notes : '—'}
+      </span>
+    </div>
+  )
+}
+
+// The inline expansion behind a clause row's Details button: the row broken
+// into granular condition lines, plus every sibling variant of the same
+// category at the same level (e.g. the casual counterpart of a night loading),
+// so one panel shows the complete picture for that clause.
+function ClauseDetailPanel({ row, siblings, awardTitle, clauseIndex, purposeMap, ragAvailable, explainOpen, onToggleExplain }) {
+  const lines = [row, ...siblings]
+  return (
+    <div className="detail-panel">
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', padding: '12px 16px 8px' }}>
+        {row.clauseRef && (
+          <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11, color: COLORS.ochre, fontWeight: 600 }} />
+        )}
+        <span style={{ fontSize: 12.5, fontWeight: 600 }}>{row.title}</span>
+        {siblings.length > 0 && (
+          <span style={{ fontSize: 11.5, color: COLORS.muted }}>{lines.length} variants at this level</span>
+        )}
+      </div>
+      <div className="detail-grid" style={{ paddingTop: 0, paddingBottom: 6 }}>
+        <span className="th">Condition</span>
+        <span className="th">Applies to</span>
+        <span className="th">Rate / value</span>
+        <span className="th">Notes & exceptions</span>
+      </div>
+      {lines.map((line) => (
+        <DetailLine key={line.rowId} row={line} primaryClauseRef={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} />
+      ))}
+      <div className="detail-foot">
+        <span style={{ fontSize: 11.5, color: COLORS.muted }}>
+          Source: {awardTitle || row.awardCode} · deterministic parse
+          {row.confidence ? ` · ${row.confidence} confidence` : ''}
+          {row.detail?.rawText ? ` · “${row.detail.rawText}”` : ''}
+        </span>
+        {ragAvailable && row.clauseRef && (
+          <button className="detail-btn" aria-expanded={explainOpen} onClick={onToggleExplain}>
+            <Sparkles size={11} strokeWidth={2} /> Explain from award text
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, ragAvailable, awardTitle, siblings = [], detailOpen = false, onToggleDetail }) {
   const [explainOpen, setExplainOpen] = useState(false)
   return (
     <>
@@ -1271,7 +1119,7 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
           )}
         </span>
         <span className="mono" style={{ fontSize: 12.5, fontWeight: 600 }}>{row.valueLabel}</span>
-        <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11.5, color: COLORS.muted, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {row.clauseRef
             ? <ClauseRef refText={row.clauseRef} clauseIndex={clauseIndex} purposeMap={purposeMap} className="mono" style={{ fontSize: 11 }} />
             : '—'}
@@ -1287,8 +1135,30 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
               <Sparkles size={13} strokeWidth={1.9} />
             </button>
           )}
+          {row.detail && (
+            <button
+              className="detail-btn"
+              aria-expanded={detailOpen}
+              onClick={onToggleDetail}
+              title="Break this clause down into its granular conditions"
+            >
+              Details {detailOpen ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
+            </button>
+          )}
         </span>
       </div>
+      {detailOpen && row.detail && (
+        <ClauseDetailPanel
+          row={row}
+          siblings={siblings}
+          awardTitle={awardTitle}
+          clauseIndex={clauseIndex}
+          purposeMap={purposeMap}
+          ragAvailable={ragAvailable}
+          explainOpen={explainOpen}
+          onToggleExplain={() => setExplainOpen((open) => !open)}
+        />
+      )}
       {explainOpen && (
         <div style={{ padding: '10px 14px 14px', background: 'var(--surface-2)', borderBottom: `1px solid ${COLORS.line}` }}>
           <RowExplanation awardCode={row.awardCode} row={row} />
@@ -1298,9 +1168,19 @@ function InterpretationTableRowView({ row, matched, clauseIndex, purposeMap, rag
   )
 }
 
-function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, ragAvailable }) {
+function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, ragAvailable, awardTitle }) {
   const [showAll, setShowAll] = useState(false)
   const [query, setQuery] = useState('')
+  // One detail panel open at a time — opening another collapses the current.
+  const [openDetailId, setOpenDetailId] = useState('')
+  // Variants of the same category at the same level (e.g. standard + casual
+  // night loading) surface together inside one detail panel.
+  const detailGroups = {}
+  for (const row of rows) {
+    if (!row.detail) continue
+    const groupKey = `${row.levelKey}::${row.category}`
+    ;(detailGroups[groupKey] ||= []).push(row)
+  }
   // Stable partition: levels matched by agreement profiles surface first.
   const ordered = [
     ...rows.filter((row) => matchedKeys.has(row.levelKey)),
@@ -1360,6 +1240,10 @@ function AwardInterpretationTable({ rows, matchedKeys, clauseIndex, purposeMap, 
               clauseIndex={clauseIndex}
               purposeMap={purposeMap}
               ragAvailable={ragAvailable}
+              awardTitle={awardTitle}
+              siblings={(detailGroups[`${row.levelKey}::${row.category}`] || []).filter((sibling) => sibling.rowId !== row.rowId)}
+              detailOpen={openDetailId === row.rowId}
+              onToggleDetail={() => setOpenDetailId((current) => (current === row.rowId ? '' : row.rowId))}
             />
           ))}
           {needle && filtered.length === 0 && (
@@ -1389,7 +1273,7 @@ function sourceBadge(source, interp) {
 }
 
 function AwardInterpretationSection({ parsedCache }) {
-  const ragAvailable = useRagServer()
+  const { available: ragAvailable } = useServerHealth()
   const interps = Object.values(parsedCache.interpretationsByCode || {})
   const matchedKeys = new Set(
     (parsedCache.employeeProfiles || [])
@@ -1443,6 +1327,7 @@ function AwardInterpretationSection({ parsedCache }) {
                 clauseIndex={award?.clauseIndex || {}}
                 purposeMap={buildPurposeMap(award?.references || {})}
                 ragAvailable={ragAvailable}
+                awardTitle={interp.awardTitle}
               />
             )}
           </div>
@@ -1452,27 +1337,27 @@ function AwardInterpretationSection({ parsedCache }) {
   )
 }
 
-function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
-  // No agreement uploaded → interpret-only: the preloaded award library is the
-  // whole payload, and there are no employee profiles to run a timesheet against.
+// Stage 3 — review what the parser produced before anything else happens.
+// This is deliberately a read-only step: the interpretation tables are the
+// product's centrepiece, so they get their own screen instead of being
+// stacked on top of the timesheet upload.
+function InterpretationStage({ parsedCache, onBack, onContinue }) {
+  // No agreement uploaded → interpret-only: there are no employee profiles,
+  // so the flow ends here until an agreement is added in Data & Documents.
   const interpretOnly = parsedCache.employeeProfiles.length === 0
-  // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
-  const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {interpretOnly
-            ? <><Scale size={13} strokeWidth={1.8} /> 03 — Interpretation</>
-            : <><CalendarClock size={13} strokeWidth={1.8} /> 03 — Timesheet</>}
+          <Scale size={13} strokeWidth={1.8} /> Award Interpretation
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
-          {interpretOnly ? 'Review the award interpretation.' : 'Upload and review the timesheet.'}
+          Review the award interpretation.
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
           {interpretOnly
-            ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement on the upload step to match employees and run a pay-period timesheet.'
-            : 'The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match employees against cached award levels without re-parsing the documents.'}
+            ? 'The preloaded award library is interpreted below — every classification level and every clause, straight from the loaded awards. Add an employee agreement in Data & Documents to match employees and run a pay-period timesheet.'
+            : 'Every classification level and every clause, read deterministically from the parsed documents. Check the tables below, then continue to upload the pay-period timesheet.'}
         </p>
       </div>
 
@@ -1489,16 +1374,56 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
         <div style={{ marginBottom: 24 }}>
           <Flag>
             Interpretation is running on the preloaded award library. To match employees and calculate pay from a
-            timesheet, go back and add an employee agreement document.
+            timesheet, upload an employee agreement in Data & Documents.
           </Flag>
         </div>
       )}
 
-      {!interpretOnly && (
-      <>
+      <div className="sticky-bar" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+          <span className="eyebrow">Interpretation status</span>
+          <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
+            {Object.keys(parsedCache.interpretationsByCode).length} awards interpreted
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 11 }}>
+          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to documents</button>
+          {interpretOnly
+            ? <button className="btn-primary" onClick={onBack}>Upload employee agreement <ArrowRight size={18} strokeWidth={2} /></button>
+            : (
+              <button className="btn-primary" onClick={onContinue}>
+                Continue to timesheet <ArrowRight size={18} strokeWidth={2} />
+              </button>
+            )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Stage 4 — the pay run itself: upload the timesheet against the cache built
+// in stages 2–3, preview the parsed shifts, then calculate.
+function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
+  // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
+  const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
+  return (
+    <div className="fade-up">
+      <div style={{ marginBottom: 26, maxWidth: 660 }}>
+        <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <CalendarClock size={13} strokeWidth={1.8} /> Time Entry
+        </div>
+        <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
+          Upload and review the timesheet.
+        </h1>
+        <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
+          The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match
+          employees against cached award levels without re-parsing the documents.
+        </p>
+      </div>
+
       <div className="upload-grid" style={{ marginBottom: 24 }}>
         <UploadCard
-          index="04"
+          index="01"
           icon={FileSpreadsheet}
           title="Timesheet"
           subtitle="Shift entries for the pay period"
@@ -1522,7 +1447,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                 <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
               </div>
             </div>
-            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>05</span>
+            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>02</span>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div className="chip">
@@ -1599,28 +1524,19 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
         </>
       )}
 
-      </>
-      )}
-
       <div className="sticky-bar" style={{ marginTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
-          <span className="eyebrow">{interpretOnly ? 'Interpretation status' : 'Timesheet status'}</span>
+          <span className="eyebrow">Timesheet status</span>
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
-            {interpretOnly
-              ? `${Object.keys(parsedCache.interpretationsByCode).length} awards interpreted`
-              : (timesheetData ? `${timesheetData.employees.length} employees` : parsingTimesheet ? 'Parsing…' : 'Awaiting upload')}
+            {timesheetData ? `${timesheetData.employees.length} employees` : parsingTimesheet ? 'Parsing…' : 'Awaiting upload'}
           </span>
-          {!interpretOnly && timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
+          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
-          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to documents</button>
-          {interpretOnly
-            ? <button className="btn-primary" onClick={onBack}>Add employee agreement <ArrowRight size={18} strokeWidth={2} /></button>
-            : (
-              <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
-                Calculate pay <ArrowRight size={18} strokeWidth={2} />
-              </button>
-            )}
+          <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to interpretation</button>
+          <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
+            Calculate pay <ArrowRight size={18} strokeWidth={2} />
+          </button>
         </div>
       </div>
     </div>
@@ -2040,7 +1956,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
         <div>
           <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
-            <BadgeCheck size={14} strokeWidth={1.9} /> Calculation complete
+            <BadgeCheck size={14} strokeWidth={1.9} /> Pay Run · calculation complete
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
             {results.stats.employees} employees calculated
@@ -2050,8 +1966,8 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
           <button className="btn" onClick={onExport}>
             <Download size={16} strokeWidth={1.9} /> Export CSV
           </button>
-          <ConfirmButton onConfirm={onReset} confirmLabel="Discard results & start over?">
-            <RotateCcw size={15} strokeWidth={1.9} /> New interpretation
+          <ConfirmButton onConfirm={onReset} confirmLabel="Discard everything & reset the workspace?">
+            <RotateCcw size={15} strokeWidth={1.9} /> Reset demo workspace
           </ConfirmButton>
         </div>
       </div>
@@ -2113,6 +2029,240 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
   )
 }
 
+// Payslip distribution panel — POSTs the calculated rows to the server's
+// In-app Outlook sign-in for payslip delivery: starts the Microsoft device-
+// code flow on the server (POST /api/mail/outlook/connect), shows the code to
+// enter at microsoft.com/devicelogin, and polls until the server's mailer
+// flips to 'outlook' — no terminal, no server restart.
+function OutlookConnect({ configured, onConnected }) {
+  const [flow, setFlow] = useState({ status: 'idle' })
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (flow.status !== 'waiting') return undefined
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/mail/outlook/status')
+        const data = await res.json()
+        if (data.status === 'connected') {
+          setFlow({ status: 'connected' })
+          onConnected(data.account || 'Outlook')
+        } else if (data.status === 'error') {
+          setFlow({ status: 'error', error: data.error || 'Outlook sign-in failed.' })
+        }
+      } catch { /* server briefly unreachable — keep polling */ }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [flow.status, onConnected])
+
+  const start = async () => {
+    setFlow({ status: 'starting' })
+    setCopied(false)
+    try {
+      const res = await fetch('/api/mail/outlook/connect', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `connect failed (${res.status})`)
+      setFlow({ status: 'waiting', userCode: data.userCode, verificationUri: data.verificationUri })
+    } catch (error) {
+      setFlow({ status: 'error', error: error instanceof Error ? error.message : 'Could not start Outlook sign-in.' })
+    }
+  }
+
+  if (!configured) {
+    return (
+      <Flag>
+        Email delivery isn&rsquo;t configured — dispatch will run as a dry run: payslips are generated and listed
+        below, but nothing is delivered. To enable the one-click Outlook connect here, add GRAPH_CLIENT_ID
+        to .env (free, ~2 minutes — see .env.example) and restart the server; or set SMTP_*.
+      </Flag>
+    )
+  }
+
+  if (flow.status === 'waiting') {
+    return (
+      <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: '14px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>
+          <Loader2 className="spin" size={15} strokeWidth={2.2} /> Waiting for Microsoft sign-in…
+        </div>
+        <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13, lineHeight: 2, color: COLORS.ink }}>
+          <li>
+            Open <a href={flow.verificationUri} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>{flow.verificationUri}</a>
+          </li>
+          <li>
+            Enter code <span className="mono" style={{ fontSize: 15, fontWeight: 700, letterSpacing: '0.08em' }}>{flow.userCode}</span>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(flow.userCode).then(() => setCopied(true)).catch(() => {}) }}
+              style={{
+                marginLeft: 10, fontSize: 11.5, fontFamily: 'var(--body)', cursor: 'pointer',
+                border: `1px solid ${COLORS.line}`, borderRadius: 6, background: 'transparent', padding: '2px 9px',
+              }}
+            >
+              {copied ? 'Copied' : 'Copy code'}
+            </button>
+          </li>
+          <li>Sign in with the Outlook account that should send the payslips</li>
+        </ol>
+        <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>
+          This page updates by itself once the sign-in completes — one time only, the connection is remembered.
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <Flag>
+        Email delivery isn&rsquo;t configured yet — without it, dispatch runs as a dry run: payslips are generated
+        and listed below, but nothing is delivered.
+      </Flag>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
+        <button className="btn-primary" onClick={start} disabled={flow.status === 'starting'}>
+          {flow.status === 'starting'
+            ? <><Loader2 className="spin" size={16} strokeWidth={2.2} /> Starting…</>
+            : <><Mail size={16} strokeWidth={2} /> Connect Outlook</>}
+        </button>
+        <span style={{ fontSize: 12.5, color: COLORS.muted }}>One-time sign-in — payslips then send from your Outlook account.</span>
+      </div>
+      {flow.status === 'error' && <div style={{ marginTop: 10 }}><Flag danger>{flow.error}</Flag></div>}
+    </>
+  )
+}
+
+// /api/disperse-pay, which emails one payslip per paid employee. Demo
+// semantics: all payslips route to one confirmed inbox (the register carries
+// no employee email addresses); each email names the employee it is for.
+function PayslipDispatch({ results, timesheetMeta }) {
+  const { available, mail, mailAccount, outlookConfigured } = useServerHealth()
+  const [outlookAccount, setOutlookAccount] = useState(null)
+  const [recipient, setRecipient] = useState(PAYSLIP_DEMO_RECIPIENT)
+  const [dispatch, setDispatch] = useState({ status: 'idle' })
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())
+  // Connect Outlook upgrades a dry-run server live — reflect it without a
+  // health re-fetch.
+  const mailMode = outlookAccount ? 'outlook' : mail
+
+  // Only rows that actually pay out get a payslip — validation rows pay $0.
+  const payable = results.rows.filter((row) => row.validationErrors.length === 0)
+
+  const send = async () => {
+    setDispatch({ status: 'sending' })
+    try {
+      const response = await fetch('/api/disperse-pay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipient: recipient.trim(),
+          business: timesheetMeta.business || '',
+          payPeriod: timesheetMeta.payPeriod || '',
+          rows: payable.map((row) => ({
+            employeeName: row.employeeName,
+            employeeId: row.id,
+            jobRole: row.jobRole,
+            employmentType: row.employmentType,
+            awardCode: row.awardCode,
+            employeeLevel: row.employeeLevel,
+            totalHours: row.totalHours,
+            basePay: row.basePay,
+            ordinaryPay: row.ordinaryPay,
+            items: row.extrasAllowances.items.map((item) => ({ type: item.type, detail: item.detail || '', amount: item.amount })),
+            totalCalculatedPay: row.totalCalculatedPay,
+          })),
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok && !data.sent) throw new Error(data.error || `dispatch failed (${response.status})`)
+      setDispatch({ status: 'done', data })
+    } catch (error) {
+      setDispatch({ status: 'error', error: error instanceof Error ? error.message : 'Payslip dispatch failed.' })
+    }
+  }
+
+  return (
+    <div className="panel-inner" style={{ marginBottom: 26 }}>
+      <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Send size={13} strokeWidth={1.9} /> Payslip distribution — demo
+      </div>
+      <p style={{ fontSize: 13, color: COLORS.muted, margin: '0 0 14px', maxWidth: 640, lineHeight: 1.55 }}>
+        Emails one payslip per paid employee ({payable.length} this run). For the demo every payslip is routed
+        to the address below — each email names the employee it is for. Production sends would resolve each
+        employee&rsquo;s own address from the register.
+      </p>
+
+      {!available ? (
+        <Flag>
+          The payslip server isn&rsquo;t running — start it with <span className="mono" style={{ fontSize: 12 }}>npm run server</span> to
+          dispatch payslip emails.
+        </Flag>
+      ) : (
+        <>
+          {mailMode === 'dry-run' && dispatch.status !== 'done' && (
+            <div style={{ marginBottom: 12 }}>
+              <OutlookConnect configured={outlookConfigured} onConnected={setOutlookAccount} />
+            </div>
+          )}
+          {(outlookAccount || (mailMode === 'outlook' && mailAccount)) && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, color: COLORS.sage, marginBottom: 12 }}>
+              <CheckCircle2 size={15} strokeWidth={2} /> Outlook connected as {outlookAccount || mailAccount} — payslips deliver for real.
+            </div>
+          )}
+          <label style={{ display: 'block', fontSize: 12.5, color: COLORS.muted, marginBottom: 6 }}>Send all payslips to</label>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="email"
+              value={recipient}
+              onChange={(event) => setRecipient(event.target.value)}
+              aria-label="Payslip recipient"
+              style={{
+                width: '100%', maxWidth: 340, fontFamily: MONO, fontSize: 13.5, color: COLORS.ink,
+                background: COLORS.paper, border: `1px solid ${valid ? COLORS.line : 'var(--error-border)'}`,
+                borderRadius: 8, padding: '11px 13px', outline: 'none',
+              }}
+            />
+            <button
+              className="btn-primary"
+              disabled={!valid || payable.length === 0 || dispatch.status === 'sending'}
+              onClick={send}
+            >
+              {dispatch.status === 'sending'
+                ? <><Loader2 className="spin" size={16} strokeWidth={2.2} /> Sending…</>
+                : <><Send size={16} strokeWidth={2} /> Email {payable.length} payslip{payable.length === 1 ? '' : 's'}</>}
+            </button>
+          </div>
+
+          {dispatch.status === 'error' && (
+            <div style={{ marginTop: 12 }}><Flag danger>{dispatch.error}</Flag></div>
+          )}
+          {dispatch.status === 'done' && (
+            <div style={{ marginTop: 14 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 600,
+                color: dispatch.data.mode !== 'dry-run' ? COLORS.sage : COLORS.warn, marginBottom: 8,
+              }}>
+                {dispatch.data.mode !== 'dry-run'
+                  ? <><CheckCircle2 size={16} strokeWidth={2} /> {dispatch.data.sent.filter((entry) => entry.ok).length} payslip emails delivered to {dispatch.data.recipient}</>
+                  : <><AlertTriangle size={16} strokeWidth={2} /> Dry run — {dispatch.data.sent.length} payslips generated, none delivered (configure email in .env — see .env.example)</>}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {dispatch.data.sent.map((entry) => (
+                  <div key={entry.employeeName} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+                    {entry.ok
+                      ? <Check size={13} strokeWidth={2.4} color={COLORS.sage} style={{ flexShrink: 0 }} />
+                      : <X size={13} strokeWidth={2.4} color={COLORS.red} style={{ flexShrink: 0 }} />}
+                    <span style={{ fontWeight: 500 }}>{entry.employeeName}</span>
+                    <span style={{ color: COLORS.muted }}>
+                      {entry.ok ? `payslip ${dispatch.data.mode !== 'dry-run' ? 'sent' : 'generated'}` : entry.error}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
   const [recipient, setRecipient] = useState(CONFIRMATION_EMAIL)
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient.trim())
@@ -2131,7 +2281,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
     <div className="fade-up">
       <div style={{ marginBottom: 30, maxWidth: 640 }}>
         <div className="eyebrow" style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
-          <CheckCircle2 size={14} strokeWidth={1.9} /> 05 — Confirmation
+          <CheckCircle2 size={14} strokeWidth={1.9} /> Pay Run · dispersal confirmation
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>Pay dispersed.</h1>
         <p style={{ fontSize: 16, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 16 }}>
@@ -2144,6 +2294,8 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
         <StatCard icon={BadgeCheck} label="Employees paid" value={`${results.stats.employees}`} caption={timesheetMeta.business || 'Current business'} accent={COLORS.ink} />
         <StatCard icon={CalendarClock} label="Pay period" value="Processed" caption={timesheetMeta.payPeriod || 'No pay period in source file'} accent={COLORS.ochre} />
       </div>
+
+      <PayslipDispatch results={results} timesheetMeta={timesheetMeta} />
 
       <div className="panel-inner" style={{ marginBottom: 26 }}>
         <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2177,25 +2329,27 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
           <Send size={17} strokeWidth={2} /> Send confirmation email
         </a>
         <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to results</button>
-        <ConfirmButton onConfirm={onReset} confirmLabel="Discard this run & start over?">
-          <RotateCcw size={15} strokeWidth={1.9} /> New interpretation
+        <ConfirmButton onConfirm={onReset} confirmLabel="Discard everything & reset the workspace?">
+          <RotateCcw size={15} strokeWidth={1.9} /> Reset demo workspace
         </ConfirmButton>
       </div>
     </div>
   )
 }
 
+// Branded footer restored from the original prototype: wordmark + product
+// line on the left, the audit disclaimer on the right.
 function Footer() {
   return (
     <div className="footer">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <img src={isoftMark} alt="iSOFT" style={{ height: 18, width: 'auto', display: 'block' }} />
+        <img src={isoftWordmark} alt="iSOFT" style={{ height: 17, width: 'auto', display: 'block' }} />
         <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
-          iSOFT ANZ · AXI·WFM AWARD INTERPRETATION
+          ANZ · AXI·WFM AWARD INTERPRETATION
         </span>
       </div>
       <span style={{ fontSize: 12, color: COLORS.muted, maxWidth: 420, textAlign: 'right' }}>
-        Suggestions only. Review every classification against the current award before processing pay.
+        An iSOFT ANZ product. Suggestions only — review every classification against the current award before processing pay.
       </span>
     </div>
   )
@@ -2208,41 +2362,105 @@ function ScrollTextIcon(props) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [expandedRowId, setExpandedRowId] = useState(null)
-  const [analyticsOpen, setAnalyticsOpen] = useState(false)
-  // Highest stage reached this run — completed stages stay one click away in
-  // the masthead stepper. Prerequisites still gate each target, so a stale
-  // maxStage after documents change can never open an empty stage.
-  const [maxStage, setMaxStage] = useState(1)
+  // Guards for the async file parses: a parse result may only land if (a) no
+  // newer parse of the same kind started, and (b) the workspace inputs it was
+  // validated against are still current. Without this, a slow parse resolving
+  // after the user swapped documents resurrects state the reducer just reset.
+  const parseSeqRef = useRef({ timesheet: 0, leave: 0 })
+  const latestInputsRef = useRef({})
+  latestInputsRef.current = { parsedCache: state.parsedCache, timesheetData: state.timesheetData }
+  // Dashboard navigation — one page id, AXI-WFM style. Module pages mount
+  // the original workflow components (upload/processing, interpretation,
+  // timesheet, results); engine ids mount their EngineWorkspace views.
+  const [page, setPage] = useState('dashboard')
+  const health = useServerHealth()
 
-  useEffect(() => {
-    setMaxStage((current) => Math.max(current, state.stage))
-  }, [state.stage])
+  const navigate = (target) => {
+    setExpandedRowId(null)
+    setPage(target)
+  }
 
   useEffect(() => {
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     window.scrollTo({ top: 0, left: 0, behavior: reduceMotion ? 'auto' : 'smooth' })
-  }, [state.stage])
+  }, [state.stage, page])
 
-  const canGo = (target) => {
-    if (target === state.stage || target === 2) return false
-    if (target === 1) return true
-    if (target > maxStage || !state.parsedCache) return false
-    if (target === 3) return true
-    return Boolean(state.results)
-  }
-
-  const goTo = (target) => {
-    if (!canGo(target)) return
-    setExpandedRowId(null)
-    dispatch({ type: 'setStage', stage: target })
-  }
+  // Processing finished while the user watched the Data page — land them on
+  // the interpretation the parse just produced.
+  useEffect(() => {
+    if (state.stage === 3 && state.parsedCache) {
+      setPage((current) => (current === 'data' ? 'award-interpretation' : current))
+    }
+  }, [state.stage, state.parsedCache])
 
   const handleReset = () => {
     setExpandedRowId(null)
-    setMaxStage(1)
-    setAnalyticsOpen(false)
+    setPage('dashboard')
     dispatch({ type: 'reset' })
   }
+
+  // Sidebar badge counts: how many findings each live engine currently has.
+  // The engine views recompute their own full models; these exist so the
+  // navigation shows risk at a glance without opening each engine. Split
+  // into per-concern memos so an Assign click (shiftFills) doesn't re-run
+  // the detection engines, and a decision doesn't re-run the pay-anomaly
+  // scan — each memo recomputes only on its own inputs.
+  const analysisBadges = useMemo(() => {
+    const badges = {}
+    const anomalies = runPayAnomalyDetector(state.results, state.parsedCache)
+    if (anomalies) badges['pay-anomaly'] = anomalies.findings.length
+    const fatigue = buildFatigueAssessments(state.timesheetData)
+    if (fatigue) badges['fatigue-risk'] = fatigue.flagged.length
+    const compliance = buildComplianceRisk(state.timesheetData, state.results)
+    if (compliance) badges['compliance-risk'] = compliance.breaches.length
+    if (state.leaveData?.requests?.length) badges['leave-impact'] = state.leaveData.requests.length
+    return badges
+  }, [state.results, state.parsedCache, state.timesheetData, state.leaveData])
+
+  const worklistBadge = useMemo(() => {
+    const worklist = buildUnallocatedWorklist(state.parsedCache, state.timesheetData, {
+      decisions: state.leaveDecisions,
+      leaveRequests: state.leaveData?.requests || [],
+      fills: state.shiftFills,
+      adHocShifts: state.adHocUnallocated,
+    })
+    return worklist?.counts.open ? { 'unallocated-shifts': worklist.counts.open } : {}
+  }, [state.parsedCache, state.timesheetData, state.leaveData, state.leaveDecisions, state.shiftFills, state.adHocUnallocated])
+
+  const rosterBadge = useMemo(() => {
+    // The optimiser's local search prices every legal move through the pay
+    // engine — unbounded user-supplied timesheets must not freeze the render
+    // path just to draw a badge. Past the cap the engine still runs fine on
+    // demand inside its own view; only the badge is skipped.
+    if ((state.timesheetData?.shifts?.length || 0) > ROSTER_BADGE_MAX_SHIFTS) return {}
+    const proposal = buildRosterProposal(state.parsedCache, state.timesheetData, {
+      leaveRequests: state.leaveData?.requests || [],
+      decisions: state.leaveDecisions,
+    })
+    return proposal?.proposals.length ? { 'roster-optimisation': proposal.proposals.length } : {}
+  }, [state.parsedCache, state.timesheetData, state.leaveData, state.leaveDecisions])
+
+  // The alert feed is shared: the dashboard home shows its top entries, the
+  // sidebar badge shows its Critical count.
+  const alertFeed = useMemo(() => {
+    if (!state.timesheetData?.employees?.length) return null
+    return buildAlertFeed({
+      payAnomaly: runPayAnomalyDetector(state.results, state.parsedCache),
+      compliance: buildComplianceRisk(state.timesheetData, state.results),
+      fatigue: buildFatigueAssessments(state.timesheetData),
+      worklist: buildUnallocatedWorklist(state.parsedCache, state.timesheetData, {
+        decisions: state.leaveDecisions,
+        leaveRequests: state.leaveData?.requests || [],
+        fills: state.shiftFills,
+        adHocShifts: state.adHocUnallocated,
+      }),
+      parsedCache: state.parsedCache,
+      leaveRequests: state.leaveData?.requests || [],
+    })
+  }, [state.results, state.parsedCache, state.timesheetData, state.leaveData, state.leaveDecisions, state.shiftFills, state.adHocUnallocated])
+
+  const alertsBadge = alertFeed?.counts.Critical ? { 'anomaly-alerts': alertFeed.counts.Critical } : {}
+  const engineBadges = { ...analysisBadges, ...worklistBadge, ...rosterBadge, ...alertsBadge }
 
   useEffect(() => {
     if (state.stage !== 2) return undefined
@@ -2303,22 +2521,50 @@ export default function App() {
   }
 
   const handleTimesheetFile = async (file) => {
+    const seq = ++parseSeqRef.current.timesheet
     if (!file) {
       dispatch({ type: 'setTimesheetError', file: null, error: '' })
       return
     }
 
+    const cacheAtStart = state.parsedCache
     dispatch({ type: 'setTimesheetStart', file })
     try {
       const data = await parseTimesheetFile(file)
+      if (seq !== parseSeqRef.current.timesheet || latestInputsRef.current.parsedCache !== cacheAtStart) return
       dispatch({
         type: 'setTimesheetSuccess',
         file,
         data,
-        error: buildTimesheetMatchMessage(state.parsedCache, data),
+        error: buildTimesheetMatchMessage(cacheAtStart, data),
       })
     } catch (error) {
+      if (seq !== parseSeqRef.current.timesheet) return
       dispatch({ type: 'setTimesheetError', file, error: error instanceof Error ? error.message : 'Timesheet parsing failed.' })
+    }
+  }
+
+  const handleLeaveFile = async (file) => {
+    const seq = ++parseSeqRef.current.leave
+    if (!file) {
+      dispatch({ type: 'setLeave', file: null })
+      return
+    }
+    const cacheAtStart = state.parsedCache
+    const timesheetAtStart = state.timesheetData
+    dispatch({ type: 'setLeave', file })
+    try {
+      const data = await parseLeaveRequestFile(file, {
+        parsedCache: cacheAtStart,
+        timesheetData: timesheetAtStart,
+      })
+      if (seq !== parseSeqRef.current.leave
+        || latestInputsRef.current.parsedCache !== cacheAtStart
+        || latestInputsRef.current.timesheetData !== timesheetAtStart) return
+      dispatch({ type: 'setLeave', file, data, error: data.parseWarnings.join(' ') })
+    } catch (error) {
+      if (seq !== parseSeqRef.current.leave) return
+      dispatch({ type: 'setLeave', file, error: error instanceof Error ? error.message : 'Leave request parsing failed.' })
     }
   }
 
@@ -2326,7 +2572,7 @@ export default function App() {
     if (!state.parsedCache || !state.timesheetData) return
     dispatch({ type: 'setResults', results: calculateTimesheetResults(state.parsedCache, state.timesheetData) })
     setExpandedRowId(null)
-    dispatch({ type: 'setStage', stage: 4 })
+    dispatch({ type: 'setStage', stage: 5 })
   }
 
   const handleExport = () => {
@@ -2343,82 +2589,270 @@ export default function App() {
     URL.revokeObjectURL(url)
   }
 
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
-      <Background />
-      <Masthead
-        stage={state.stage}
-        canGo={canGo}
-        onGo={goTo}
-        showAnalytics={state.stage >= 3 && Boolean(state.parsedCache)}
-        onOpenAnalytics={() => setAnalyticsOpen(true)}
-      />
-      <div className="app-shell">
-        {state.stage === 1 && (
-          <UploadStage
-            documents={state.documents}
-            industry={state.industry}
-            onSetDocument={handleSetDocument}
-            onSetIndustry={(industry) => { dispatch({ type: 'setIndustry', industry }); setExpandedRowId(null) }}
-            onContinue={() => dispatch({ type: 'setStage', stage: 2 })}
-          />
-        )}
+  // Bulk ad-hoc shift creation: assigned shifts join the timesheet through
+  // the same append the parser shape expects; the outcome (added/skipped)
+  // returns to the page for its confirmation note.
+  const handleBulkAssigned = (identity, shifts) => {
+    const outcome = appendShiftsToTimesheet(state.timesheetData, identity, shifts)
+    dispatch({ type: 'setBulkTimesheet', timesheetData: outcome.timesheetData })
+    return outcome
+  }
 
-        {state.stage === 2 && (
-          <ProcessingStage
-            documents={state.documents}
-            industry={state.industry}
-            stepIndex={state.stepIndex}
-            error={state.processingError}
-            onBack={() => dispatch({ type: 'setStage', stage: 1 })}
-          />
-        )}
+  const handleBulkBatchAssigned = (assignments) => {
+    const outcome = appendAssignmentsToTimesheet(state.timesheetData, assignments)
+    dispatch({ type: 'setBulkTimesheet', timesheetData: outcome.timesheetData })
+    return outcome
+  }
 
-        {state.stage === 3 && state.parsedCache && (
-          <TimesheetStage
-            parsedCache={state.parsedCache}
-            timesheetFile={state.timesheetFile}
-            timesheetData={state.timesheetData}
-            timesheetError={state.timesheetError}
-            onTimesheetFile={handleTimesheetFile}
-            onBack={() => dispatch({ type: 'setStage', stage: 1 })}
-            onContinue={handleCalculate}
-          />
-        )}
+  const availability = {
+    hasCache: Boolean(state.parsedCache),
+    hasTimesheet: Boolean(state.timesheetData),
+    hasResults: Boolean(state.results),
+    hasProfiles: Boolean(state.parsedCache?.employeeProfiles?.length),
+  }
 
-        {state.stage === 4 && state.results && (
+  const engineNavItem = (id) => {
+    const engine = engineById(id)
+    return { id, label: engine.shortName, icon: engine.icon, hint: engine.name }
+  }
+  const nav = [
+    { section: '', items: [{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }] },
+    {
+      section: 'Award',
+      items: [
+        { id: 'award-interpretation', label: 'Award Interpretation', icon: Scale, hint: 'Deterministic clause-level interpretation of every loaded award' },
+        { id: 'employees', label: 'Employees', icon: Users },
+        { ...engineNavItem('leave-impact'), label: 'Leave Management' },
+        { id: 'time-entry', label: 'Time Entry', icon: Clock },
+        { id: 'pay-run', label: 'Pay Run', icon: Banknote },
+        { id: 'ai-extract', label: 'AI Award Extract', icon: Sparkles },
+      ],
+    },
+    {
+      section: 'Roster',
+      items: [
+        engineNavItem('roster-optimisation'),
+        { ...engineNavItem('unallocated-shifts'), label: 'Unallocated Duty' },
+        { id: 'bulk-shifts', label: 'Bulk Ad-Hoc Shifts', icon: CalendarPlus },
+      ],
+    },
+    {
+      section: 'AI Engines',
+      items: ['anomaly-alerts', 'pay-anomaly', 'labour-cost', 'budget-forecaster', 'fatigue-risk', 'compliance-risk'].map(engineNavItem),
+    },
+    {
+      section: 'Insights',
+      items: [{ id: 'reports', label: 'Reports', icon: BarChart3 }],
+    },
+    {
+      section: 'Workspace',
+      items: [
+        { id: 'data', label: 'Data & Documents', icon: Database },
+        { id: 'settings', label: 'Settings', icon: SettingsGlyph },
+      ],
+    },
+  ]
+  const ready = {
+    'award-interpretation': availability.hasCache,
+    employees: availability.hasCache,
+    'bulk-shifts': availability.hasCache,
+    'time-entry': availability.hasCache,
+    'pay-run': availability.hasTimesheet,
+    reports: availability.hasCache,
+    ...Object.fromEntries(LIVE_ENGINES.map((engine) => [engine.id, engineAvailable(engine, availability)])),
+  }
+
+  const leaveProps = {
+    file: state.leaveFile,
+    data: state.leaveData,
+    error: state.leaveError,
+    onFile: handleLeaveFile,
+    decisions: state.leaveDecisions,
+    onDecide: (record) => dispatch({ type: 'addLeaveDecision', record }),
+  }
+  const worklistProps = {
+    fills: state.shiftFills,
+    onFill: (fill) => dispatch({ type: 'addShiftFill', fill }),
+    adHocShifts: state.adHocUnallocated,
+  }
+
+  const gate = (title, hint, target = 'data', cta = null) => (
+    <div className="fade-up" style={{ background: COLORS.card, border: '1px dashed var(--line-strong)', borderRadius: 16, padding: '56px 28px', textAlign: 'center' }}>
+      <div style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600 }}>{title}</div>
+      <div style={{ fontSize: 13.5, color: COLORS.muted, margin: '10px auto 16px', maxWidth: 460, lineHeight: 1.6 }}>{hint}</div>
+      <button className="btn-primary" onClick={() => navigate(target)}>
+        {cta || (target === 'data' ? 'Load documents' : 'Continue')} <ArrowRight size={17} strokeWidth={2} />
+      </button>
+    </div>
+  )
+
+  const renderPage = () => {
+    if (page === 'dashboard') {
+      return (
+        <DashboardHome
+          industryLabel={INDUSTRY_LABELS[state.industry] || (state.parsedCache ? 'Custom document pack' : '')}
+          parsedCache={state.parsedCache}
+          timesheetData={state.timesheetData}
+          results={state.results}
+          dispatched={state.stage >= 6}
+          alertFeed={alertFeed}
+          onNavigate={navigate}
+        />
+      )
+    }
+    if (page === 'data') {
+      return state.stage === 2 ? (
+        <ProcessingStage
+          documents={state.documents}
+          industry={state.industry}
+          stepIndex={state.stepIndex}
+          error={state.processingError}
+          onBack={() => dispatch({ type: 'setStage', stage: 1 })}
+        />
+      ) : (
+        <UploadStage
+          documents={state.documents}
+          industry={state.industry}
+          onSetDocument={handleSetDocument}
+          onSetIndustry={(industry) => { dispatch({ type: 'setIndustry', industry }); setExpandedRowId(null) }}
+          onContinue={() => dispatch({ type: 'setStage', stage: 2 })}
+        />
+      )
+    }
+    if (page === 'award-interpretation') {
+      return state.parsedCache ? (
+        <InterpretationStage
+          parsedCache={state.parsedCache}
+          onBack={() => navigate('data')}
+          onContinue={() => navigate('time-entry')}
+        />
+      ) : gate('No awards interpreted yet', 'Preload an industry library or upload an award pack — interpretation is deterministic, clause by clause.')
+    }
+    if (page === 'time-entry') {
+      return state.parsedCache ? (
+        <TimesheetStage
+          parsedCache={state.parsedCache}
+          timesheetFile={state.timesheetFile}
+          timesheetData={state.timesheetData}
+          timesheetError={state.timesheetError}
+          onTimesheetFile={handleTimesheetFile}
+          onBack={() => navigate('award-interpretation')}
+          onContinue={() => { handleCalculate(); navigate('pay-run') }}
+        />
+      ) : gate('Time entry needs a loaded workspace', 'Parse the award and agreement documents first — timesheet rows match against the cached register.')
+    }
+    if (page === 'pay-run') {
+      if (state.stage >= 6 && state.results) {
+        return (
+          <ConfirmationStage
+            results={state.results}
+            timesheetMeta={state.timesheetData?.meta || {}}
+            onBack={() => dispatch({ type: 'setStage', stage: 5 })}
+            onReset={handleReset}
+          />
+        )
+      }
+      if (state.results) {
+        return (
           <ResultsStage
             results={state.results}
             expandedRowId={expandedRowId}
             onToggleRow={setExpandedRowId}
             onExport={handleExport}
             onReset={handleReset}
-            onDisperse={() => dispatch({ type: 'setStage', stage: 5 })}
+            onDisperse={() => dispatch({ type: 'setStage', stage: 6 })}
           />
-        )}
-
-        {state.stage === 5 && state.results && (
-          <ConfirmationStage
-            results={state.results}
-            timesheetMeta={state.timesheetData?.meta || {}}
-            onBack={() => dispatch({ type: 'setStage', stage: 4 })}
-            onReset={handleReset}
-          />
-        )}
-
-        <Footer />
-      </div>
-
-      {state.stage >= 3 && state.parsedCache && (
-        <AnalyticsSidebar
+        )
+      }
+      if (state.timesheetData) {
+        // The timesheet is loaded — offer the calculation right here instead
+        // of bouncing the user back through Time Entry.
+        return (
+          <div className="fade-up" style={{ background: COLORS.card, border: '1px dashed var(--line-strong)', borderRadius: 16, padding: '56px 28px', textAlign: 'center' }}>
+            <div style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600 }}>Ready to calculate</div>
+            <div style={{ fontSize: 13.5, color: COLORS.muted, margin: '10px auto 16px', maxWidth: 460, lineHeight: 1.6 }}>
+              {state.timesheetData.employees.length} employees · {state.timesheetData.totalHours} hrs loaded.
+              Every pay line will trace to the clause that produced it.
+            </div>
+            <button className="btn-primary" onClick={handleCalculate}>
+              Run pay calculation <ArrowRight size={17} strokeWidth={2} />
+            </button>
+          </div>
+        )
+      }
+      return gate('No pay run yet', 'Upload the pay-period timesheet in Time Entry, then calculate — every line traces to a clause.', 'time-entry', 'Open Time Entry')
+    }
+    if (page === 'reports') {
+      return state.parsedCache ? (
+        <AnalyticsWorkspace
           parsedCache={state.parsedCache}
           timesheetData={state.timesheetData}
           results={state.results}
-          open={analyticsOpen}
-          onClose={() => setAnalyticsOpen(false)}
+          onBackToFlow={() => navigate('dashboard')}
         />
-      )}
+      ) : gate('Reports need workspace data', 'Analytics reconcile with the pay run to the cent — load the document pack to begin.')
+    }
+    if (page === 'employees') return <EmployeesPage parsedCache={state.parsedCache} timesheetData={state.timesheetData} results={state.results} onNavigate={navigate} />
+    if (page === 'bulk-shifts') {
+      return (
+        <BulkShiftsPage
+          parsedCache={state.parsedCache}
+          timesheetData={state.timesheetData}
+          onCreateAssigned={handleBulkAssigned}
+          onCreateBatch={handleBulkBatchAssigned}
+          onCreateAdHoc={(entries) => dispatch({ type: 'addAdHocUnallocated', entries })}
+          onNavigate={navigate}
+        />
+      )
+    }
+    if (page === 'ai-extract') return <AiExtractPage health={health} />
+    if (page === 'settings') {
+      return (
+        <SettingsPage
+          health={health}
+          stats={{
+            industryLabel: INDUSTRY_LABELS[state.industry] || '',
+            awards: Object.keys(state.parsedCache?.interpretationsByCode || {}).length,
+            profiles: state.parsedCache?.employeeProfiles?.length || 0,
+            engines: LIVE_ENGINES.length,
+          }}
+          onReset={handleReset}
+        />
+      )
+    }
+    if (engineById(page)) {
+      return (
+        <EngineWorkspace
+          engineId={page}
+          parsedCache={state.parsedCache}
+          timesheetData={state.timesheetData}
+          results={state.results}
+          leave={leaveProps}
+          worklist={worklistProps}
+          onBackToFlow={() => navigate('dashboard')}
+          onOpenEngine={navigate}
+        />
+      )
+    }
+    return null
+  }
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
+      <DashboardShell
+        nav={nav}
+        activePage={page}
+        onNavigate={navigate}
+        badges={engineBadges}
+        ready={ready}
+        user={{ name: 'Sage Abdallah', role: 'Admin' }}
+        version="v0.9.0-demo"
+        onSignOut={handleReset}
+      >
+        {renderPage()}
+        <Footer />
+      </DashboardShell>
     </>
   )
 }
