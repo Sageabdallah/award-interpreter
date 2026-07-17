@@ -83,7 +83,7 @@ const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
 // Demo payslip dispatch: employees carry no email addresses in this data
 // model, so every payslip routes to one confirmed inbox (editable on the
 // Pay Run page).
-const PAYSLIP_DEMO_RECIPIENT = 'sageabdallah10@gmail.com'
+const PAYSLIP_DEMO_RECIPIENT = 'sage.abdallah@isoftanz.com.au'
 const PARSE_STEPS = [
   { label: 'Hashing the document set', detail: 'Computing the cache fingerprint for the uploaded rule documents and preloaded award library' },
   { label: 'Parsing award records', detail: 'Extracting award code, title, employee levels, rates, allowances and penalties from uploads and the preloaded industry library' },
