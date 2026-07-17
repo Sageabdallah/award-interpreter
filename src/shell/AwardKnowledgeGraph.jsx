@@ -54,11 +54,13 @@ function layoutGraph(graph, width) {
     ...topics.map((node) => ({ node, angle: angleOf(node) })).sort((a, b) => a.angle - b.angle),
     ...streams.map((node) => ({ node, angle: null })),
   ]
+  // Crowded inner rings (some awards have 15+ pills) alternate between two
+  // radii so neighbouring pills never overlap.
+  const stagger = inner.length > 8
   inner.forEach((slot, index) => {
-    const angle = slot.angle !== null && inner.length === topics.length
-      ? slot.angle
-      : -Math.PI / 2 + (2 * Math.PI * index) / inner.length
-    positions.set(slot.node.id, { ...polar(cx, cy, innerX, innerY, angle), angle })
+    const angle = -Math.PI / 2 + (2 * Math.PI * index) / inner.length
+    const factor = stagger && index % 2 === 1 ? 1.38 : 1
+    positions.set(slot.node.id, { ...polar(cx, cy, innerX * factor, innerY * factor, angle), angle })
   })
 
   return { positions, cx, cy }
@@ -141,7 +143,9 @@ export function AwardKnowledgeGraph({ graph, citedIds }) {
         {/* inner ring: topics + streams */}
         {innerNodes.map((node) => {
           const pos = positions.get(node.id)
-          const label = node.type === 'stream' && node.levelCount > 1 ? `${node.label} (${node.levelCount})` : node.label
+          // Long family names are truncated on the pill — the tooltip has the full name.
+          const name = node.label.length > 24 ? `${node.label.slice(0, 23).trimEnd()}…` : node.label
+          const label = node.type === 'stream' && node.levelCount > 1 ? `${name} (${node.levelCount})` : name
           const w = Math.max(56, label.length * 5.6 + 18)
           return (
             <g key={node.id} onMouseEnter={() => setHovered(node.id)} onMouseLeave={() => setHovered(null)} style={{ cursor: 'default' }}>
