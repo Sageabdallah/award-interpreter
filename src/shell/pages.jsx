@@ -27,11 +27,15 @@ import {
   MessageSquareText,
   Search,
   Send,
+  Share2,
   Sparkles,
   Users,
   X,
 } from 'lucide-react'
 import { COLORS, MONO, SERIF, fmtAud, fmtNum } from '../analytics/theme.js'
+import { loadAwardLibrary } from '../domain/awardLibrary/index.js'
+import { buildAwardGraph, matchCitedNodeIds } from '../domain/knowledgeGraph.js'
+import { AwardKnowledgeGraph } from './AwardKnowledgeGraph.jsx'
 import { shortDate } from '../domain/analyticsSeries.js'
 import { appendAssignmentsToTimesheet, buildBulkShifts, buildRosteredTimesheetSummary, expandBulkDates, timesheetToCsv } from '../domain/bulkShifts.js'
 import { buildEmployeeDossier, classifyShift } from '../domain/employeeEnrichment.js'
@@ -1131,6 +1135,23 @@ export function AiExtractPage({ health }) {
 
   const awardLabel = (code) => health.awardTitles?.[code] ? `${health.awardTitles[code]} (${code})` : code
 
+  // Knowledge graph of the selected award, built from the preloaded library.
+  // Clauses cited/consulted by the latest answer light up in the graph.
+  const graph = useMemo(() => {
+    const entry = loadAwardLibrary('healthcare', [awardCode])[0]
+    return entry ? buildAwardGraph(entry) : null
+  }, [awardCode])
+  const citedIds = useMemo(() => {
+    if (!graph) return new Set()
+    const lastAnswer = [...messages].reverse().find((m) => m.role === 'assistant' && !m.error && !m.pending)
+    if (!lastAnswer) return new Set()
+    const refs = [
+      ...(lastAnswer.citations || []).map((citation) => citation.clauseRef),
+      ...(lastAnswer.sources || []).map((source) => source.clauseRef),
+    ]
+    return matchCitedNodeIds(graph, refs)
+  }, [graph, messages])
+
   // Patch the trailing assistant bubble in place — the streaming events all
   // mutate the same message as it fills in.
   const patchLast = (patch) => setMessages((prev) =>
@@ -1401,6 +1422,26 @@ export function AiExtractPage({ health }) {
           </Card>
         </div>
       </div>
+
+      {graph && (
+        <Card style={{ marginTop: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700 }}>
+              <Share2 size={16} strokeWidth={1.9} color={COLORS.ochre} /> Knowledge graph — {health.awardTitles?.[awardCode] || awardCode}
+            </div>
+            <div style={{ fontSize: 11.5, color: COLORS.muted }}>
+              {citedIds.size > 0
+                ? 'Highlighted clauses are the ones the assistant just consulted.'
+                : 'Ask a question above — the clauses the assistant consults will light up.'}
+            </div>
+          </div>
+          <p style={{ fontSize: 12, color: COLORS.muted, margin: '0 0 6px', maxWidth: 720, lineHeight: 1.55 }}>
+            Everything the assistant can draw on for this award: each dot on the outer ring is an indexed clause,
+            pills are the key topic references and classification streams parsed from the award. Hover any node for detail.
+          </p>
+          <AwardKnowledgeGraph graph={graph} citedIds={citedIds} />
+        </Card>
+      )}
     </div>
   )
 }
