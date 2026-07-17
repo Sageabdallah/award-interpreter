@@ -4,7 +4,7 @@
 // classify is a pure semantic search over classification-definition chunks.
 // ---------------------------------------------------------------------------
 
-import { parseClauseRefs } from './clauseRefs.js'
+import { normalizeClauseRef, parseClauseRefs } from './clauseRefs.js'
 
 const MAX_CONTEXT_CHARS = 20000 // ~5K tokens of clause text per request
 
@@ -44,6 +44,34 @@ export async function retrieveForRow({ store, embedQuery }, { awardCode, row }) 
   const semantic = await store.search({ vector, k: 3, awardCode })
 
   // Exact clause chunks first — they are the citation targets.
+  return capChars(dedupeById([...exact, ...semantic]))
+}
+
+// Clause mentions inside a free-text question ("what does clause 25.5 say",
+// "sch B rates") — each one becomes an exact chunk lookup alongside the
+// semantic search. A false match just fetches nothing.
+const CLAUSE_MENTION_RE = /\bcl(?:ause)?\.?\s*\d{1,3}[A-Z]?(?:\.\d+)*(?:\([a-z]\))?|\bsch(?:edule)?\.?\s*[A-Z]\b(?:\.\d+)*/gi
+
+/**
+ * Chunks for answering a free-text question about one award: exact chunks for
+ * any clause the question names, then top-k semantic hits. `recentContext`
+ * (prior user turns) keeps follow-ups like "and on Sundays?" retrievable.
+ * @param {object} deps  { store, embedQuery }
+ */
+export async function retrieveForQuestion({ store, embedQuery }, { awardCode, question, recentContext = '' }) {
+  const exact = []
+  if (awardCode) {
+    for (const mention of question.match(CLAUSE_MENTION_RE) || []) {
+      const ref = normalizeClauseRef(mention)
+      if (ref) exact.push(...await store.byClauseRef(awardCode, ref.ref))
+    }
+  }
+
+  const query = [recentContext, question].filter(Boolean).join('\n').slice(-2000)
+  const vector = await embedQuery(query)
+  const semantic = await store.search({ vector, k: 8, awardCode: awardCode || null })
+
+  // Explicitly named clauses first — they are what the user asked about.
   return capChars(dedupeById([...exact, ...semantic]))
 }
 

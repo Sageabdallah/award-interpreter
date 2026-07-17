@@ -43,3 +43,10 @@ Award Code: MA000018
 Employee Level: Carer
 Job Role: Personal Carer
 Base Pay Rate: $34.42/hr
+
+Employee: Sage Abdallah
+Employee ID: HC-007
+Award Code: MA000034
+Employee Level: Registered nurse—level 2
+Job Role: Registered Nurse
+Base Pay Rate: $39.59/hr

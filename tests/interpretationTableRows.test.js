@@ -80,6 +80,26 @@ describe('buildInterpretationTableRows (flat clause-level display rows)', () => 
     expect(firstAid.clauseRef).toBe('cl. 21.2(c) / Sch C')
   })
 
+  it('attaches structured detail to entitlement/penalty rows only', () => {
+    const rows = buildInterpretationTableRows(healthcareInterp, { source: 'preloaded' })
+    const granular = rows.filter((row) => row.kind === 'entitlement' || row.kind === 'penalty')
+    const simple = rows.filter((row) => row.kind !== 'entitlement' && row.kind !== 'penalty')
+    expect(granular.length).toBeGreaterThan(0)
+    expect(granular.every((row) => row.detail && Array.isArray(row.detail.conditions))).toBe(true)
+    expect(simple.every((row) => row.detail === undefined)).toBe(true)
+
+    const saturday = granular.find((row) => row.trigger === 'day:saturday' && row.employment === 'standard')
+    expect(saturday.detail.rate.multiplier).toBe(1.5)
+    expect(saturday.detail.rate.appliesTo).toBe('base_rate')
+    expect(saturday.detail.conditions.some((c) => c.kind === 'day' && c.text === 'Saturday')).toBe(true)
+
+    const firstAid = buildInterpretationTableRows(airportInterp)
+      .find((row) => row.kind === 'entitlement' && row.category === 'first_aid')
+    expect(firstAid.detail.value.amount).toBe(21.43)
+    expect(firstAid.detail.value.basis).toBe('per_week')
+    expect(firstAid.detail.scheduleRef).toBe('Sch C')
+  })
+
   it('is deterministic — same input produces identical rows', () => {
     const first = buildInterpretationTableRows(healthcareInterp, { source: 'preloaded' })
     const second = buildInterpretationTableRows(healthcareInterp, { source: 'preloaded' })

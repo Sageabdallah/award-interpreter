@@ -15,10 +15,15 @@
 
      node scripts/generateHealthcareDemoPack.mjs
 */
-import { mkdirSync, writeFileSync } from 'fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import XLSX from 'xlsx'
+import { buildParsedCacheFromTexts } from '../src/domain/cacheBuilder.js'
+import { parseLeaveRequestRows } from '../src/domain/leaveParser.js'
+import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
+import { buildLeaveImpactModel } from '../src/engines/leaveImpact.js'
+import { buildRosterProposal } from '../src/engines/rosterOptimisation.js'
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const PACK_DIR = join(ROOT, 'mvp-documents', 'healthcare')
@@ -40,9 +45,13 @@ const EMPLOYEES = {
   'HC-004': { name: 'Sofia Marino', role: 'Nursing Assistant', emp: 'Casual', awardCode: 'MA000034', level: 'Nursing assistant', rate: 27.65 },
   'HC-005': { name: 'Ruth Adebayo', role: 'Aged Care Worker', emp: 'Full-time', awardCode: 'MA000018', level: 'Aged care employee—general—level 4', rate: 31.00 },
   'HC-006': { name: 'Ahmed Hassan', role: 'Personal Carer', emp: 'Full-time', awardCode: 'MA000018', level: 'Carer', rate: 34.42 },
+  // HC-007 is the payslip-dispatch demo employee. RN level 2 is deliberately a
+  // level no one else holds: the leave/roster scenario assertions below depend
+  // on exact same-level coverage candidates, so a shared level would break them.
+  'HC-007': { name: 'Sage Abdallah', role: 'Registered Nurse', emp: 'Full-time', awardCode: 'MA000034', level: 'Registered nurse—level 2', rate: 39.59 },
 }
-const TARGET_HOURS = { 'HC-001': 24, 'HC-002': 36, 'HC-003': 24, 'HC-004': 16, 'HC-005': 24, 'HC-006': 18 }
-const GRAND_TARGET = 142
+const TARGET_HOURS = { 'HC-001': 24, 'HC-002': 36, 'HC-003': 24, 'HC-004': 16, 'HC-005': 24, 'HC-006': 18, 'HC-007': 16 }
+const GRAND_TARGET = 158
 const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 // [empId, dayOfMonth (July 2026), start, finish, breakMins, hours, notes]
@@ -53,6 +62,7 @@ const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '
 //   HC-004  casual — casual loading on weekdays + Saturday casual rate (×1.75)
 //   HC-005  public holiday (×2.5) at an over-award agreement rate
 //   HC-006  sleepover note — parse-visible but engine-inert (no allowances seeded)
+//   HC-007  weekday + Saturday penalty (×1.5) — the payslip email demo employee
 const RAW = [
   ['HC-001', 7, '07:00', '15:30', 30, 8, ''],
   ['HC-001', 9, '07:00', '15:30', 30, 8, ''],
@@ -71,6 +81,8 @@ const RAW = [
   ['HC-005', 10, '07:00', '15:30', 30, 8, ''],
   ['HC-006', 7, '08:00', '16:30', 30, 8, ''],
   ['HC-006', 9, '21:00', '07:30', 30, 10, 'sleepover 23:00 to 07:00'],
+  ['HC-007', 9, '08:00', '16:30', 30, 8, ''],
+  ['HC-007', 11, '08:00', '16:30', 30, 8, ''],
 ]
 
 // Hours = (finish - start - break)/60; finish <= start crosses midnight.
@@ -196,7 +208,7 @@ by \`node scripts/seedAwardLibrary.mjs --industry healthcare\`).
    category, plain language, value, clause ref). MA000034 and MA000018 carry
    the agreement-matched levels (badged, sorted to the top; both awards sort
    before the four unmatched ones). Upload \`04-timesheet-healthcare.xlsx\`
-   (or the .csv twin) — all 6 employees match.
+   (or the .csv twin) — all 7 employees match.
 4. **Stage 4 — Results**: expected totals below.
 
 ## Employees & expected results (pay period ${PERIOD}, ${GRAND_TARGET} hrs)
@@ -209,6 +221,7 @@ by \`node scripts/seedAwardLibrary.mjs --industry healthcare\`).
 | HC-004 | Sofia Marino | MA000034 / Nursing assistant, casual ($27.65) | 16 | **$663.60** | casual loading 55.30 + Saturday casual ×1.75 (165.90) |
 | HC-005 | Ruth Adebayo | MA000018 / Aged care general level 4 (**$31.00** agreement > $30.34 award) | 24 | **$1,116.00** | over-award override flag + public holiday ×2.5 (372.00) |
 | HC-006 | Ahmed Hassan | MA000018 / Carer ($34.42) | 18 | **$619.56** | sleepover note — visible in parse, engine-inert (see below) |
+| HC-007 | Sage Abdallah | MA000034 / Registered nurse—level 2 ($39.59) | 16 | **$791.80** | Saturday penalty ×1.5 (633.44 + 158.36) — the payslip email demo row |
 
 Ruth also carries a compliance note and an override reason
 ("Agreement rate 31.00 overrides award rate 30.34."); Sofia and Mei's level
@@ -226,10 +239,106 @@ carry one compliance note each.
 - MA000018's night-shift row is malformed in the seed (×0.15, window
   10:00–13:00) — a parser anchor misfire, shown as-is by design.
 
+## Leave Impact & Cost Advisor demo (\`05-leave-requests-healthcare.csv\`)
+
+After stage 3, open **Leave Impact** in the AI engines sidebar and upload the
+05 file. Three curated scenarios, engine-verified at generation time:
+
+| Request | Scenario | Expected outcome |
+|---|---|---|
+| Grace Whitlam · 07/07 | Cheap midweek swap | Sofia Marino (casual, same level) covers — delta is her casual loading premium; ±1 day alternatives cost $0 (Grace has no shift those days) |
+| Grace Whitlam · 09–11/07 | Weekend coverage gap, better window nearby | Thursday covered by Sofia; Saturday is a **coverage gap** (Sofia is rostered 09:00–17:30). Shifting the window earlier removes the gap |
+| Mei Tanaka · 06–08/07 | Register-level gap | All 3 night shifts gap — no other Registered nurse—level 1 exists in the register |
+
+**Cross-engine handoff:** approving any of these requests vacates the
+requester's rostered shifts onto the **Unallocated Shifts** worklist (sidebar)
+— prioritised by urgency, fill difficulty and value at risk, with ranked
+candidates and one-click assignment. Approve Grace's 09–11/07 request to see
+both a fillable shift (Thursday → Sofia) and an unfillable one (Saturday).
+
+## Roster Optimiser demo (no extra file needed)
+
+Open **Roster Optimiser** in the sidebar once the timesheet is loaded. On this
+roster the engine finds exactly one legal saving, verified at generation time:
+Sofia Marino's (casual) Wednesday shift reassigned to Grace Whitlam
+(full-time, free that day), shedding the 25% casual loading — **$55.30/week**.
+Sofia's Saturday shift is correctly left alone (it overlaps Grace's own
+Saturday shift), which shows up in the constraint report.
+
 Regenerate this pack with \`node scripts/generateHealthcareDemoPack.mjs\`
 (also refreshes tests/fixtures/healthcare/, asserted by
 tests/healthcareDemoPack.test.js).
 `
+
+/* ── 05: leave requests — Leave Impact & Cost Advisor engine input ── */
+const LEAVE_HEADERS = ['Employee ID', 'Name', 'Leave Type', 'Start Date', 'End Date', 'Notes']
+const LEAVE_ROWS = [
+  ['HC-001', 'Grace Whitlam', 'Annual', '07/07/2026', '07/07/2026', 'Family event'],
+  ['HC-001', 'Grace Whitlam', 'Annual', '09/07/2026', '11/07/2026', 'Long weekend away'],
+  ['HC-003', 'Mei Tanaka', 'Personal', '06/07/2026', '08/07/2026', 'Carer duties'],
+]
+const leaveSheetRows = [LEAVE_HEADERS, ...LEAVE_ROWS]
+const leaveCsv = leaveSheetRows.map((row) => row.map(csvEsc).join(',')).join('\r\n')
+
+/* ── verification 3: each leave scenario produces its intended outcome ──
+   The pack must never drift from its README — run the real cache builder,
+   timesheet parser and Leave Impact engine over the exact files being
+   written, and abort before writing anything on any mismatch. */
+const LIBRARY_DIR = join(ROOT, 'src', 'domain', 'awardLibrary', 'healthcare')
+const preloadedAwards = readdirSync(LIBRARY_DIR)
+  .filter((file) => file.endsWith('.json'))
+  .map((file) => ({ parsedAward: JSON.parse(readFileSync(join(LIBRARY_DIR, file), 'utf8')).parsedAward, industry: 'healthcare' }))
+const verifyCache = await buildParsedCacheFromTexts(
+  { complianceText, agreementText },
+  { cacheFingerprint: 'healthcare-pack-leave-verify', industry: 'healthcare', preloadedAwards },
+)
+const verifyTimesheet = parseTimesheetRows(sheetRows, '04-timesheet-healthcare.csv')
+const { requests: verifyRequests } = parseLeaveRequestRows(leaveSheetRows, { parsedCache: verifyCache, timesheetData: verifyTimesheet })
+
+let leaveFailed = false
+const assertScenario = (ok, label) => {
+  if (ok) console.log(`  leave scenario: ${label}  OK`)
+  else { console.error(`LEAVE SCENARIO FAILED: ${label}`); leaveFailed = true }
+}
+const [swap, weekend, rnGap] = verifyRequests.map((request) =>
+  buildLeaveImpactModel(verifyCache, verifyTimesheet, request, verifyRequests))
+
+assertScenario(
+  swap.requested.coverageGaps.length === 0
+    && swap.requested.affectedShifts[0]?.assigned === 'Sofia Marino'
+    && swap.requested.costDelta > 0
+    && swap.alternatives[0]?.costDelta === 0,
+  'Grace 07/07 — Sofia covers at a casual premium, $0 alternatives exist',
+)
+assertScenario(
+  weekend.requested.affectedCount === 2
+    && weekend.requested.coverageGaps.length === 1
+    && /Sofia Marino — already rostered/.test(weekend.requested.coverageGaps[0].reason)
+    && weekend.alternatives[0]?.coverageGapCount === 0
+    && weekend.alternatives[0]?.offset < 0, // README says "shifting the window EARLIER removes the gap"
+  'Grace 09–11/07 — Saturday gaps on Sofia’s roster, an earlier gap-free window exists',
+)
+assertScenario(
+  rnGap.requested.coverageGaps.length === 3
+    && /No other Registered nurse—level 1/.test(rnGap.requested.coverageGaps[0].reason),
+  'Mei 06–08/07 — register-level gap on all three nights',
+)
+/* ── verification 4: the roster optimiser scenario in the README holds ── */
+const rosterProposal = buildRosterProposal(verifyCache, verifyTimesheet)
+assertScenario(
+  rosterProposal.proposals.length === 1
+    && rosterProposal.proposals[0].from === 'Sofia Marino'
+    && rosterProposal.proposals[0].to === 'Grace Whitlam'
+    && rosterProposal.proposals[0].shift.dateKey === '2026-07-08'
+    && Math.abs(rosterProposal.saving - 55.3) < 0.05
+    && rosterProposal.rejections.overlapping > 0, // README: the Saturday overlap "shows up in the constraint report"
+  'Roster optimiser — one move, Sofia Wed → Grace, saves $55.30, overlap reported',
+)
+
+if (leaveFailed) {
+  console.error('\nABORTING: scenarios above no longer hold — files not written.')
+  process.exit(1)
+}
 
 /* ── write everything ── */
 mkdirSync(PACK_DIR, { recursive: true })
@@ -238,6 +347,7 @@ mkdirSync(FIXTURE_DIR, { recursive: true })
 writeFileSync(join(PACK_DIR, '02-compliance-document-healthcare.txt'), complianceText, 'utf8')
 writeFileSync(join(PACK_DIR, '03-employee-agreement-healthcare.txt'), agreementText, 'utf8')
 writeFileSync(join(PACK_DIR, '04-timesheet-healthcare.csv'), '﻿' + csv, 'utf8')
+writeFileSync(join(PACK_DIR, '05-leave-requests-healthcare.csv'), '﻿' + leaveCsv, 'utf8')
 writeFileSync(join(PACK_DIR, 'README.md'), readme, 'utf8')
 
 const worksheet = XLSX.utils.aoa_to_sheet(sheetRows)
@@ -249,6 +359,7 @@ XLSX.writeFile(workbook, join(PACK_DIR, '04-timesheet-healthcare.xlsx'))
 writeFileSync(join(FIXTURE_DIR, 'healthcare-compliance-document.txt'), complianceText, 'utf8')
 writeFileSync(join(FIXTURE_DIR, 'healthcare-employee-agreement.txt'), agreementText, 'utf8')
 writeFileSync(join(FIXTURE_DIR, 'healthcare-timesheet.csv'), '﻿' + csv, 'utf8')
+writeFileSync(join(FIXTURE_DIR, 'healthcare-leave-requests.csv'), '﻿' + leaveCsv, 'utf8')
 
 console.log(`\nWrote demo pack to ${PACK_DIR}`)
 console.log(`Mirrored fixtures to ${FIXTURE_DIR}`)
