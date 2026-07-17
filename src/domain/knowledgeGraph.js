@@ -41,6 +41,22 @@ export function normalizeToNodeRef(ref) {
   return text
 }
 
+/**
+ * Collapse a classification stream/level name to its family so the graph
+ * shows "Registered nurse" once, not one node per year-of-service variant.
+ * "Aged care employee—general—level 3" → "Aged care employee",
+ * "Level 5 (unqualified with …)" → "Level 5".
+ */
+export function classificationFamily(name) {
+  let base = String(name || '').split('—')[0]
+  base = base.replace(/\s*\(.*$/, '') // trailing parenthetical qualifier
+  base = base.replace(/\s+\d{1,3}(?:,\d{3})+$/, '') // trailing salary figure (e.g. "Intern 66,432")
+  const beforeLevelStrip = base.trim()
+  base = base.replace(/[\s,-]*\b[Ll]evel\s+\d+.*$/, '')
+  base = base.trim().replace(/[—\-–,\s]+$/, '')
+  return base || beforeLevelStrip || String(name || '').trim()
+}
+
 const clauseSortKey = (ref) => {
   const clause = ref.match(/^cl\. (\d+)$/)
   if (clause) return [0, Number(clause[1]), '']
@@ -95,13 +111,15 @@ export function buildAwardGraph(entry) {
     for (const ref of refs) edges.push({ from: topicId, to: clauseNode(normalizeToNodeRef(ref)) })
   }
 
-  // Stream nodes — classification streams with level count and rate range.
+  // Stream nodes — classification families with level count and rate range.
+  // The raw stream field is nearly 1:1 with levels in some awards, so names
+  // are collapsed to their family (see classificationFamily).
   // parsedAward.levels carry the hourly rates; interpretation.levels don't.
   const levels = Array.isArray(parsed.levels) && parsed.levels.length ? parsed.levels : interp.levels || []
   const streamOf = new Map((parsed.classificationRows || []).map((row) => [row.employeeLevel, row.stream || row.employeeLevel]))
   const streams = new Map()
   for (const level of levels) {
-    const name = streamOf.get(level.employeeLevel) || level.employeeLevel || 'Classifications'
+    const name = classificationFamily(streamOf.get(level.employeeLevel) || level.employeeLevel || 'Classifications')
     const entry = streams.get(name) || { count: 0, min: Infinity, max: -Infinity }
     entry.count += 1
     const rate = Number(level.basePayRateHourly)

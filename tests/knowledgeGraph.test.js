@@ -1,6 +1,12 @@
+import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import ma000034 from '../src/domain/awardLibrary/healthcare/MA000034.json'
-import { buildAwardGraph, matchCitedNodeIds, normalizeToNodeRef, parseRefList } from '../src/domain/knowledgeGraph.js'
+import { buildAwardGraph, classificationFamily, matchCitedNodeIds, normalizeToNodeRef, parseRefList } from '../src/domain/knowledgeGraph.js'
+
+const LIBRARY_DIR = new URL('../src/domain/awardLibrary/healthcare/', import.meta.url)
+const ALL_AWARDS = fs.readdirSync(LIBRARY_DIR)
+  .filter((file) => file.endsWith('.json'))
+  .map((file) => [file.replace('.json', ''), JSON.parse(fs.readFileSync(new URL(file, LIBRARY_DIR), 'utf8'))])
 
 describe('normalizeToNodeRef', () => {
   it('maps sub-clause citations to their top-level clause', () => {
@@ -77,6 +83,45 @@ describe('buildAwardGraph on the Nurses Award', () => {
     for (const edge of graph.edges) {
       expect(ids.has(edge.from)).toBe(true)
       expect(ids.has(edge.to)).toBe(true)
+    }
+  })
+})
+
+describe('classificationFamily', () => {
+  it('collapses level and year-of-service variants to the family', () => {
+    expect(classificationFamily('Registered nurse—level 2 — In excess of 3 years of employment classified at this level')).toBe('Registered nurse')
+    expect(classificationFamily('Aged care employee—general—level 3')).toBe('Aged care employee')
+    expect(classificationFamily('Pharmacy assistant level 1')).toBe('Pharmacy assistant')
+  })
+
+  it('strips trailing salary figures but keeps level numbers as a fallback', () => {
+    expect(classificationFamily('Intern 66,432')).toBe('Intern')
+    expect(classificationFamily('Level 5 (unqualified with 12 months’ industry experience)')).toBe('Level 5')
+  })
+})
+
+describe('buildAwardGraph across the whole award library', () => {
+  it.each(ALL_AWARDS)('%s builds a well-formed graph', (code, entry) => {
+    const graph = buildAwardGraph(entry)
+    const byType = (type) => graph.nodes.filter((node) => node.type === type)
+    expect(byType('award')).toHaveLength(1)
+    expect(byType('award')[0].awardCode).toBe(code)
+    expect(byType('clause').length).toBeGreaterThan(20)
+    expect(byType('topic').length).toBeGreaterThan(0)
+
+    // Streams: every level accounted for, grouped tighter than one-per-level.
+    const streams = byType('stream')
+    const levelCount = (entry.parsedAward.levels || []).length
+    expect(streams.reduce((sum, node) => sum + node.levelCount, 0)).toBe(levelCount)
+    expect(streams.length).toBeLessThan(levelCount)
+
+    // Every edge endpoint resolves; ids are unique.
+    const ids = graph.nodes.map((node) => node.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    const idSet = new Set(ids)
+    for (const edge of graph.edges) {
+      expect(idSet.has(edge.from)).toBe(true)
+      expect(idSet.has(edge.to)).toBe(true)
     }
   })
 })
