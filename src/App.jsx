@@ -79,7 +79,7 @@ const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
 const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
 const ROSTER_BADGE_MAX_SHIFTS = 80
-const CONFIRMATION_EMAIL = 'payroll@wharftavern.com.au'
+const CONFIRMATION_EMAIL = 'sage.abdallah@isoftanz.com.au'
 // Demo payslip dispatch: employees carry no email addresses in this data
 // model, so every payslip routes to one confirmed inbox (editable on the
 // Pay Run page).
@@ -2141,6 +2141,8 @@ function PayslipDispatch({ results, timesheetMeta }) {
 
   // Only rows that actually pay out get a payslip — validation rows pay $0.
   const payable = results.rows.filter((row) => row.validationErrors.length === 0)
+  // Demo sends a single sample payslip — the first paid employee.
+  const demoRows = payable.slice(0, 1)
 
   const send = async () => {
     setDispatch({ status: 'sending' })
@@ -2152,7 +2154,7 @@ function PayslipDispatch({ results, timesheetMeta }) {
           recipient: recipient.trim(),
           business: timesheetMeta.business || '',
           payPeriod: timesheetMeta.payPeriod || '',
-          rows: payable.map((row) => ({
+          rows: demoRows.map((row) => ({
             employeeName: row.employeeName,
             employeeId: row.id,
             jobRole: row.jobRole,
@@ -2181,9 +2183,9 @@ function PayslipDispatch({ results, timesheetMeta }) {
         <Send size={13} strokeWidth={1.9} /> Payslip distribution — demo
       </div>
       <p style={{ fontSize: 13, color: COLORS.muted, margin: '0 0 14px', maxWidth: 640, lineHeight: 1.55 }}>
-        Emails one payslip per paid employee ({payable.length} this run). For the demo every payslip is routed
-        to the address below — each email names the employee it is for. Production sends would resolve each
-        employee&rsquo;s own address from the register.
+        Emails one sample payslip{demoRows.length ? <> — {demoRows[0].employeeName}&rsquo;s</> : null} ({payable.length} employees
+        paid this run). For the demo it is routed to the address below and names the employee it is for. Production
+        sends would email every paid employee at their own address from the register.
       </p>
 
       {!available ? (
@@ -2203,7 +2205,7 @@ function PayslipDispatch({ results, timesheetMeta }) {
               <CheckCircle2 size={15} strokeWidth={2} /> Outlook connected as {outlookAccount || mailAccount} — payslips deliver for real.
             </div>
           )}
-          <label style={{ display: 'block', fontSize: 12.5, color: COLORS.muted, marginBottom: 6 }}>Send all payslips to</label>
+          <label style={{ display: 'block', fontSize: 12.5, color: COLORS.muted, marginBottom: 6 }}>Send payslip to</label>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="email"
@@ -2223,7 +2225,7 @@ function PayslipDispatch({ results, timesheetMeta }) {
             >
               {dispatch.status === 'sending'
                 ? <><Loader2 className="spin" size={16} strokeWidth={2.2} /> Sending…</>
-                : <><Send size={16} strokeWidth={2} /> Email {payable.length} payslip{payable.length === 1 ? '' : 's'}</>}
+                : <><Send size={16} strokeWidth={2} /> Email {demoRows.length} payslip{demoRows.length === 1 ? '' : 's'}</>}
             </button>
           </div>
 
