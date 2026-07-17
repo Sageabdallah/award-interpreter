@@ -22,3 +22,6 @@ data/
 .env
 # Outlook refresh token written by `npm run mail:auth`
 .outlook-token.json
+# Vercel CLI project link + pulled env
+.vercel
+.env.local
