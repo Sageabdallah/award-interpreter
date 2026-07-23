@@ -95,6 +95,24 @@ function Section({ title, children, style }) {
   )
 }
 
+// Each engine's how-it-works note, tucked behind a toggle so pages lead with
+// the findings while the full derivation stays one click away.
+function MethodNote({ children }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ padding: '0 4px' }}>
+      <button className="detail-btn" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+        How this is computed
+      </button>
+      {open && (
+        <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, marginTop: 10, maxWidth: 860 }}>
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function EngineHeader({ engine, onBackToFlow }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', marginBottom: 26 }}>
@@ -848,13 +866,13 @@ function LeaveImpactView({ parsedCache, timesheetData, leave = {} }) {
         </Section>
       )}
 
-      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, padding: '0 4px' }}>
-        Method: every dollar is produced by the same pay engine as the pay run — a candidate's cover is priced as
+      <MethodNote>
+        Every dollar is produced by the same pay engine as the pay run — a candidate's cover is priced as
         pay(their shifts + the cover) − pay(their shifts), so overtime triggers, weekend and public holiday penalties
         and casual loading land in each delta exactly as they would at payroll. The loaded timesheet period is the
         scheduling horizon; "qualified" means the same award code and classification level; public holidays are known
         only where the timesheet marks them.
-      </div>
+      </MethodNote>
     </div>
   )
 }
@@ -988,13 +1006,13 @@ function UnallocatedView({ parsedCache, timesheetData, leave = {}, worklist = {}
         </>
       )}
 
-      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, padding: '0 4px' }}>
-        Method: priority = urgency (40 pts, exponential decay in days from the period start — no wall clock) +
+      <MethodNote>
+        Priority = urgency (40 pts, exponential decay in days from the period start — no wall clock) +
         fill difficulty (35 pts, how few qualified candidates are free) + value at risk (25 pts, the shift's own
         pay-engine cost, normalised). Candidate costs use the same marginal pricing as Leave Management.
         Post criticality and client billing value are catalogue dimensions this workspace has no data for — the
         weights were redistributed and the shift's award cost stands in for billing value.
-      </div>
+      </MethodNote>
     </div>
   )
 }
@@ -1137,15 +1155,15 @@ function RosterOptimisationView({ parsedCache, timesheetData, leave = {} }) {
         </div>
       </Section>
 
-      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, padding: '0 4px' }}>
-        Method: deterministic best-improvement local search — each pass prices every legal shift reassignment
+      <MethodNote>
+        Deterministic best-improvement local search — each pass prices every legal shift reassignment
         through the same pay engine as the pay run (receiver's marginal cost minus the current holder's saving),
         applies the single best cost-reducing move, and repeats until none remains. Constraints: same award code
         and classification level, no overlapping shifts, no parsed leave over the date, a 10-hour minimum rest
         period, and a 48-hour weekly cap. The proposal is advisory — this workspace's roster is source data and
         is never mutated. Coverage demand is the loaded shifts themselves (no post configuration exists), and the
         solver is local search rather than MIP, per the catalogue's fallback approach.
-      </div>
+      </MethodNote>
     </div>
   )
 }
@@ -1245,12 +1263,12 @@ function AlertsView({ model, onOpenEngine }) {
         )}
       </Section>
 
-      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, padding: '0 4px' }}>
-        Method: pure aggregation — every alert is a pointer at a finding another deterministic engine already
+      <MethodNote>
+        Pure aggregation — every alert is a pointer at a finding another deterministic engine already
         produced and can explain; this feed computes nothing new. Severity normalises to Critical (blocks money
         or coverage), Warning (needs a decision), Info. Inactive sources mean the workspace hasn't loaded that
         engine's input yet, not that the area is clean.
-      </div>
+      </MethodNote>
     </div>
   )
 }
@@ -1354,13 +1372,13 @@ function BudgetForecasterView({ timesheetData, results }) {
         </Section>
       )}
 
-      <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6, padding: '0 4px' }}>
-        Method: the projection is the analytics workspace's deterministic forecast (weekday profile plus damped
+      <MethodNote>
+        The projection is the analytics workspace's deterministic forecast (weekday profile plus damped
         trend, ±1.28σ band{outlook.forecastMethod.indicativeBand ? ' — indicative ±10% until more than one week of residuals exists' : ''}),
         and the wage stress test scales only rate-linked dollars (base pay and multiplier penalties) exactly as
         the analytics scenario model does. "Breach likely" means even the LOW bound exceeds the budget; "Watch"
         means only the high bound does. With a single observed week, treat the band as indicative, not statistical.
-      </div>
+      </MethodNote>
     </div>
   )
 }

@@ -95,7 +95,7 @@ export function DashboardHome({ industryLabel, parsedCache, timesheetData, resul
     <div className="fade-up">
       <PageHeader
         title="Welcome back, Sage"
-        subtitle={`${industryLabel || 'Workforce'} — every number below comes from the deterministic engines over your loaded pack. No black boxes.`}
+        subtitle={`${industryLabel ? `${industryLabel} workspace` : 'Workspace'} overview. Every figure below is calculated from your loaded documents and traces back to a source clause.`}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 14, marginBottom: 18 }}>
         <StatCard label="Employees on award" value={profiles.length} caption={profiles.length ? 'agreement register loaded' : 'no register yet'} icon={Users} accent={COLORS.ink} onView={() => onNavigate('employees')} />
@@ -1264,7 +1264,7 @@ export function AiExtractPage({ health }) {
 
   return (
     <div className="fade-up">
-      <PageHeader title="AI Award Extraction" subtitle="Ask questions about any uploaded Modern Award. Answers are grounded in the award text, with verbatim clause citations." />
+      <PageHeader title="AI Award Extract" subtitle="Ask questions about any uploaded Modern Award. Answers are grounded in the award text, with verbatim clause citations." />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 14, alignItems: 'start' }}>
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
