@@ -16,9 +16,12 @@ import {
   CheckCircle2,
   Download,
   ShieldAlert,
+  Sparkles,
   UploadCloud,
   X,
 } from 'lucide-react'
+import RiskExplanation from '../RiskExplanation.jsx'
+import { useServerHealth } from '../serverHealth.js'
 import { COLORS, SERIF, fmtAud, fmtPct } from '../analytics/theme.js'
 import { buildAlertFeed, SEVERITY_ORDER } from './anomalyAlerts.js'
 import { buildBudgetOutlook } from './budgetForecaster.js'
@@ -286,8 +289,60 @@ function FatigueView({ model }) {
 
 // --- Compliance Risk Scorer ---------------------------------------------------
 
-function ComplianceView({ model }) {
+// /api/explain-risk payloads for the compliance engine. The employee's award
+// code comes from the pay run when one exists — breaches computed from the
+// timesheet alone still explain, just without award-filtered retrieval.
+function complianceAwardCode(employee, results) {
+  const row = (results?.rows || []).find(
+    (r) => r.id === employee.employeeId || r.employeeName === employee.employeeName,
+  )
+  return /^MA\d/.test(row?.awardCode || '') ? row.awardCode : null
+}
+
+function complianceEmployeeRequest(employee, results) {
+  const breaches = employee.breaches.map(({ label, basis, deduction, detail }) => ({ label, basis, deduction, detail }))
+  return {
+    awardCode: complianceAwardCode(employee, results),
+    subject: `Compliance risk — ${employee.employeeName} (score ${employee.score}, ${employee.band})`,
+    facts: {
+      employeeName: employee.employeeName,
+      jobRole: employee.jobRole,
+      totalHours: employee.totalHours,
+      score: employee.score,
+      band: employee.band,
+      scoring: 'score = 100 minus the sum of breach deductions',
+      breaches,
+    },
+    query: breaches.map((b) => `${b.label} — ${b.basis}`).join('; '),
+  }
+}
+
+function complianceSiteRequest(model) {
+  const summary = model.breachSummary.map(({ label, basis, count }) => ({ label, basis, count }))
+  return {
+    awardCode: null,
+    subject: `Site compliance — score ${model.siteScore} (${model.siteBand}), publish gate ${model.publishGate}`,
+    facts: {
+      siteScore: model.siteScore,
+      siteBand: model.siteBand,
+      publishGate: model.publishGate,
+      publishGateRule: `any employee score below ${PUBLISH_GATE_THRESHOLD} blocks publishing`,
+      employees: model.employees.length,
+      totalBreaches: model.breaches.length,
+      breachSummary: summary,
+      scoring: 'each employee scores 100 minus the sum of breach deductions; the site score is hours-weighted',
+    },
+    query: summary.length
+      ? summary.map((item) => `${item.label} — ${item.basis}`).join('; ')
+      : 'workplace compliance — rest periods, meal breaks, maximum weekly hours',
+  }
+}
+
+function ComplianceView({ model, results, ragAvailable }) {
   const siteColor = BAND_COLORS[model.siteBand] || COLORS.muted
+  const [siteExplainOpen, setSiteExplainOpen] = useState(false)
+  // One employee explanation open at a time — opening another collapses it.
+  const [explainKey, setExplainKey] = useState('')
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div className="eng-kpis">
@@ -301,6 +356,19 @@ function ComplianceView({ model }) {
           accent={model.publishGate === 'blocked' ? COLORS.red : COLORS.sage}
         />
       </div>
+
+      {ragAvailable && (
+        <div>
+          <button className="detail-btn" aria-expanded={siteExplainOpen} onClick={() => setSiteExplainOpen((open) => !open)}>
+            <Sparkles size={11} strokeWidth={2} /> Explain this compliance picture
+          </button>
+          {siteExplainOpen && (
+            <div style={{ marginTop: 12, maxWidth: 720, background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: '14px 16px' }}>
+              <RiskExplanation {...complianceSiteRequest(model)} />
+            </div>
+          )}
+        </div>
+      )}
 
       {model.breachSummary.length > 0 && (
         <Section title="Breach frequency by type">
@@ -339,6 +407,25 @@ function ComplianceView({ model }) {
                           <div style={{ fontSize: 12, color: COLORS.muted }}>{item.detail}</div>
                         </div>
                       ))}
+                    {ragAvailable && employee.breaches.length > 0 && (() => {
+                      const key = employee.employeeId || employee.employeeName
+                      return (
+                        <div style={{ marginTop: 8 }}>
+                          <button
+                            className="detail-btn"
+                            aria-expanded={explainKey === key}
+                            onClick={() => setExplainKey(explainKey === key ? '' : key)}
+                          >
+                            <Sparkles size={11} strokeWidth={2} /> Explain
+                          </button>
+                          {explainKey === key && (
+                            <div style={{ marginTop: 10, maxWidth: 560 }}>
+                              <RiskExplanation {...complianceEmployeeRequest(employee, results)} />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -1283,6 +1370,9 @@ function BudgetForecasterView({ timesheetData, results }) {
 
 export default function EngineWorkspace({ engineId, parsedCache, timesheetData, results, leave, worklist, onBackToFlow, onOpenEngine }) {
   const engine = engineById(engineId)
+  // Feature-detects the optional RAG server — the compliance view gains its
+  // AI explain affordances only when /api/health answers.
+  const { available: ragAvailable } = useServerHealth()
 
   const model = useMemo(() => {
     if (!engine) return null
@@ -1351,7 +1441,7 @@ export default function EngineWorkspace({ engineId, parsedCache, timesheetData, 
               {model && engine.id === 'pay-anomaly' && <PayAnomalyView model={model} />}
               {model && engine.id === 'labour-cost' && <LabourCostView model={model} />}
               {model && engine.id === 'fatigue-risk' && <FatigueView model={model} />}
-              {model && engine.id === 'compliance-risk' && <ComplianceView model={model} />}
+              {model && engine.id === 'compliance-risk' && <ComplianceView model={model} results={results} ragAvailable={ragAvailable} />}
               {model && engine.id === 'anomaly-alerts' && <AlertsView model={model} onOpenEngine={onOpenEngine} />}
             </>
           )}

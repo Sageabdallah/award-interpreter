@@ -32,6 +32,8 @@ import {
   X,
 } from 'lucide-react'
 import AnalyticsWorkspace from './analytics/AnalyticsWorkspace.jsx'
+import RiskExplanation from './RiskExplanation.jsx'
+import { useServerHealth } from './serverHealth.js'
 import DashboardShell from './shell/DashboardShell.jsx'
 import { AiExtractPage, BulkShiftsPage, DashboardHome, EmployeesPage, SettingsPage } from './shell/pages.jsx'
 import EngineWorkspace from './engines/EngineWorkspace.jsx'
@@ -919,32 +921,6 @@ function ProcessingStage({ documents, industry, stepIndex, error, onBack }) {
   )
 }
 
-// Feature-detect the optional server (server/index.js). The app is fully
-// functional without it; when present, interpretation rows gain an "explain"
-// affordance and the Confirmation stage can dispatch payslip emails.
-// `mail` is the server's transport mode: 'smtp' or 'outlook' (real delivery),
-// 'dry-run' (generated, not sent), or 'none'.
-function useServerHealth() {
-  const [health, setHealth] = useState(null)
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/health')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data?.ok) setHealth(data) })
-      .catch(() => {})
-    return () => { cancelled = true }
-  }, [])
-  return {
-    available: Boolean(health?.ok),
-    mail: health?.mail || 'none',
-    mailAccount: health?.mailAccount || '',
-    outlookConfigured: Boolean(health?.outlookConfigured),
-    backend: health?.backend || '',
-    awards: health?.awards || [],
-    awardTitles: health?.awardTitles || {},
-  }
-}
-
 function RowExplanation({ awardCode, row }) {
   const [state, setState] = useState({ status: 'idle' })
   useEffect(() => {
@@ -1541,8 +1517,38 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
   )
 }
 
-function ResultRow({ row, isOpen, onToggle }) {
+// Payload for /api/explain-risk: the row's warnings and pay breakdown as
+// facts, its clause refs as exact retrieval targets.
+function payrunExplainRequest(row) {
+  const warnings = [
+    ...row.validationErrors,
+    ...(row.overrideReason ? [row.overrideReason] : []),
+    ...row.complianceNotes,
+  ]
+  const items = row.extrasAllowances.items.map(({ type, detail, amount, clause }) => ({ type, detail, amount, clause }))
+  return {
+    awardCode: /^MA\d/.test(row.awardCode || '') ? row.awardCode : null,
+    subject: `Pay run — ${row.employeeName} (${row.employeeLevel})`,
+    facts: {
+      employeeLevel: row.employeeLevel,
+      jobRole: row.jobRole,
+      employmentType: row.employmentType,
+      totalHours: row.totalHours,
+      basePayHourly: row.basePay,
+      ordinaryPay: row.ordinaryPay,
+      extras: items,
+      totalCalculatedPay: row.totalCalculatedPay,
+      effectiveHourlyRateAfterLoadings: row.effectiveHourlyRate,
+      warnings,
+    },
+    clauseRefs: [row.interpretation?.baseRateRef, ...items.map((item) => item.clause)].filter(Boolean),
+    query: [row.employeeLevel, ...warnings, ...items.map((item) => item.type)].filter(Boolean).join(' — '),
+  }
+}
+
+function ResultRow({ row, isOpen, onToggle, ragAvailable }) {
   const hasValidationErrors = row.validationErrors.length > 0
+  const [explainOpen, setExplainOpen] = useState(false)
   return (
     <div className="rowwrap fade-up">
       <div
@@ -1590,6 +1596,19 @@ function ResultRow({ row, isOpen, onToggle }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 22 }}>
                 {row.overrideReason && <Flag>{row.overrideReason}</Flag>}
                 {row.complianceNotes.map((note) => <Flag key={note}>{note}</Flag>)}
+              </div>
+            )}
+
+            {ragAvailable && (
+              <div style={{ marginBottom: 22 }}>
+                <button className="detail-btn" aria-expanded={explainOpen} onClick={() => setExplainOpen((open) => !open)}>
+                  <Sparkles size={11} strokeWidth={2} /> Explain this pay & its flags
+                </button>
+                {explainOpen && (
+                  <div style={{ marginTop: 12, maxWidth: 720 }}>
+                    <RiskExplanation {...payrunExplainRequest(row)} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -1948,7 +1967,7 @@ function InterpretationTable({ rows }) {
   )
 }
 
-function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow }) {
+function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow, ragAvailable }) {
   return (
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
@@ -2002,6 +2021,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
                   row={row}
                   isOpen={expandedRowId === row.id}
                   onToggle={() => onToggleRow(expandedRowId === row.id ? null : row.id)}
+                  ragAvailable={ragAvailable}
                 />
               ))}
             </div>
@@ -2761,6 +2781,7 @@ export default function App() {
             onExport={handleExport}
             onReset={handleReset}
             onDisperse={() => dispatch({ type: 'setStage', stage: 6 })}
+            ragAvailable={health.available}
           />
         )
       }
