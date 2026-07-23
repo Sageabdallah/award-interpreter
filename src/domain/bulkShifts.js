@@ -13,6 +13,51 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 export const TIMESHEET_COLUMNS = ['Employee ID', 'Name', 'Role', 'Employment Type', 'Date', 'Day', 'Start', 'Finish', 'Break Mins', 'Hours', 'Location', 'Notes']
 export const MAX_BULK_DAYS = 92 // a quarter — enough for any demo, blocks runaway ranges
 
+// Bulk adds respect the same rules the compliance engine scores against, so
+// assigning a template across the roster can never flood Compliance Risk:
+// no overlaps, the 10-hour rest window, and the 48-hour weekly cap.
+const REST_MINIMUM_HOURS = 10
+const WEEKLY_CAP_HOURS = 48
+
+export const BULK_SKIP_LABELS = {
+  duplicate: 'duplicate slot',
+  overlap: 'clashes with an existing shift',
+  rest: 'inside a 10-hour rest window',
+  weeklyCap: 'over the 48-hour weekly cap',
+}
+
+function toMinutes(hhmm) {
+  const match = String(hhmm || '').match(/^(\d{1,2}):(\d{2})/)
+  if (!match) return null
+  return Number(match[1]) * 60 + Number(match[2])
+}
+
+/** Absolute [start, finish] in minutes since epoch, cross-midnight aware. */
+function shiftInterval(shift) {
+  const date = new Date(`${shift.dateKey}T00:00:00`).getTime()
+  const start = toMinutes(shift.start)
+  let finish = toMinutes(shift.finish)
+  if (Number.isNaN(date) || start == null || finish == null) return null
+  if (finish <= start) finish += 24 * 60
+  const base = Math.round(date / 60000)
+  return [base + start, base + finish]
+}
+
+/** Why this candidate can't sit alongside the existing shifts, or null. */
+function conflictReason(candidate, intervals, weekHours) {
+  const interval = shiftInterval(candidate)
+  if (interval) {
+    for (const [start, finish] of intervals) {
+      if (interval[0] < finish && interval[1] > start) return 'overlap'
+      const gap = interval[0] >= finish ? interval[0] - finish : start - interval[1]
+      if (gap < REST_MINIMUM_HOURS * 60) return 'rest'
+    }
+  }
+  const week = candidate.weekBucket || getWeekBucket(candidate.dateKey)
+  if ((weekHours.get(week) || 0) + candidate.hours > WEEKLY_CAP_HOURS) return 'weeklyCap'
+  return null
+}
+
 export function weekdayName(dateKey) {
   const date = new Date(`${dateKey}T00:00:00`)
   if (Number.isNaN(date.getTime())) return ''
@@ -56,10 +101,12 @@ export function buildBulkShifts({ dates, start, finish, breakMinutes = 0, notes 
 }
 
 /**
- * Append bulk shifts to the workspace timesheet (or start one). Duplicate
- * (dateKey, start) slots for the same employee are skipped, never doubled.
- * Returns a NEW timesheetData; the caller owns invalidation of downstream
- * state (results, leave decisions) exactly as a re-upload would.
+ * Append bulk shifts to the workspace timesheet (or start one). Slots the
+ * employee can't legally take are skipped, never doubled: exact duplicates,
+ * overlaps with existing shifts, anything inside the 10-hour rest window,
+ * and additions that would push a week past the 48-hour cap. Returns a NEW
+ * timesheetData plus per-reason skip counts; the caller owns invalidation of
+ * downstream state (results, leave decisions) exactly as a re-upload would.
  */
 export function appendShiftsToTimesheet(timesheetData, identity, shifts) {
   const base = timesheetData || { meta: { payPeriod: '', business: '' }, employees: [], shifts: [], totalHours: 0 }
@@ -80,11 +127,27 @@ export function appendShiftsToTimesheet(timesheetData, identity, shifts) {
   }
 
   const taken = new Set(target.shifts.map((shift) => `${shift.dateKey}|${shift.start}`))
+  const intervals = target.shifts.map(shiftInterval).filter(Boolean)
+  const weekHours = new Map()
+  for (const shift of target.shifts) {
+    const week = shift.weekBucket || getWeekBucket(shift.dateKey)
+    weekHours.set(week, (weekHours.get(week) || 0) + (Number(shift.hours) || 0))
+  }
+
   const added = []
+  const skippedReasons = {}
   for (const shift of shifts) {
     const slot = `${shift.dateKey}|${shift.start}`
-    if (taken.has(slot)) continue
+    const reason = taken.has(slot) ? 'duplicate' : conflictReason(shift, intervals, weekHours)
+    if (reason) {
+      skippedReasons[reason] = (skippedReasons[reason] || 0) + 1
+      continue
+    }
     taken.add(slot)
+    const interval = shiftInterval(shift)
+    if (interval) intervals.push(interval)
+    const week = shift.weekBucket || getWeekBucket(shift.dateKey)
+    weekHours.set(week, (weekHours.get(week) || 0) + (Number(shift.hours) || 0))
     const stamped = { ...shift, employeeId: target.employeeId, employeeName: target.employeeName, jobRole: target.jobRole, employmentType: target.employmentType }
     target.shifts.push(stamped)
     added.push(stamped)
@@ -102,6 +165,7 @@ export function appendShiftsToTimesheet(timesheetData, identity, shifts) {
     },
     added: added.length,
     skipped: shifts.length - added.length,
+    skippedReasons,
   }
 }
 
@@ -115,6 +179,7 @@ export function appendAssignmentsToTimesheet(timesheetData, assignments = []) {
   const details = []
   let added = 0
   let skipped = 0
+  const skippedReasons = {}
 
   for (const assignment of assignments) {
     if (!assignment?.identity?.employeeName || !assignment.shifts?.length) continue
@@ -122,6 +187,9 @@ export function appendAssignmentsToTimesheet(timesheetData, assignments = []) {
     current = outcome.timesheetData
     added += outcome.added
     skipped += outcome.skipped
+    for (const [reason, count] of Object.entries(outcome.skippedReasons || {})) {
+      skippedReasons[reason] = (skippedReasons[reason] || 0) + count
+    }
     details.push({
       employeeId: assignment.identity.employeeId || '',
       employeeName: assignment.identity.employeeName,
@@ -134,6 +202,7 @@ export function appendAssignmentsToTimesheet(timesheetData, assignments = []) {
     timesheetData: current || null,
     added,
     skipped,
+    skippedReasons,
     details,
   }
 }

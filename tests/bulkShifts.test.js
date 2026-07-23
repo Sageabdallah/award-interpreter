@@ -9,6 +9,7 @@ import { buildParsedCacheFromTexts } from '../src/domain/cacheBuilder.js'
 import { calculateTimesheetResults } from '../src/domain/payCalculator.js'
 import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
 import { buildUnallocatedWorklist } from '../src/engines/unallocatedShifts.js'
+import { buildComplianceRisk } from '../src/engines/complianceRisk.js'
 
 const PRELOADED = [
   { parsedAward: ma000034.parsedAward, industry: 'healthcare' },
@@ -119,6 +120,67 @@ describe('buildBulkShifts + appendShiftsToTimesheet', () => {
     expect(reparsed.employees.map((employee) => employee.employeeName)).toEqual(['Grace Whitlam', "Liam O'Rourke"])
     expect(reparsed.totalHours).toBe(30)
     expect(reparsed.shifts.every((shift) => shift.location === 'Demo ward')).toBe(true)
+  })
+})
+
+describe('conflict-aware bulk appends (compliance-safe)', () => {
+  it('skips slots that clash with an existing shift or sit inside the rest window, with reasons', async () => {
+    const { timesheetData } = await loadPack()
+    const identity = { employeeId: 'HC-001', employeeName: 'Grace Whitlam', jobRole: 'Nursing Assistant', employmentType: 'Full-time' }
+    // Grace already works Tuesday — an overlapping mid-shift slot and a
+    // back-to-back evening slot must both be refused, never double-booked.
+    const overlap = buildBulkShifts({ dates: ['2026-07-07'], start: '09:00', finish: '17:00', breakMinutes: 30 })
+    const backToBack = buildBulkShifts({ dates: ['2026-07-07'], start: '16:00', finish: '22:00', breakMinutes: 30 })
+    const outcome = appendShiftsToTimesheet(timesheetData, identity, [...overlap, ...backToBack])
+    expect(outcome.added).toBe(0)
+    expect(outcome.skipped).toBe(2)
+    expect(outcome.skippedReasons).toEqual({ overlap: 1, rest: 1 })
+  })
+
+  it('refuses additions that would push a week past the 48-hour cap', () => {
+    // Six 8.5h day shifts Mon-Sat: the sixth lands at 51h and must be refused.
+    const dates = expandBulkDates({ startKey: '2026-07-06', endKey: '2026-07-11', daysOfWeek: [0, 1, 2, 3, 4, 5] })
+    const shifts = buildBulkShifts({ dates, start: '08:00', finish: '17:00', breakMinutes: 30 })
+    const outcome = appendShiftsToTimesheet(null, { employeeName: 'Cap Test' }, shifts)
+    expect(outcome.added).toBe(5)
+    expect(outcome.skippedReasons).toEqual({ weeklyCap: 1 })
+    expect(outcome.timesheetData.totalHours).toBe(42.5)
+  })
+
+  it('bulk-assigning a template across the whole roster cannot flood Compliance Risk', async () => {
+    const { timesheetData } = await loadPack()
+    // The reported bug: an ad-hoc 09:00-17:00 template, every day, for every
+    // employee, on top of their live roster. Before conflict-aware appends
+    // this produced same-day double shifts and rest breaches for everyone.
+    const dates = expandBulkDates({ startKey: '2026-07-06', endKey: '2026-07-12', daysOfWeek: [0, 1, 2, 3, 4, 5, 6] })
+    const shifts = buildBulkShifts({ dates, start: '09:00', finish: '17:00', breakMinutes: 30 })
+    const assignments = timesheetData.employees.map((employee) => ({
+      identity: {
+        employeeId: employee.employeeId,
+        employeeName: employee.employeeName,
+        jobRole: employee.jobRole,
+        employmentType: employee.employmentType,
+      },
+      shifts,
+    }))
+    const before = buildComplianceRisk(timesheetData)
+    const outcome = appendAssignmentsToTimesheet(timesheetData, assignments)
+    expect(outcome.added).toBeGreaterThan(0)
+    const after = buildComplianceRisk(outcome.timesheetData)
+
+    // The fixture roster ships with its own baseline breaches — the fix
+    // guarantees the bulk assign adds NO new hard breaches on top of them;
+    // at most the advisory over-38 flag (−5) may appear per employee.
+    const countByType = (risk) => risk.breaches.reduce((map, item) => map.set(item.type, (map.get(item.type) || 0) + 1), new Map())
+    const beforeCounts = countByType(before)
+    const afterCounts = countByType(after)
+    for (const type of ['restPeriod', 'missingBreak', 'weeklyHoursSevere', 'longShift']) {
+      expect(afterCounts.get(type) || 0).toBe(beforeCounts.get(type) || 0)
+    }
+    const beforeScores = new Map(before.employees.map((employee) => [employee.employeeName, employee.score]))
+    for (const employee of after.employees) {
+      expect(employee.score).toBeGreaterThanOrEqual((beforeScores.get(employee.employeeName) ?? 100) - 5)
+    }
   })
 })
 

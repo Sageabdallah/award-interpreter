@@ -37,7 +37,7 @@ import { loadAwardLibrary } from '../domain/awardLibrary/index.js'
 import { buildAwardGraph, matchCitedNodeIds } from '../domain/knowledgeGraph.js'
 import { AwardKnowledgeGraph } from './AwardKnowledgeGraph.jsx'
 import { shortDate } from '../domain/analyticsSeries.js'
-import { appendAssignmentsToTimesheet, buildBulkShifts, buildRosteredTimesheetSummary, expandBulkDates, timesheetToCsv } from '../domain/bulkShifts.js'
+import { appendAssignmentsToTimesheet, buildBulkShifts, buildRosteredTimesheetSummary, BULK_SKIP_LABELS, expandBulkDates, timesheetToCsv } from '../domain/bulkShifts.js'
 import { buildEmployeeDossier, classifyShift } from '../domain/employeeEnrichment.js'
 import { keyForAwardLevel, normalizeName } from '../domain/utils.js'
 import { marginalCost, timesheetEmployeeFor } from '../engines/coverage.js'
@@ -554,6 +554,14 @@ export function EmployeesPage({ parsedCache, timesheetData, results, onNavigate 
 
 // --- Bulk ad-hoc shifts ---------------------------------------------------------------
 
+// "3 skipped — 2 clash with an existing shift, 1 over the 48-hour weekly cap"
+function describeSkips(skippedReasons = {}, total = 0) {
+  const parts = Object.entries(skippedReasons)
+    .filter(([, count]) => count > 0)
+    .map(([reason, count]) => `${count} ${BULK_SKIP_LABELS[reason] || reason}`)
+  return parts.length ? parts.join(', ') : `${total} not addable`
+}
+
 export function BulkShiftsPage({ parsedCache, timesheetData, onCreateAssigned, onCreateBatch, onCreateAdHoc, onNavigate }) {
   const profiles = useMemo(() => [...(parsedCache?.employeeProfiles || [])].sort((left, right) => left.employeeName.localeCompare(right.employeeName)), [parsedCache])
   const levels = useMemo(() => Object.values(parsedCache?.awardLevelsByKey || {})
@@ -762,10 +770,10 @@ export function BulkShiftsPage({ parsedCache, timesheetData, onCreateAssigned, o
     if (!ready) return
     if (mode === 'employee') {
       const outcome = onCreateAssigned(singleIdentity, shifts)
-      setCreated({ mode, count: outcome.added, skipped: outcome.skipped, target: selectedProfile.employeeName, details: outcome.details || [] })
+      setCreated({ mode, count: outcome.added, skipped: outcome.skipped, skippedReasons: outcome.skippedReasons || {}, target: selectedProfile.employeeName, details: outcome.details || [] })
     } else if (mode === 'roster') {
       const outcome = onCreateBatch(rosterAssignments)
-      setCreated({ mode, count: outcome.added, skipped: outcome.skipped, target: `${selectedRosterPeople.length} employee${selectedRosterPeople.length === 1 ? '' : 's'}`, details: outcome.details || [] })
+      setCreated({ mode, count: outcome.added, skipped: outcome.skipped, skippedReasons: outcome.skippedReasons || {}, target: `${selectedRosterPeople.length} employee${selectedRosterPeople.length === 1 ? '' : 's'}`, details: outcome.details || [] })
     } else {
       onCreateAdHoc(shifts.map((shift) => ({ shift, awardCode: selectedLevel.awardCode, employeeLevel: selectedLevel.employeeLevel })))
       setCreated({ mode, count: shifts.length, skipped: 0, target: `${selectedLevel.employeeLevel} (${selectedLevel.awardCode})`, details: [] })
@@ -984,10 +992,16 @@ export function BulkShiftsPage({ parsedCache, timesheetData, onCreateAssigned, o
             <CalendarClock size={16} strokeWidth={2} />
             Create {plannedShiftInstances || ''} shift line{plannedShiftInstances === 1 ? '' : 's'}
           </button>
+          {mode !== 'unallocated' && (
+            <div style={{ marginTop: 10, fontSize: 11.5, color: COLORS.muted, lineHeight: 1.5 }}>
+              Slots an employee can&rsquo;t take are skipped automatically — existing shifts, 10-hour rest
+              windows and the 48-hour weekly cap are respected.
+            </div>
+          )}
           {created && (
             <div style={{ marginTop: 12, fontSize: 12.5, lineHeight: 1.55, color: COLORS.sage, fontWeight: 600 }}>
               <CheckCircle2 size={14} strokeWidth={2} style={{ verticalAlign: '-2px', marginRight: 6 }} />
-              {created.count} shift line{created.count === 1 ? '' : 's'} created for {created.target}{created.skipped ? ` (${created.skipped} duplicate slot${created.skipped === 1 ? '' : 's'} skipped)` : ''}.{' '}
+              {created.count} shift line{created.count === 1 ? '' : 's'} created for {created.target}{created.skipped ? ` (${created.skipped} skipped — ${describeSkips(created.skippedReasons, created.skipped)})` : ''}.{' '}
               <button onClick={() => onNavigate(created.mode === 'unallocated' ? 'unallocated-shifts' : 'time-entry')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: COLORS.ochre, fontWeight: 600, padding: 0 }}>
                 {created.mode === 'unallocated' ? 'View worklist' : 'View time entry'} <ArrowRight size={12} strokeWidth={2} style={{ verticalAlign: '-2px' }} />
               </button>
