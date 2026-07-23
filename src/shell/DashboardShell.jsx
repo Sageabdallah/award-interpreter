@@ -128,7 +128,7 @@ function ShellFooter({ user, version, onSignOut }) {
       <div style={{ fontFamily: 'var(--mono)', fontSize: 10.5, color: '#6E7380' }}>{version}</div>
       <div style={{ color: '#FFFFFF', fontWeight: 600, fontSize: 13.5, marginTop: 8 }}>{user.name}</div>
       <div style={{ fontSize: 11.5, color: '#8A8F9B' }}>{user.role}</div>
-      <button className="dsh-signout" onClick={handleClick} style={armed ? { color: '#FF8A8F' } : undefined} title="Sign out resets the demo workspace">
+      <button className="dsh-signout" onClick={handleClick} style={armed ? { color: '#FF8A8F' } : undefined} title="Sign out clears this workspace">
         {armed
           ? <><AlertTriangle size={13} strokeWidth={1.9} /> Really sign out &amp; reset?</>
           : <><LogOut size={13} strokeWidth={1.9} /> Sign out</>}

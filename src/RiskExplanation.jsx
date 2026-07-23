@@ -25,13 +25,9 @@ export default function RiskExplanation({ awardCode, subject, facts, clauseRefs,
         try {
           data = JSON.parse(text)
         } catch {
-          throw new Error(
-            r.status === 404
-              ? 'The AI explain service is not available on this server yet — it may still be deploying. Try again in a few minutes.'
-              : `explain failed (${r.status})`,
-          )
+          throw new Error('The explanation service is temporarily unavailable — please try again shortly.')
         }
-        if (!r.ok) throw new Error(data.error || `explain failed (${r.status})`)
+        if (!r.ok) throw new Error(data.error || 'Couldn\u2019t generate the explanation — please try again.')
         return data
       })
       .then((data) => { if (!cancelled) setState({ status: 'done', data }) })

@@ -16,7 +16,7 @@ export function explainRowRoute({ anthropic, store, embedQuery, modelId }) {
 
     const chunks = await retrieveForRow({ store, embedQuery }, { awardCode, row })
     if (!chunks.length) {
-      return res.status(409).json({ error: `No indexed clause text for ${awardCode} — run: npm run rag:index` })
+      return res.status(409).json({ error: `No indexed award text is available for ${awardCode} yet.` })
     }
     const chunksBlock = chunksToPromptBlock(chunks)
 
