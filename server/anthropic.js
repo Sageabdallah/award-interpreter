@@ -23,8 +23,9 @@ export async function structuredCall(client, { model, system, messages, schema, 
     // interactive routes slow and can exhaust max_tokens before any text
     // is emitted. Offline batch callers can opt in with thinking: true.
     thinking: { type: thinking ? 'adaptive' : 'disabled' },
+    // effort: null omits the field — Haiku models reject output_config.effort.
     output_config: {
-      effort,
+      ...(effort ? { effort } : {}),
       format: { type: 'json_schema', schema },
     },
     system,

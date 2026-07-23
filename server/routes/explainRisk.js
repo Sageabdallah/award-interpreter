@@ -12,7 +12,11 @@ import { RISK_SCHEMA, RISK_SYSTEM, riskUserMessage } from '../prompts/explainRis
  * the caller supplies the system facts; retrieval and citation grounding
  * follow the same pattern as explain-row.
  */
-export function explainRiskRoute({ anthropic, store, embedQuery, modelId }) {
+export function explainRiskRoute({ anthropic, store, embedQuery, modelId, reasonerModelId = null }) {
+  // Risk explanations are short and grounded in retrieved clause text, so the
+  // fast/cheap Haiku reasoner model handles them; falls back to the primary
+  // model when no reasoner is configured (tests).
+  const explainModelId = reasonerModelId || modelId
   return async (req, res) => {
     const { awardCode = null, subject, facts, clauseRefs = [], query } = req.body || {}
     if (!subject || typeof subject !== 'string' || !facts || typeof facts !== 'object') {
@@ -26,11 +30,12 @@ export function explainRiskRoute({ anthropic, store, embedQuery, modelId }) {
     const usage = { inputTokens: 0, outputTokens: 0 }
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const { output, usage: callUsage } = await structuredCall(anthropic, {
-        model: modelId,
+        model: explainModelId,
         system: RISK_SYSTEM,
         messages: [{ role: 'user', content: riskUserMessage({ subject, facts, chunksBlock, correction }) }],
         schema: RISK_SCHEMA,
-        effort: 'low',
+        // No effort param — the Haiku reasoner model rejects output_config.effort.
+        effort: null,
         maxTokens: 1024,
       })
       usage.inputTokens += callUsage.inputTokens

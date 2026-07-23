@@ -48,10 +48,13 @@ function stubStore() {
 /** Anthropic stub: returns each canned structured output in sequence. */
 function stubAnthropic(outputs) {
   let call = 0
+  const models = []
   return {
     calls: () => call,
+    models: () => models,
     messages: {
-      async create() {
+      async create(params) {
+        models.push(params?.model)
         const output = outputs[Math.min(call, outputs.length - 1)]
         call += 1
         return {
@@ -78,13 +81,14 @@ const ROW = {
   valueLabel: '×1.50 (150%)', clauseRef: 'cl. 19',
 }
 
-function makeApp({ outputs }) {
+function makeApp({ outputs, reasonerModelId = null }) {
   const anthropic = stubAnthropic(outputs)
   const app = createApp({
     anthropic,
     store: stubStore(),
     embedQuery: async () => new Array(4).fill(0),
     modelId: 'claude-test',
+    reasonerModelId,
     library: LIBRARY,
   })
   return { app, anthropic }
@@ -179,6 +183,13 @@ describe('POST /api/explain-risk', () => {
     expect(res.status).toBe(200)
     expect(res.body.citations).toHaveLength(0)
     expect(anthropic.calls()).toBe(2)
+  })
+
+  it('uses the cheap reasoner model when one is configured', async () => {
+    const { app, anthropic } = makeApp({ outputs: [goodOutput], reasonerModelId: 'claude-haiku-test' })
+    const res = await request(app).post('/api/explain-risk').send(body)
+    expect(res.status).toBe(200)
+    expect(anthropic.models()).toEqual(['claude-haiku-test'])
   })
 
   it('400s on a malformed body', async () => {

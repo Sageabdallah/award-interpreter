@@ -17,7 +17,20 @@ export default function RiskExplanation({ awardCode, subject, facts, clauseRefs,
       body: JSON.stringify({ awardCode, subject, facts, clauseRefs, query }),
     })
       .then(async (r) => {
-        const data = await r.json()
+        // A missing route (older server build, proxy 404) answers with an HTML
+        // error page — parse defensively so the user sees a real message
+        // instead of "Unexpected token '<' ... is not valid JSON".
+        const text = await r.text()
+        let data
+        try {
+          data = JSON.parse(text)
+        } catch {
+          throw new Error(
+            r.status === 404
+              ? 'The AI explain service is not available on this server yet — it may still be deploying. Try again in a few minutes.'
+              : `explain failed (${r.status})`,
+          )
+        }
         if (!r.ok) throw new Error(data.error || `explain failed (${r.status})`)
         return data
       })
