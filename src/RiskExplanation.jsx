@@ -8,6 +8,15 @@ import { COLORS } from './analytics/theme.js'
 // Mirrors RowExplanation: fetches on mount, so mount it only when opened.
 export default function RiskExplanation({ awardCode, subject, facts, clauseRefs, query }) {
   const [state, setState] = useState({ status: 'idle' })
+  // Two-phase status: clause retrieval happens first server-side, then the
+  // model writes — surfacing both makes the wait feel deliberate.
+  const [phase, setPhase] = useState(0)
+  useEffect(() => {
+    if (state.status !== 'loading') return undefined
+    setPhase(0)
+    const timer = setTimeout(() => setPhase(1), 2500)
+    return () => clearTimeout(timer)
+  }, [state.status])
   useEffect(() => {
     let cancelled = false
     setState({ status: 'loading' })
@@ -38,7 +47,8 @@ export default function RiskExplanation({ awardCode, subject, facts, clauseRefs,
   if (state.status === 'loading') {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: COLORS.muted }}>
-        <Loader2 size={13} strokeWidth={2} className="spin" /> Reading the award text…
+        <Loader2 size={13} strokeWidth={2} className="spin" />
+        {phase === 0 ? 'Retrieving the relevant award clauses…' : 'Writing the explanation…'}
       </div>
     )
   }
@@ -50,8 +60,10 @@ export default function RiskExplanation({ awardCode, subject, facts, clauseRefs,
     <div style={{ fontSize: 12.5, lineHeight: 1.55, color: 'rgba(26,27,30,0.82)' }}>
       {state.data.explanation}
       {state.data.risk && (
-        <div style={{ marginTop: 7 }}>
-          <span style={{ fontWeight: 600, color: COLORS.warn }}>Why this is a risk: </span>
+        <div style={{ marginTop: 10, padding: '9px 12px', background: `${COLORS.warn}0D`, border: `1px solid ${COLORS.warn}40`, borderRadius: 10 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: COLORS.warn, marginBottom: 3 }}>
+            Why this is a risk
+          </div>
           {state.data.risk}
         </div>
       )}

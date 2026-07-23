@@ -2363,7 +2363,7 @@ function Footer() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <img src={isoftWordmark} alt="iSOFT" style={{ height: 17, width: 'auto', display: 'block' }} />
         <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', color: COLORS.muted }}>
-          ANZ · AXI·WFM AWARD INTERPRETATION
+          ANZ · AXI·WFM AWARD INTELLIGENCE
         </span>
       </div>
       <span style={{ fontSize: 12, color: COLORS.muted, maxWidth: 420, textAlign: 'right' }}>
