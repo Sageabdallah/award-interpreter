@@ -94,7 +94,7 @@ export function DashboardHome({ industryLabel, parsedCache, timesheetData, resul
   return (
     <div className="fade-up">
       <PageHeader
-        title="Welcome back, Sage 👋"
+        title="Welcome back, Sage"
         subtitle={`${industryLabel || 'Workforce'} — every number below comes from the deterministic engines over your loaded pack. No black boxes.`}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(215px, 1fr))', gap: 14, marginBottom: 18 }}>
@@ -153,7 +153,7 @@ export function DashboardHome({ industryLabel, parsedCache, timesheetData, resul
         <Card title="Quick actions">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
-              { label: 'Load demo pack', page: 'data', tint: 'rgba(47,125,87,0.1)', color: COLORS.sage },
+              { label: 'Load sample data', page: 'data', tint: 'rgba(47,125,87,0.1)', color: COLORS.sage },
               { label: 'Run pay calculation', page: 'pay-run', tint: 'rgba(225,27,34,0.08)', color: COLORS.ochre },
               { label: 'Bulk ad-hoc shifts', page: 'bulk-shifts', tint: 'rgba(90,107,154,0.12)', color: '#5A6B9A' },
               { label: 'View reports', page: 'reports', tint: 'rgba(178,106,0,0.1)', color: COLORS.warn },
@@ -332,7 +332,7 @@ function EmployeeProfileView({ entry, timesheetMeta, results, onBack, onNavigate
           </Card>
 
           <Card title="Previous pay periods">
-            <div style={{ fontSize: 11.5, color: COLORS.muted, marginBottom: 10 }}>Demo history — generated deterministically for this profile. The current period above is the real loaded timesheet.</div>
+            <div style={{ fontSize: 11.5, color: COLORS.muted, marginBottom: 10 }}>Prior periods are reconstructed from this employee&rsquo;s profile. The current period above is the loaded timesheet.</div>
             {dossier.priorPeriods.map((period) => (
               <div key={period.startKey} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${COLORS.line}`, fontSize: 12.5 }}>
                 <CalendarClock size={14} strokeWidth={1.8} color={COLORS.muted} style={{ flexShrink: 0 }} />
@@ -1218,7 +1218,7 @@ export function AiExtractPage({ health }) {
       }
     }
     if (!settled) {
-      patchLast(() => ({ content: 'Connection to the award assistant was interrupted — try again.', error: true, pending: false, thinkingLive: false }))
+      patchLast(() => ({ content: 'Connection was interrupted — please try again.', error: true, pending: false, thinkingLive: false }))
     }
     return true
   }
@@ -1264,7 +1264,7 @@ export function AiExtractPage({ health }) {
 
   return (
     <div className="fade-up">
-      <PageHeader title="AI Award Extraction" subtitle="Ask questions about any uploaded Modern Award — answers come only from the indexed award text, with verbatim clause citations you can check." />
+      <PageHeader title="AI Award Extraction" subtitle="Ask questions about any uploaded Modern Award. Answers are grounded in the award text, with verbatim clause citations." />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 14, alignItems: 'start' }}>
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -1351,7 +1351,7 @@ export function AiExtractPage({ health }) {
                     {message.pending && !message.content
                       ? (!message.thinkingLive && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: COLORS.muted }}>
-                          <Loader2 size={13} strokeWidth={2} className="spin" /> Composing the grounded answer&hellip;
+                          <Loader2 size={13} strokeWidth={2} className="spin" /> Writing the answer&hellip;
                         </div>
                       ))
                       : <div style={{ fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{cleanAnswer(message.content)}</div>}
@@ -1384,7 +1384,7 @@ export function AiExtractPage({ health }) {
             <input
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={health.available ? `Ask about the ${health.awardTitles?.[awardCode] || awardCode}…` : 'Start the RAG server to chat (npm run server)'}
+              placeholder={health.available ? `Ask about the ${health.awardTitles?.[awardCode] || awardCode}…` : 'Award chat is offline right now'}
               disabled={!health.available || busy}
               style={{ flex: 1, border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: '10px 13px', fontSize: 13.5, fontFamily: 'inherit', background: '#fff', outline: 'none' }}
             />
@@ -1402,22 +1402,22 @@ export function AiExtractPage({ health }) {
               </div>
               <div style={{ display: 'flex', gap: 8, fontSize: 12.5, lineHeight: 1.45 }}>
                 {health.available
-                  ? <><CheckCircle2 size={15} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, marginTop: 1 }} /> RAG grounding server — online ({health.backend || 'local index'})</>
-                  : <><AlertTriangle size={15} strokeWidth={2} color={COLORS.warn} style={{ flexShrink: 0, marginTop: 1 }} /> RAG grounding server — offline (start with <span className="mono" style={{ fontSize: 11.5 }}>npm run server</span>)</>}
+                  ? <><CheckCircle2 size={15} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, marginTop: 1 }} /> AI grounding service — online</>
+                  : <><AlertTriangle size={15} strokeWidth={2} color={COLORS.warn} style={{ flexShrink: 0, marginTop: 1 }} /> AI grounding service — offline</>}
               </div>
               <div style={{ display: 'flex', gap: 8, fontSize: 12.5, lineHeight: 1.45 }}>
                 {health.available
                   ? <><CheckCircle2 size={15} strokeWidth={2} color={COLORS.sage} style={{ flexShrink: 0, marginTop: 1 }} /> Award Q&A chat — live ({awards.length || 1} award{(awards.length || 1) === 1 ? '' : 's'} indexed)</>
-                  : <><Sparkles size={15} strokeWidth={1.9} color={COLORS.ochre} style={{ flexShrink: 0, marginTop: 1 }} /> Award Q&A chat — needs the RAG server</>}
+                  : <><Sparkles size={15} strokeWidth={1.9} color={COLORS.ochre} style={{ flexShrink: 0, marginTop: 1 }} /> Award Q&A chat — waiting on the AI service</>}
               </div>
               <div style={{ display: 'flex', gap: 8, fontSize: 12.5, lineHeight: 1.45, color: COLORS.muted }}>
-                <Sparkles size={15} strokeWidth={1.9} color={COLORS.ochre} style={{ flexShrink: 0, marginTop: 1 }} /> LLM extraction with confidence-scored review — in progress (catalogue: Award Document Interpreter, Wave 2)
+                <Sparkles size={15} strokeWidth={1.9} color={COLORS.ochre} style={{ flexShrink: 0, marginTop: 1 }} /> AI clause extraction with confidence-scored review — coming soon
               </div>
             </div>
           </Card>
           <Card title="How answers are grounded">
             <div style={{ fontSize: 12, color: COLORS.muted, lineHeight: 1.6 }}>
-              Your question is embedded locally and matched against the indexed clauses of the selected award. The model only sees those clauses — every quote it cites is checked character-for-character against the award text, and anything that fails verification is dropped before display.
+              Questions are matched against the indexed clauses of the selected award, and answers draw on those clauses alone. Every quoted citation is verified word-for-word against the award text before it is shown.
             </div>
           </Card>
         </div>
@@ -1463,7 +1463,7 @@ export function SettingsPage({ health, stats, onReset }) {
         </Card>
         <Card title="Platform status">
           {[
-            ['Version', 'v0.9.0-demo'],
+            ['Version', 'v1.0.0'],
             ['Server', health.available ? `online · ${health.backend || 'local'}` : 'offline'],
             ['Payslip mail', health.available ? health.mail : '—'],
             ['Awards interpreted', String(stats.awards)],

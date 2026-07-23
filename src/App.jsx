@@ -933,7 +933,7 @@ function RowExplanation({ awardCode, row }) {
     })
       .then(async (r) => {
         const data = await r.json()
-        if (!r.ok) throw new Error(data.error || `explain failed (${r.status})`)
+        if (!r.ok) throw new Error(data.error || 'Couldn\u2019t generate the explanation — please try again.')
         return data
       })
       .then((data) => { if (!cancelled) setState({ status: 'done', data }) })
@@ -1984,7 +1984,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
             <Download size={16} strokeWidth={1.9} /> Export CSV
           </button>
           <ConfirmButton onConfirm={onReset} confirmLabel="Discard everything & reset the workspace?">
-            <RotateCcw size={15} strokeWidth={1.9} /> Reset demo workspace
+            <RotateCcw size={15} strokeWidth={1.9} /> Reset workspace
           </ConfirmButton>
         </div>
       </div>
@@ -2089,9 +2089,8 @@ function OutlookConnect({ configured, onConnected }) {
   if (!configured) {
     return (
       <Flag>
-        Email delivery isn&rsquo;t configured — dispatch will run as a dry run: payslips are generated and listed
-        below, but nothing is delivered. To enable the one-click Outlook connect here, add GRAPH_CLIENT_ID
-        to .env (free, ~2 minutes — see .env.example) and restart the server; or set SMTP_*.
+        Email delivery isn&rsquo;t configured — dispatch runs in preview: payslips are generated and listed
+        below, but nothing is delivered. Connect a mailbox to enable live delivery.
       </Flag>
     )
   }
@@ -2130,7 +2129,7 @@ function OutlookConnect({ configured, onConnected }) {
   return (
     <>
       <Flag>
-        Email delivery isn&rsquo;t configured yet — without it, dispatch runs as a dry run: payslips are generated
+        Email delivery isn&rsquo;t configured yet — dispatch runs in preview: payslips are generated
         and listed below, but nothing is delivered.
       </Flag>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginTop: 10 }}>
@@ -2200,18 +2199,17 @@ function PayslipDispatch({ results, timesheetMeta }) {
   return (
     <div className="panel-inner" style={{ marginBottom: 26 }}>
       <div className="panel-label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Send size={13} strokeWidth={1.9} /> Payslip distribution — demo
+        <Send size={13} strokeWidth={1.9} /> Payslip distribution
       </div>
       <p style={{ fontSize: 13, color: COLORS.muted, margin: '0 0 14px', maxWidth: 640, lineHeight: 1.55 }}>
-        Emails one sample payslip{demoRows.length ? <> — {demoRows[0].employeeName}&rsquo;s</> : null} ({payable.length} employees
-        paid this run). For the demo it is routed to the address below and names the employee it is for. Production
-        sends would email every paid employee at their own address from the register.
+        Sends a sample payslip{demoRows.length ? <> — {demoRows[0].employeeName}&rsquo;s</> : null} ({payable.length} employees
+        paid this run) to the confirmed address below. A full dispatch emails every paid employee their own
+        payslip at their registered address.
       </p>
 
       {!available ? (
         <Flag>
-          The payslip server isn&rsquo;t running — start it with <span className="mono" style={{ fontSize: 12 }}>npm run server</span> to
-          dispatch payslip emails.
+          The delivery service is offline — payslip emails can&rsquo;t be dispatched right now.
         </Flag>
       ) : (
         <>
@@ -2260,7 +2258,7 @@ function PayslipDispatch({ results, timesheetMeta }) {
               }}>
                 {dispatch.data.mode !== 'dry-run'
                   ? <><CheckCircle2 size={16} strokeWidth={2} /> {dispatch.data.sent.filter((entry) => entry.ok).length} payslip emails delivered to {dispatch.data.recipient}</>
-                  : <><AlertTriangle size={16} strokeWidth={2} /> Dry run — {dispatch.data.sent.length} payslips generated, none delivered (configure email in .env — see .env.example)</>}
+                  : <><AlertTriangle size={16} strokeWidth={2} /> Preview — {dispatch.data.sent.length} payslips generated, none delivered (email delivery not configured)</>}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {dispatch.data.sent.map((entry) => (
@@ -2350,7 +2348,7 @@ function ConfirmationStage({ results, timesheetMeta, onBack, onReset }) {
         </a>
         <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to results</button>
         <ConfirmButton onConfirm={onReset} confirmLabel="Discard everything & reset the workspace?">
-          <RotateCcw size={15} strokeWidth={1.9} /> Reset demo workspace
+          <RotateCcw size={15} strokeWidth={1.9} /> Reset workspace
         </ConfirmButton>
       </div>
     </div>
@@ -2868,7 +2866,7 @@ export default function App() {
         badges={engineBadges}
         ready={ready}
         user={{ name: 'Sage Abdallah', role: 'Admin' }}
-        version="v0.9.0-demo"
+        version="v1.0.0"
         onSignOut={handleReset}
       >
         {renderPage()}

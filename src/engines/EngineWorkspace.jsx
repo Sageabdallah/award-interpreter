@@ -106,7 +106,6 @@ function EngineHeader({ engine, onBackToFlow }) {
         <p style={{ fontSize: 14.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 12, marginBottom: 0 }}>{engine.blurb}</p>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <span className="pill" style={{ fontSize: 11.5 }}>Wave {engine.wave}</span>
         <span className="pill" style={{ fontSize: 11.5, color: COLORS.sage, borderColor: `${COLORS.sage}55` }}>Deterministic · explainable</span>
         <button className="btn" onClick={onBackToFlow}><ArrowLeft size={15} strokeWidth={1.9} /> Back to dashboard</button>
       </div>
