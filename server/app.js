@@ -3,6 +3,7 @@
 // stubs — no network, no model download.
 import express from 'express'
 import { explainRowRoute } from './routes/explainRow.js'
+import { explainRiskRoute } from './routes/explainRisk.js'
 import { classifyEmployeeRoute } from './routes/classifyEmployee.js'
 import { dispersePayRoute } from './routes/dispersePay.js'
 import { awardChatRoute } from './routes/awardChat.js'
@@ -44,6 +45,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
 
   const deps = { anthropic, store, embedQuery, modelId, reasonerModelId, library }
   app.post('/api/explain-row', wrap(explainRowRoute(deps)))
+  app.post('/api/explain-risk', wrap(explainRiskRoute(deps)))
   app.post('/api/classify-employee', wrap(classifyEmployeeRoute(deps)))
   app.post('/api/award-chat', wrap(awardChatRoute(deps)))
   // SSE variant streams a Haiku reasoning pass before the Sonnet answer. It

@@ -138,6 +138,56 @@ describe('POST /api/explain-row', () => {
   })
 })
 
+describe('POST /api/explain-risk', () => {
+  const body = {
+    awardCode: 'MA000034',
+    subject: 'Pay run — Ruth Adebayo (Registered nurse—level 1)',
+    facts: { warnings: ['Agreement rate 31.00 overrides award rate 30.34.'], basePayHourly: 31 },
+    clauseRefs: ['cl. 19'],
+    query: 'agreement rate overrides award rate — overtime',
+  }
+  const goodOutput = {
+    explanation: 'The agreement rate of $31.00 sits above the award minimum, so the higher rate is paid.',
+    risk: 'If the over-award rate is not documented, an audit cannot verify the employee is paid at least the award minimum.',
+    citations: [{ clauseRef: 'cl. 19', quote: 'paid at 150% of the ordinary rate for the first 3 hours' }],
+  }
+
+  it('returns what is happening, why it is a risk, and verified citations', async () => {
+    const { app, anthropic } = makeApp({ outputs: [goodOutput] })
+    const res = await request(app).post('/api/explain-risk').send(body)
+    expect(res.status).toBe(200)
+    expect(res.body.explanation).toMatch(/award minimum/)
+    expect(res.body.risk).toMatch(/audit/)
+    expect(res.body.citations).toHaveLength(1)
+    expect(res.body.citations[0].clauseRef).toBe('cl. 19')
+    expect(anthropic.calls()).toBe(1)
+  })
+
+  it('accepts an answer with no citations without retrying', async () => {
+    const uncited = { ...goodOutput, citations: [] }
+    const { app, anthropic } = makeApp({ outputs: [uncited] })
+    const res = await request(app).post('/api/explain-risk').send(body)
+    expect(res.status).toBe(200)
+    expect(res.body.citations).toHaveLength(0)
+    expect(anthropic.calls()).toBe(1)
+  })
+
+  it('drops citations that never ground after one retry', async () => {
+    const bad = { ...goodOutput, citations: [{ clauseRef: 'cl. 19', quote: 'fabricated wording not in the award' }] }
+    const { app, anthropic } = makeApp({ outputs: [bad, bad] })
+    const res = await request(app).post('/api/explain-risk').send(body)
+    expect(res.status).toBe(200)
+    expect(res.body.citations).toHaveLength(0)
+    expect(anthropic.calls()).toBe(2)
+  })
+
+  it('400s on a malformed body', async () => {
+    const { app } = makeApp({ outputs: [] })
+    const res = await request(app).post('/api/explain-risk').send({ facts: {} })
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('POST /api/classify-employee', () => {
   const output = {
     suggestions: [{

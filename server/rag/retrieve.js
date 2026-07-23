@@ -47,6 +47,30 @@ export async function retrieveForRow({ store, embedQuery }, { awardCode, row }) 
   return capChars(dedupeById([...exact, ...semantic]))
 }
 
+/**
+ * Chunks for explaining a pay-run warning or compliance finding: exact chunks
+ * for every clause the finding cites, then top-k semantic hits for the
+ * finding's own wording. `awardCode` is optional — compliance breaches built
+ * without a pay run may not know the employee's award.
+ * @param {object} deps  { store, embedQuery }
+ */
+export async function retrieveForRisk({ store, embedQuery }, { awardCode, clauseRefs = [], query }) {
+  const exact = []
+  if (awardCode) {
+    for (const raw of clauseRefs) {
+      for (const ref of parseClauseRefs(raw)) {
+        exact.push(...await store.byClauseRef(awardCode, ref.ref))
+      }
+    }
+  }
+
+  const vector = await embedQuery(String(query).slice(0, 2000))
+  const semantic = await store.search({ vector, k: 4, awardCode: awardCode || null })
+
+  // Exact clause chunks first — they are the citation targets.
+  return capChars(dedupeById([...exact, ...semantic]))
+}
+
 // Clause mentions inside a free-text question ("what does clause 25.5 say",
 // "sch B rates") — each one becomes an exact chunk lookup alongside the
 // semantic search. A false match just fetches nothing.
