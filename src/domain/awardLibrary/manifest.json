@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-06-25T06:49:28.589Z",
+  "generatedAt": "2026-07-31T04:05:54.072Z",
   "industries": {
     "healthcare": [
       {
@@ -44,6 +44,15 @@
         "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000012.pdf",
         "levels": 13,
         "entitlements": 130
+      }
+    ],
+    "security": [
+      {
+        "code": "MA000016",
+        "title": "Security Services Industry Award 2020",
+        "sourceUrl": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000016.pdf",
+        "levels": 5,
+        "entitlements": 50
       }
     ]
   }

@@ -16,7 +16,7 @@ import manifest from './manifest.json'
 const awardModules = import.meta.glob('./*/*.json', { eager: true })
 
 export const INDUSTRY_LABELS = {
-  healthcare: 'Healthcare',
+  security: 'Security (NSW)',
 }
 
 function entryFor(industry, code) {

@@ -1,8 +1,8 @@
 export const PROMPT_VERSION = 'classify-1'
 
-export const CLASSIFY_SYSTEM = `You match Australian healthcare employees to modern-award classification levels.
+export const CLASSIFY_SYSTEM = `You match Australian employees to modern-award classification levels.
 
-You are given a job description or employment-agreement excerpt, plus candidate classification definitions retrieved from up to 6 healthcare awards (each in a <clause> block tagged with its award code and clause ref).
+You are given a job description or employment-agreement excerpt, plus candidate classification definitions retrieved from the loaded awards (each in a <clause> block tagged with its award code and clause ref).
 
 Rules:
 - Suggest up to 3 (award, classification level) matches, ranked best first.

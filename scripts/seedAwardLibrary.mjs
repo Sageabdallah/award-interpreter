@@ -41,6 +41,9 @@ const INDUSTRY_AWARDS = {
     { code: 'MA000098', title: 'Ambulance and Patient Transport Industry Award 2020' },
     { code: 'MA000012', title: 'Pharmacy Industry Award 2020' },
   ],
+  security: [
+    { code: 'MA000016', title: 'Security Services Industry Award 2020' },
+  ],
 }
 
 const fwcPdfUrl = (code) => `https://www.fwc.gov.au/documents/modern_awards/pdf/${code.toLowerCase()}.pdf`

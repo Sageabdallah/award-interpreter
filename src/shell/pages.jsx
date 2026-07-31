@@ -1152,7 +1152,7 @@ export function AiExtractPage({ health }) {
   // Knowledge graph of the selected award, built from the preloaded library.
   // Clauses cited/consulted by the latest answer light up in the graph.
   const graph = useMemo(() => {
-    const entry = loadAwardLibrary('healthcare', [awardCode])[0]
+    const entry = loadAwardLibrary('security', [awardCode])[0]
     return entry ? buildAwardGraph(entry) : null
   }, [awardCode])
   const citedIds = useMemo(() => {

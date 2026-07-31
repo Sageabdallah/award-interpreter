@@ -1,0 +1,3289 @@
+{
+  "parsedAward": {
+    "awardCode": "MA000016",
+    "awardTitle": "Security Services Industry Award 2020",
+    "references": {
+      "ordinaryHours": "cl. 13",
+      "baseRate": "cl. 15",
+      "casualLoading": "cl. 11",
+      "penalties": "cl. 26",
+      "eveningNight": "",
+      "overtime": "cl. 19",
+      "allowances": "cl. 17 / Sch C"
+    },
+    "clauseIndex": {
+      "cl. 1": "Title and commencement",
+      "cl. 2": "Definitions",
+      "cl. 3": "The National Employment Standards and this award",
+      "cl. 4": "Coverage",
+      "cl. 5": "Individual flexibility arrangements",
+      "cl. 6": "Requests for flexible working arrangements",
+      "cl. 7": "Facilitative provisions",
+      "cl. 8": "Types of employment",
+      "cl. 9": "Full-time employees",
+      "cl. 10": "Part-time employees",
+      "cl. 11": "Casual employees",
+      "cl. 12": "Classifications",
+      "cl. 13": "Ordinary hours of work and rostering arrangements",
+      "cl. 13A": "Employee right to disconnect",
+      "cl. 14": "Breaks",
+      "cl. 15": "Minimum rates",
+      "cl. 16": "Payment of wages",
+      "cl. 17": "Allowances",
+      "cl. 18": "Superannuation",
+      "cl. 19": "Overtime",
+      "cl. 20": "Penalty rates",
+      "cl. 21": "Annual leave",
+      "cl. 22": "Personal/carer’s leave and compassionate leave",
+      "cl. 23": "Parental leave and related entitlements",
+      "cl. 24": "Community service leave",
+      "cl. 25": "Family and domestic violence leave",
+      "cl. 26": "Public holidays",
+      "cl. 26A": "Workplace delegates’ rights",
+      "cl. 27": "Consultation about major workplace change",
+      "cl. 28": "Consultation about changes to rosters or hours of work",
+      "cl. 29": "Consultation about change of contract",
+      "cl. 30": "Dispute resolution",
+      "cl. 31": "Termination of employment",
+      "cl. 32": "Redundancy",
+      "Sch A": "Classification Definitions",
+      "Sch B": "Summary of Hourly Rates of Pay",
+      "Sch C": "Summary of Monetary Allowances",
+      "Sch D": "Agreement for Time Off Instead of Payment for Overtime",
+      "Sch E": "Agreement to Take Annual Leave in Advance",
+      "Sch F": "Agreement to Cash Out Annual Leave"
+    },
+    "classificationRows": [
+      {
+        "code": "SO L1",
+        "employeeLevel": "Security Officer Level 1",
+        "stream": "Security Officer Level 1",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "SO L2",
+        "employeeLevel": "Security Officer Level 2",
+        "stream": "Security Officer Level 2",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "SO L3",
+        "employeeLevel": "Security Officer Level 3",
+        "stream": "Security Officer Level 3",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "SO L4",
+        "employeeLevel": "Security Officer Level 4",
+        "stream": "Security Officer Level 4",
+        "duties": "",
+        "schedule": ""
+      },
+      {
+        "code": "SO L5",
+        "employeeLevel": "Security Officer Level 5",
+        "stream": "Security Officer Level 5",
+        "duties": "",
+        "schedule": ""
+      }
+    ],
+    "levels": [
+      {
+        "awardCode": "MA000016",
+        "awardTitle": "Security Services Industry Award 2020",
+        "employeeLevel": "Security Officer Level 1",
+        "levelCode": "SO L1",
+        "basePayRateHourly": 28.42,
+        "weeklyRate": 1079.96,
+        "annualRate": null,
+        "casualRateHourly": 35.53,
+        "casualLoadingAmount": 7.11,
+        "allowances": [
+          {
+            "type": "First aid allowance",
+            "category": "first_aid",
+            "amount": 7.68,
+            "rawAmounts": [
+              7.68
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "condition": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a first aid allowance of $7.68 per shift up to a maximum of $38.19 per week.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Broken shift allowance",
+            "category": "broken_shift",
+            "amount": 18.3,
+            "rawAmounts": [
+              18.3
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "condition": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks).",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer of an employee who is required to work a rostered shift in 2 periods of duty (excluding rest breaks) must pay the employee a broken shift allowance of $18.30 per rostered shift.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Supervision allowance (1–5 employees)",
+            "category": "in_charge",
+            "amount": 47.68,
+            "rawAmounts": [
+              47.68
+            ],
+            "unit": "week",
+            "clause": "cl. 17",
+            "meaning": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "condition": "Employee is required to supervise 1 to 5 other employees.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(a) 1 to 5 employees—$47.68 per week; or",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Meal allowance",
+            "category": "meal_allowance",
+            "amount": 22.14,
+            "rawAmounts": [
+              22.14
+            ],
+            "unit": "occasion",
+            "clause": "cl. 17",
+            "meaning": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "condition": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a meal allowance of $22.14.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Vehicle allowance (motor vehicle)",
+            "category": "travel_allowance",
+            "amount": 1,
+            "rawAmounts": [
+              1
+            ],
+            "unit": "km",
+            "clause": "cl. 17",
+            "meaning": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "condition": "Employer requires an employee to use their own motor vehicle in performing their duties.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(i) motor vehicle—$1.00;",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          }
+        ],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 26"
+          }
+        ],
+        "roleLabel": "Security Officer Level 1",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 15",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 26",
+          "eveningNight": "",
+          "overtime": "cl. 19",
+          "allowances": "cl. 17 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000016 (fwc-pdf)",
+        "key": "MA000016::securityofficerlevel1"
+      },
+      {
+        "awardCode": "MA000016",
+        "awardTitle": "Security Services Industry Award 2020",
+        "employeeLevel": "Security Officer Level 2",
+        "levelCode": "SO L2",
+        "basePayRateHourly": 29.24,
+        "weeklyRate": 1111.12,
+        "annualRate": null,
+        "casualRateHourly": 36.55,
+        "casualLoadingAmount": 7.31,
+        "allowances": [
+          {
+            "type": "First aid allowance",
+            "category": "first_aid",
+            "amount": 7.68,
+            "rawAmounts": [
+              7.68
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "condition": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a first aid allowance of $7.68 per shift up to a maximum of $38.19 per week.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Broken shift allowance",
+            "category": "broken_shift",
+            "amount": 18.3,
+            "rawAmounts": [
+              18.3
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "condition": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks).",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer of an employee who is required to work a rostered shift in 2 periods of duty (excluding rest breaks) must pay the employee a broken shift allowance of $18.30 per rostered shift.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Supervision allowance (1–5 employees)",
+            "category": "in_charge",
+            "amount": 47.68,
+            "rawAmounts": [
+              47.68
+            ],
+            "unit": "week",
+            "clause": "cl. 17",
+            "meaning": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "condition": "Employee is required to supervise 1 to 5 other employees.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(a) 1 to 5 employees—$47.68 per week; or",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Meal allowance",
+            "category": "meal_allowance",
+            "amount": 22.14,
+            "rawAmounts": [
+              22.14
+            ],
+            "unit": "occasion",
+            "clause": "cl. 17",
+            "meaning": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "condition": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a meal allowance of $22.14.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Vehicle allowance (motor vehicle)",
+            "category": "travel_allowance",
+            "amount": 1,
+            "rawAmounts": [
+              1
+            ],
+            "unit": "km",
+            "clause": "cl. 17",
+            "meaning": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "condition": "Employer requires an employee to use their own motor vehicle in performing their duties.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(i) motor vehicle—$1.00;",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          }
+        ],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 26"
+          }
+        ],
+        "roleLabel": "Security Officer Level 2",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 15",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 26",
+          "eveningNight": "",
+          "overtime": "cl. 19",
+          "allowances": "cl. 17 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000016 (fwc-pdf)",
+        "key": "MA000016::securityofficerlevel2"
+      },
+      {
+        "awardCode": "MA000016",
+        "awardTitle": "Security Services Industry Award 2020",
+        "employeeLevel": "Security Officer Level 3",
+        "levelCode": "SO L3",
+        "basePayRateHourly": 29.73,
+        "weeklyRate": 1129.74,
+        "annualRate": null,
+        "casualRateHourly": 37.16,
+        "casualLoadingAmount": 7.43,
+        "allowances": [
+          {
+            "type": "First aid allowance",
+            "category": "first_aid",
+            "amount": 7.68,
+            "rawAmounts": [
+              7.68
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "condition": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a first aid allowance of $7.68 per shift up to a maximum of $38.19 per week.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Broken shift allowance",
+            "category": "broken_shift",
+            "amount": 18.3,
+            "rawAmounts": [
+              18.3
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "condition": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks).",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer of an employee who is required to work a rostered shift in 2 periods of duty (excluding rest breaks) must pay the employee a broken shift allowance of $18.30 per rostered shift.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Supervision allowance (1–5 employees)",
+            "category": "in_charge",
+            "amount": 47.68,
+            "rawAmounts": [
+              47.68
+            ],
+            "unit": "week",
+            "clause": "cl. 17",
+            "meaning": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "condition": "Employee is required to supervise 1 to 5 other employees.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(a) 1 to 5 employees—$47.68 per week; or",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Meal allowance",
+            "category": "meal_allowance",
+            "amount": 22.14,
+            "rawAmounts": [
+              22.14
+            ],
+            "unit": "occasion",
+            "clause": "cl. 17",
+            "meaning": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "condition": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a meal allowance of $22.14.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Vehicle allowance (motor vehicle)",
+            "category": "travel_allowance",
+            "amount": 1,
+            "rawAmounts": [
+              1
+            ],
+            "unit": "km",
+            "clause": "cl. 17",
+            "meaning": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "condition": "Employer requires an employee to use their own motor vehicle in performing their duties.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(i) motor vehicle—$1.00;",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          }
+        ],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 26"
+          }
+        ],
+        "roleLabel": "Security Officer Level 3",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 15",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 26",
+          "eveningNight": "",
+          "overtime": "cl. 19",
+          "allowances": "cl. 17 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000016 (fwc-pdf)",
+        "key": "MA000016::securityofficerlevel3"
+      },
+      {
+        "awardCode": "MA000016",
+        "awardTitle": "Security Services Industry Award 2020",
+        "employeeLevel": "Security Officer Level 4",
+        "levelCode": "SO L4",
+        "basePayRateHourly": 30.23,
+        "weeklyRate": 1148.74,
+        "annualRate": null,
+        "casualRateHourly": 37.79,
+        "casualLoadingAmount": 7.56,
+        "allowances": [
+          {
+            "type": "First aid allowance",
+            "category": "first_aid",
+            "amount": 7.68,
+            "rawAmounts": [
+              7.68
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "condition": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a first aid allowance of $7.68 per shift up to a maximum of $38.19 per week.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Broken shift allowance",
+            "category": "broken_shift",
+            "amount": 18.3,
+            "rawAmounts": [
+              18.3
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "condition": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks).",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer of an employee who is required to work a rostered shift in 2 periods of duty (excluding rest breaks) must pay the employee a broken shift allowance of $18.30 per rostered shift.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Supervision allowance (1–5 employees)",
+            "category": "in_charge",
+            "amount": 47.68,
+            "rawAmounts": [
+              47.68
+            ],
+            "unit": "week",
+            "clause": "cl. 17",
+            "meaning": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "condition": "Employee is required to supervise 1 to 5 other employees.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(a) 1 to 5 employees—$47.68 per week; or",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Meal allowance",
+            "category": "meal_allowance",
+            "amount": 22.14,
+            "rawAmounts": [
+              22.14
+            ],
+            "unit": "occasion",
+            "clause": "cl. 17",
+            "meaning": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "condition": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a meal allowance of $22.14.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Vehicle allowance (motor vehicle)",
+            "category": "travel_allowance",
+            "amount": 1,
+            "rawAmounts": [
+              1
+            ],
+            "unit": "km",
+            "clause": "cl. 17",
+            "meaning": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "condition": "Employer requires an employee to use their own motor vehicle in performing their duties.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(i) motor vehicle—$1.00;",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          }
+        ],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 26"
+          }
+        ],
+        "roleLabel": "Security Officer Level 4",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 15",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 26",
+          "eveningNight": "",
+          "overtime": "cl. 19",
+          "allowances": "cl. 17 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000016 (fwc-pdf)",
+        "key": "MA000016::securityofficerlevel4"
+      },
+      {
+        "awardCode": "MA000016",
+        "awardTitle": "Security Services Industry Award 2020",
+        "employeeLevel": "Security Officer Level 5",
+        "levelCode": "SO L5",
+        "basePayRateHourly": 31.2,
+        "weeklyRate": 1185.6,
+        "annualRate": null,
+        "casualRateHourly": 39,
+        "casualLoadingAmount": 7.8,
+        "allowances": [
+          {
+            "type": "First aid allowance",
+            "category": "first_aid",
+            "amount": 7.68,
+            "rawAmounts": [
+              7.68
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "condition": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a first aid allowance of $7.68 per shift up to a maximum of $38.19 per week.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Broken shift allowance",
+            "category": "broken_shift",
+            "amount": 18.3,
+            "rawAmounts": [
+              18.3
+            ],
+            "unit": "shift",
+            "clause": "cl. 17",
+            "meaning": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "condition": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks).",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer of an employee who is required to work a rostered shift in 2 periods of duty (excluding rest breaks) must pay the employee a broken shift allowance of $18.30 per rostered shift.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Supervision allowance (1–5 employees)",
+            "category": "in_charge",
+            "amount": 47.68,
+            "rawAmounts": [
+              47.68
+            ],
+            "unit": "week",
+            "clause": "cl. 17",
+            "meaning": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "condition": "Employee is required to supervise 1 to 5 other employees.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(a) 1 to 5 employees—$47.68 per week; or",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Meal allowance",
+            "category": "meal_allowance",
+            "amount": 22.14,
+            "rawAmounts": [
+              22.14
+            ],
+            "unit": "occasion",
+            "clause": "cl. 17",
+            "meaning": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "condition": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "The employer must pay the employee a meal allowance of $22.14.",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          },
+          {
+            "type": "Vehicle allowance (motor vehicle)",
+            "category": "travel_allowance",
+            "amount": 1,
+            "rawAmounts": [
+              1
+            ],
+            "unit": "km",
+            "clause": "cl. 17",
+            "meaning": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "condition": "Employer requires an employee to use their own motor vehicle in performing their duties.",
+            "origin": "llm-extraction",
+            "confidence": "medium",
+            "extraction": {
+              "model": "claude-sonnet-4-6",
+              "promptVersion": "extract-1",
+              "quote": "(i) motor vehicle—$1.00;",
+              "extractedAt": "2026-07-31T04:06:40.362Z"
+            }
+          }
+        ],
+        "penaltyRates": [
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Saturday",
+            "mode": "multiplier",
+            "value": 1.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Sunday",
+            "mode": "multiplier",
+            "value": 2.25,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Public holiday",
+            "mode": "multiplier",
+            "value": 2.75,
+            "unit": "hour",
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "clause": "cl. 26"
+          },
+          {
+            "type": "Overtime — first 3 hours",
+            "mode": "multiplier",
+            "value": 1.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — after 3 hours",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — Sunday",
+            "mode": "multiplier",
+            "value": 2,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "clause": "cl. 19"
+          },
+          {
+            "type": "Overtime — public holiday",
+            "mode": "multiplier",
+            "value": 2.5,
+            "unit": "hour",
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "clause": "cl. 26"
+          }
+        ],
+        "roleLabel": "Security Officer Level 5",
+        "roleHints": [],
+        "references": {
+          "ordinaryHours": "cl. 13",
+          "baseRate": "cl. 15",
+          "casualLoading": "cl. 11",
+          "penalties": "cl. 26",
+          "eveningNight": "",
+          "overtime": "cl. 19",
+          "allowances": "cl. 17 / Sch C",
+          "schedule": ""
+        },
+        "rules": {
+          "casualLoading": 0.25,
+          "weekend": {
+            "standard": {
+              "saturday": 1.5,
+              "sunday": 2,
+              "public_holiday": 2.5
+            },
+            "casual": {
+              "saturday": 1.75,
+              "sunday": 2.25,
+              "public_holiday": 2.75
+            }
+          },
+          "flatLoadings": [],
+          "overtime": {
+            "weeklyThreshold": 38,
+            "dailyThreshold": 10,
+            "casualDailyThreshold": 10,
+            "firstBandHours": 3,
+            "firstTwoMultiplier": 1.5,
+            "afterTwoMultiplier": 2,
+            "sundayMultiplier": 2,
+            "publicHolidayMultiplier": 2.5
+          }
+        },
+        "sourceName": "MA000016 (fwc-pdf)",
+        "key": "MA000016::securityofficerlevel5"
+      }
+    ]
+  },
+  "interpretation": {
+    "awardCode": "MA000016",
+    "awardTitle": "Security Services Industry Award 2020",
+    "industry": "other",
+    "sourceRef": {
+      "sourceName": "MA000016 (fwc-pdf)"
+    },
+    "levels": [
+      {
+        "levelKey": "MA000016::securityofficerlevel1",
+        "levelCode": "SO L1",
+        "employeeLevel": "Security Officer Level 1",
+        "levelName": "Security Officer Level 1",
+        "stream": "Security Officer Level 1",
+        "baseRate": {
+          "hourly": 28.42,
+          "weekly": 1079.96,
+          "clauseRef": "cl. 15"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.11,
+          "casualHourly": 35.53,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [
+          {
+            "id": "ma000016-securityofficerlevel1-first_aid-0",
+            "category": "first_aid",
+            "title": "First aid allowance",
+            "plainLanguage": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 7.68,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-broken_shift-1",
+            "category": "broken_shift",
+            "title": "Broken shift allowance",
+            "plainLanguage": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "valueType": "fixed",
+            "value": {
+              "amount": 18.3,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks)."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-in_charge-2",
+            "category": "in_charge",
+            "title": "Supervision allowance (1–5 employees)",
+            "plainLanguage": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 47.68,
+              "unit": "week",
+              "basis": "per_week"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to supervise 1 to 5 other employees."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-meal_allowance-3",
+            "category": "meal_allowance",
+            "title": "Meal allowance",
+            "plainLanguage": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 22.14,
+              "unit": "occasion",
+              "basis": "per_occasion"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-travel_allowance-4",
+            "category": "travel_allowance",
+            "title": "Vehicle allowance (motor vehicle)",
+            "plainLanguage": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 1,
+              "unit": "km",
+              "basis": "per_km"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employer requires an employee to use their own motor vehicle in performing their duties."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          }
+        ],
+        "penalties": [
+          {
+            "id": "ma000016-securityofficerlevel1-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel1-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000016::securityofficerlevel2",
+        "levelCode": "SO L2",
+        "employeeLevel": "Security Officer Level 2",
+        "levelName": "Security Officer Level 2",
+        "stream": "Security Officer Level 2",
+        "baseRate": {
+          "hourly": 29.24,
+          "weekly": 1111.12,
+          "clauseRef": "cl. 15"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.31,
+          "casualHourly": 36.55,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [
+          {
+            "id": "ma000016-securityofficerlevel2-first_aid-0",
+            "category": "first_aid",
+            "title": "First aid allowance",
+            "plainLanguage": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 7.68,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-broken_shift-1",
+            "category": "broken_shift",
+            "title": "Broken shift allowance",
+            "plainLanguage": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "valueType": "fixed",
+            "value": {
+              "amount": 18.3,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks)."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-in_charge-2",
+            "category": "in_charge",
+            "title": "Supervision allowance (1–5 employees)",
+            "plainLanguage": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 47.68,
+              "unit": "week",
+              "basis": "per_week"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to supervise 1 to 5 other employees."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-meal_allowance-3",
+            "category": "meal_allowance",
+            "title": "Meal allowance",
+            "plainLanguage": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 22.14,
+              "unit": "occasion",
+              "basis": "per_occasion"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-travel_allowance-4",
+            "category": "travel_allowance",
+            "title": "Vehicle allowance (motor vehicle)",
+            "plainLanguage": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 1,
+              "unit": "km",
+              "basis": "per_km"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employer requires an employee to use their own motor vehicle in performing their duties."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          }
+        ],
+        "penalties": [
+          {
+            "id": "ma000016-securityofficerlevel2-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel2-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000016::securityofficerlevel3",
+        "levelCode": "SO L3",
+        "employeeLevel": "Security Officer Level 3",
+        "levelName": "Security Officer Level 3",
+        "stream": "Security Officer Level 3",
+        "baseRate": {
+          "hourly": 29.73,
+          "weekly": 1129.74,
+          "clauseRef": "cl. 15"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.43,
+          "casualHourly": 37.16,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [
+          {
+            "id": "ma000016-securityofficerlevel3-first_aid-0",
+            "category": "first_aid",
+            "title": "First aid allowance",
+            "plainLanguage": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 7.68,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-broken_shift-1",
+            "category": "broken_shift",
+            "title": "Broken shift allowance",
+            "plainLanguage": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "valueType": "fixed",
+            "value": {
+              "amount": 18.3,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks)."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-in_charge-2",
+            "category": "in_charge",
+            "title": "Supervision allowance (1–5 employees)",
+            "plainLanguage": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 47.68,
+              "unit": "week",
+              "basis": "per_week"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to supervise 1 to 5 other employees."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-meal_allowance-3",
+            "category": "meal_allowance",
+            "title": "Meal allowance",
+            "plainLanguage": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 22.14,
+              "unit": "occasion",
+              "basis": "per_occasion"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-travel_allowance-4",
+            "category": "travel_allowance",
+            "title": "Vehicle allowance (motor vehicle)",
+            "plainLanguage": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 1,
+              "unit": "km",
+              "basis": "per_km"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employer requires an employee to use their own motor vehicle in performing their duties."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          }
+        ],
+        "penalties": [
+          {
+            "id": "ma000016-securityofficerlevel3-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel3-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000016::securityofficerlevel4",
+        "levelCode": "SO L4",
+        "employeeLevel": "Security Officer Level 4",
+        "levelName": "Security Officer Level 4",
+        "stream": "Security Officer Level 4",
+        "baseRate": {
+          "hourly": 30.23,
+          "weekly": 1148.74,
+          "clauseRef": "cl. 15"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.56,
+          "casualHourly": 37.79,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [
+          {
+            "id": "ma000016-securityofficerlevel4-first_aid-0",
+            "category": "first_aid",
+            "title": "First aid allowance",
+            "plainLanguage": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 7.68,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-broken_shift-1",
+            "category": "broken_shift",
+            "title": "Broken shift allowance",
+            "plainLanguage": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "valueType": "fixed",
+            "value": {
+              "amount": 18.3,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks)."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-in_charge-2",
+            "category": "in_charge",
+            "title": "Supervision allowance (1–5 employees)",
+            "plainLanguage": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 47.68,
+              "unit": "week",
+              "basis": "per_week"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to supervise 1 to 5 other employees."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-meal_allowance-3",
+            "category": "meal_allowance",
+            "title": "Meal allowance",
+            "plainLanguage": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 22.14,
+              "unit": "occasion",
+              "basis": "per_occasion"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-travel_allowance-4",
+            "category": "travel_allowance",
+            "title": "Vehicle allowance (motor vehicle)",
+            "plainLanguage": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 1,
+              "unit": "km",
+              "basis": "per_km"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employer requires an employee to use their own motor vehicle in performing their duties."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          }
+        ],
+        "penalties": [
+          {
+            "id": "ma000016-securityofficerlevel4-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel4-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          }
+        ]
+      },
+      {
+        "levelKey": "MA000016::securityofficerlevel5",
+        "levelCode": "SO L5",
+        "employeeLevel": "Security Officer Level 5",
+        "levelName": "Security Officer Level 5",
+        "stream": "Security Officer Level 5",
+        "baseRate": {
+          "hourly": 31.2,
+          "weekly": 1185.6,
+          "clauseRef": "cl. 15"
+        },
+        "casualLoading": {
+          "rate": 0.25,
+          "amountHourly": 7.8,
+          "casualHourly": 39,
+          "clauseRef": "cl. 11"
+        },
+        "hours": {
+          "ordinaryWeekly": 38,
+          "ordinaryDaily": 10,
+          "span": null,
+          "clauseRef": "cl. 13"
+        },
+        "entitlements": [
+          {
+            "id": "ma000016-securityofficerlevel5-first_aid-0",
+            "category": "first_aid",
+            "title": "First aid allowance",
+            "plainLanguage": "Pays $7.68 per shift (capped at $38.19 per week) to an employee who holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 7.68,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee holds a current Senior First Aid Certificate and is requested or nominated by the employer to act as a first aider."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-broken_shift-1",
+            "category": "broken_shift",
+            "title": "Broken shift allowance",
+            "plainLanguage": "Pays $18.30 per rostered shift when an employee is required to work a rostered shift split into two separate periods of duty (excluding rest breaks).",
+            "valueType": "fixed",
+            "value": {
+              "amount": 18.3,
+              "unit": "shift",
+              "basis": "per_shift"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work a rostered shift in 2 periods of duty (excluding rest breaks)."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-in_charge-2",
+            "category": "in_charge",
+            "title": "Supervision allowance (1–5 employees)",
+            "plainLanguage": "Pays $47.68 per week to an employee required to supervise 1 to 5 other employees.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 47.68,
+              "unit": "week",
+              "basis": "per_week"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to supervise 1 to 5 other employees."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-meal_allowance-3",
+            "category": "meal_allowance",
+            "title": "Meal allowance",
+            "plainLanguage": "Pays $22.14 per occasion when an employee is required to work more than one hour beyond their ordinary shift without having been notified on or before the previous day.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 22.14,
+              "unit": "occasion",
+              "basis": "per_occasion"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employee is required to work more than one hour after the completion of their ordinary shift and was not advised of that requirement on or before the previous day."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-travel_allowance-4",
+            "category": "travel_allowance",
+            "title": "Vehicle allowance (motor vehicle)",
+            "plainLanguage": "Pays $1.00 per kilometre when an employee is required to use their own motor vehicle in performing duties.",
+            "valueType": "fixed",
+            "value": {
+              "amount": 1,
+              "unit": "km",
+              "basis": "per_km"
+            },
+            "rate": null,
+            "conditions": [
+              {
+                "kind": "other",
+                "text": "Employer requires an employee to use their own motor vehicle in performing their duties."
+              }
+            ],
+            "clauseRef": "cl. 17",
+            "scheduleRef": "",
+            "confidence": "medium",
+            "origin": "llm-extraction",
+            "rawText": ""
+          }
+        ],
+        "penalties": [
+          {
+            "id": "ma000016-securityofficerlevel5-weekend_penalty-pen-0",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 150% of the base rate.",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-weekend_penalty-pen-1",
+            "category": "weekend_penalty",
+            "title": "Saturday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Saturday — 175% of the base rate.",
+            "rate": {
+              "multiplier": 1.75,
+              "percent": 175,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:saturday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Saturday",
+                "match": {
+                  "day": "saturday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-weekend_penalty-pen-2",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 200% of the base rate.",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-weekend_penalty-pen-3",
+            "category": "weekend_penalty",
+            "title": "Sunday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a Sunday — 225% of the base rate.",
+            "rate": {
+              "multiplier": 2.25,
+              "percent": 225,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:sunday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "Sunday",
+                "match": {
+                  "day": "sunday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-public_holiday-pen-4",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 250% of the base rate.",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-public_holiday-pen-5",
+            "category": "public_holiday",
+            "title": "Public holiday",
+            "plainLanguage": "Higher pay for ordinary hours worked on a public holiday — 275% of the base rate.",
+            "rate": {
+              "multiplier": 2.75,
+              "percent": 275,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "casual",
+            "trigger": "day:public_holiday",
+            "conditions": [
+              {
+                "kind": "day",
+                "text": "public holiday",
+                "match": {
+                  "day": "public_holiday"
+                }
+              },
+              {
+                "kind": "employment",
+                "text": "casual employees",
+                "match": {
+                  "employment": "casual"
+                }
+              }
+            ],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-overtime-pen-6",
+            "category": "overtime",
+            "title": "Overtime — first 3 hours",
+            "plainLanguage": "Overtime is paid at 150% of the base rate (Overtime — first 3 hours).",
+            "rate": {
+              "multiplier": 1.5,
+              "percent": 150,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-overtime-pen-7",
+            "category": "overtime",
+            "title": "Overtime — after 3 hours",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — after 3 hours).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:after_first_band",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-overtime-pen-8",
+            "category": "overtime",
+            "title": "Overtime — Sunday",
+            "plainLanguage": "Overtime is paid at 200% of the base rate (Overtime — Sunday).",
+            "rate": {
+              "multiplier": 2,
+              "percent": 200,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:sunday",
+            "conditions": [],
+            "clauseRef": "cl. 19",
+            "confidence": "high"
+          },
+          {
+            "id": "ma000016-securityofficerlevel5-overtime-pen-9",
+            "category": "overtime",
+            "title": "Overtime — public holiday",
+            "plainLanguage": "Overtime is paid at 250% of the base rate (Overtime — public holiday).",
+            "rate": {
+              "multiplier": 2.5,
+              "percent": 250,
+              "appliesTo": "base_rate",
+              "unit": "hour"
+            },
+            "employment": "standard",
+            "trigger": "overtime:public_holiday",
+            "conditions": [],
+            "clauseRef": "cl. 26",
+            "confidence": "high"
+          }
+        ]
+      }
+    ],
+    "warnings": [],
+    "generatedFrom": {
+      "engine": "deterministic-parser",
+      "parserVersion": "interp-1.0.0",
+      "cacheFingerprint": "",
+      "generatedAt": null
+    },
+    "schemaVersion": "1.0.0"
+  },
+  "source": {
+    "kind": "fwc-pdf",
+    "url": "https://www.fwc.gov.au/documents/modern_awards/pdf/ma000016.pdf",
+    "htmlUrl": "https://awards.fairwork.gov.au/MA000016.html",
+    "fetchedAt": "2026-07-31T04:05:54.072Z"
+  },
+  "augmentation": {
+    "model": "claude-sonnet-4-6",
+    "promptVersion": "extract-1",
+    "generatedAt": "2026-07-31T04:06:40.362Z",
+    "itemsAdded": 25,
+    "itemsSkipped": 20,
+    "repaired": 0,
+    "itemsRejected": 0
+  }
+}

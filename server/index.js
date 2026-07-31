@@ -18,7 +18,7 @@ const store = await openVectorStore({
 })
 console.log(`vector store: ${store.backend}`)
 
-const library = loadAwardLibraryFs(config.awardLibraryDir, 'healthcare')
+const library = loadAwardLibraryFs(config.awardLibraryDir, 'security')
 console.log(`award library: ${library.length} awards`)
 
 console.log('warming embedder…')
