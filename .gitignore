@@ -19,7 +19,7 @@ award-sources/
 data/
 
 # Live-data demo upload pack (regenerate: node scripts/generateSecurityLivePack.mjs)
-production/
+mvp-documents/security/
 
 # Server secrets
 .env
