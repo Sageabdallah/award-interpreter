@@ -48,11 +48,19 @@ function layer1Findings(row, parsedCache) {
   const levelKey = keyForAwardLevel(row.awardCode, row.employeeLevel)
   const awardMinimum = parsedCache?.awardLevelsByKey?.[levelKey]?.basePayRateHourly
   if (awardMinimum != null && row.basePay < awardMinimum) {
+    // A documented agreement override is already surfaced on the pay run as an
+    // override flag — the same fact must not also hard-block the export here.
+    // It stays visible as an Advisory (historical pay periods legitimately
+    // carry rates below the CURRENT award minimum); only an undocumented
+    // below-minimum rate is a Block.
+    const documented = Boolean(row.overrideReason)
     findings.push({
       layer: 1,
       type: 'award-minimum',
-      severity: 'Block',
-      explanation: `Base rate ${round2(row.basePay)}/hr is below the award minimum ${round2(awardMinimum)}/hr for ${row.employeeLevel} (${row.awardCode}).`,
+      severity: documented ? 'Advisory' : 'Block',
+      explanation: documented
+        ? `Documented agreement rate ${round2(row.basePay)}/hr sits below the current award minimum ${round2(awardMinimum)}/hr for ${row.employeeLevel} (${row.awardCode}) — verify the award version applicable to this pay period.`
+        : `Base rate ${round2(row.basePay)}/hr is below the award minimum ${round2(awardMinimum)}/hr for ${row.employeeLevel} (${row.awardCode}).`,
       suggestedAction: 'Check the agreement override rate and its effective date against the award classification.',
       evidence: { basePay: row.basePay, awardMinimum },
     })

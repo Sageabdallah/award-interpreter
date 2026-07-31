@@ -136,6 +136,19 @@ describe('payAnomaly', () => {
     expect(finding?.evidence).toEqual({ basePay: 24, awardMinimum: 25 })
   })
 
+  it('Layer 1 demotes a below-minimum rate to Advisory when the agreement documents it', () => {
+    const parsedCache = {
+      awardLevelsByKey: { [keyForAwardLevel('MA000004', 'Level 2')]: { basePayRateHourly: 25 } },
+    }
+    const row = payRow('Documented Override', { basePay: 24, overrideReason: 'Agreement rate 24.00 overrides award rate 25.00.' })
+    const model = runPayAnomalyDetector({ rows: [row] }, parsedCache)
+    const finding = model.findings.find((item) => item.type === 'award-minimum')
+    expect(finding?.severity).toBe('Advisory')
+    expect(finding?.explanation).toMatch(/documented agreement rate/i)
+    // A documented historical rate must not hard-block the export by itself.
+    expect(model.gate).toBe('clear')
+  })
+
   it('Layer 1 warns on a casual with no casual loading line', () => {
     const model = runPayAnomalyDetector({ rows: [payRow('Cass Ual', { employmentType: 'Casual' })] })
     const finding = model.findings.find((item) => item.type === 'casual-loading')

@@ -23,7 +23,53 @@ import { PUBLISH_GATE_THRESHOLD } from './complianceRisk.js'
 
 export const SEVERITY_ORDER = ['Critical', 'Warning', 'Info']
 
+// When this many alerts share an engine, kind and severity, the pattern is
+// systemic — one finding about the workforce, not N findings about people.
+// The feed collapses the group into a single summary alert so a real outlier
+// is never buried under 150 copies of the same story.
+export const SYSTEMIC_ALERT_MIN = 8
+
+const SYSTEMIC_TITLES = {
+  'employee-critical': 'Compliance scores below the publish gate',
+  'award-minimum': 'Base rates below the current award minimum',
+  'cohort-deviation': 'Pay-per-hour outside the cohort band',
+}
+
 const severityRank = (severity) => SEVERITY_ORDER.indexOf(severity)
+
+function collapseSystemic(alerts) {
+  const groups = new Map()
+  for (const alert of alerts) {
+    const key = `${alert.engineId}|${alert.kind}|${alert.severity}`
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(alert)
+  }
+  const collapsed = []
+  for (const [key, group] of groups) {
+    if (group.length < SYSTEMIC_ALERT_MIN) {
+      collapsed.push(...group)
+      continue
+    }
+    const names = [...new Set(group.map((alert) => alert.employeeName).filter(Boolean))]
+    const allSameTitle = group.every((alert) => alert.title === group[0].title)
+    const topic = SYSTEMIC_TITLES[group[0].kind]
+      || (allSameTitle ? group[0].title : group[0].kind.replace(/-/g, ' '))
+    collapsed.push({
+      id: `systemic|${key}`,
+      engineId: group[0].engineId,
+      engineLabel: group[0].engineLabel,
+      kind: group[0].kind,
+      severity: group[0].severity,
+      systemic: true,
+      count: group.length,
+      employeeName: names.length ? `${names.length} employees` : '',
+      title: `${topic} — ${group.length} finding${group.length === 1 ? '' : 's'}`,
+      detail: `A pattern this widespread is systemic, not individual${names.length ? ` (e.g. ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''})` : ''}. First finding: ${group[0].detail || group[0].title}`,
+      action: group[0].action,
+    })
+  }
+  return collapsed
+}
 
 /**
  * Build the alert feed from already-computed engine models. Absent models
@@ -180,18 +226,19 @@ export function buildAlertFeed({
     }
   }
 
-  alerts.sort((left, right) =>
+  const feedAlerts = collapseSystemic(alerts)
+  feedAlerts.sort((left, right) =>
     severityRank(left.severity) - severityRank(right.severity)
     || left.engineId.localeCompare(right.engineId)
     || (left.employeeName || '').localeCompare(right.employeeName || ''))
 
   const counts = Object.fromEntries(SEVERITY_ORDER.map((severity) => [
     severity,
-    alerts.filter((alert) => alert.severity === severity).length,
+    feedAlerts.filter((alert) => alert.severity === severity).length,
   ]))
 
   return {
-    alerts,
+    alerts: feedAlerts,
     counts,
     sources: [
       { engineId: 'pay-anomaly', label: 'Pay Anomaly Detector', active: Boolean(payAnomaly), note: payAnomaly ? `${payAnomaly.findings.length} finding${payAnomaly.findings.length === 1 ? '' : 's'}` : 'needs a calculated pay run' },

@@ -2426,7 +2426,9 @@ export default function App() {
   const analysisBadges = useMemo(() => {
     const badges = {}
     const anomalies = runPayAnomalyDetector(state.results, state.parsedCache)
-    if (anomalies) badges['pay-anomaly'] = anomalies.findings.length
+    // Advisories are context, not risk — the at-a-glance badge counts only
+    // findings that demand action before export.
+    if (anomalies) badges['pay-anomaly'] = anomalies.counts.Block + anomalies.counts.Warning
     const fatigue = buildFatigueAssessments(state.timesheetData)
     if (fatigue) badges['fatigue-risk'] = fatigue.flagged.length
     const compliance = buildComplianceRisk(state.timesheetData, state.results)

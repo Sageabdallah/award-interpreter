@@ -131,6 +131,25 @@ describe('anomalyAlerts', () => {
     expect(breaches.alerts).toHaveLength(3)
   })
 
+  it('collapses a systemic pattern into one summary alert instead of one per employee', () => {
+    const employees = Array.from({ length: 20 }, (_, index) => ({
+      employeeName: `Officer ${index + 1}`,
+      score: 10,
+      band: 'Critical',
+      breaches: [{ type: 'weeklyHoursSevere', label: 'Weekly hours over 48', detail: `d${index}`, basis: 'b', deduction: 15 }],
+    }))
+    const feed = buildAlertFeed({
+      compliance: { publishGate: 'blocked', siteScore: 10, siteBand: 'Critical', employees },
+    })
+    // Publish gate + ONE systemic summary — not 20 identical criticals.
+    expect(feed.counts.Critical).toBe(2)
+    const summary = feed.alerts.find((alert) => alert.systemic)
+    expect(summary.kind).toBe('employee-critical')
+    expect(summary.count).toBe(20)
+    expect(summary.employeeName).toBe('20 employees')
+    expect(summary.detail).toMatch(/Officer 1, Officer 2, Officer 3 and 17 more/)
+  })
+
   it('produces a real feed from the fixture pack pipeline', async () => {
     const { parsedCache } = await loadPack()
     const feed = buildAlertFeed({ parsedCache })
