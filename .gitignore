@@ -18,6 +18,9 @@ award-sources/
 # RAG index + embedding model cache (rebuild with: npm run rag:index)
 data/
 
+# Live-data demo upload pack (regenerate: node scripts/generateSecurityLivePack.mjs)
+production/
+
 # Server secrets
 .env
 # Outlook refresh token written by `npm run mail:auth`
