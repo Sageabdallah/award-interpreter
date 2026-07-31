@@ -267,6 +267,10 @@ ${BUSINESS} — payroll data review, pay period ${PERIOD}
 Award Code: ${AWARD_CODE}
 Employee Level: ${seededLevels[0].employeeLevel}
 Note: Agreement rates in this register are the rates actually paid in the source payroll period. The preloaded award library carries the current FWC minimum rates (${currentMinimums}); differences appear as agreement-rate overrides and should be reviewed against the pay period's applicable award version.
+${seededLevels.map((l) => `
+Award Code: ${AWARD_CODE}
+Employee Level: ${l.employeeLevel}
+Note: Timesheets show 0 break minutes on every shift. This does not mean officers work without breaks: under this award rest breaks are paid and count as time worked (cl. 14.2), so they never appear as a gap in paid hours. What the data does show is that no unpaid 30-minute meal break is recorded (cl. 14.3) — permitted where a break is operationally impracticable, as is common for security posts that cannot be left unattended. Each "missing meal break" finding marks a shift where that basis should be evidenced.`).join('\n')}
 ${overAward.map((e) => `
 Employee: ${e.name}
 Employee ID: ${e.id}
