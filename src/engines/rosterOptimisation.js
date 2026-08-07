@@ -20,8 +20,9 @@
 // Constraints enforced per the spec: qualification (same award code +
 // classification level — the standing relaxation), availability (no
 // overlapping shift), leave (any parsed request over the date blocks),
-// minimum 10-hour rest period around the received shift, and a 48-hour
-// weekly hard cap. Rejected moves are tallied into the constraint report.
+// applicable rest period around the received shift, and the configured
+// weekly policy cap where it applies. Rejected moves are tallied into the
+// constraint report.
 //
 // Documented relaxations vs the spec (see AI_ENGINES.md): coverage demand is
 // the loaded shifts themselves (no post/coverage config), the solver is
@@ -39,6 +40,7 @@ import {
   leaveBlocks,
   marginalCost,
   profileFor,
+  restMinimumHoursForAward,
   spansOverlap,
 } from './coverage.js'
 
@@ -50,21 +52,25 @@ export const WEEKLY_HARD_CAP_HOURS = 48
 /** Would adding `shift` to `ownShifts` leave a turnaround under the rest
  *  minimum on either side? Overlaps are handled upstream — this guards the
  *  gaps. Exported for direct unit testing. */
-export function restOk(ownShifts, shift) {
+export function restOk(ownShifts, shift, awardCode = '') {
   const span = absSpan(shift)
   if (!span) return true
+  const minimumRestHours = restMinimumHoursForAward(awardCode)
   for (const own of ownShifts) {
     const ownSpan = absSpan(own)
     if (!ownSpan || spansOverlap(ownSpan, span)) continue
     const gap = ownSpan.start >= span.end
       ? (ownSpan.start - span.end) / 60
       : (span.start - ownSpan.end) / 60
-    if (gap < REST_MINIMUM_HOURS) return false
+    if (gap < minimumRestHours) return false
   }
   return true
 }
 
-function weeklyCapOk(ownShifts, shift) {
+function weeklyCapOk(ownShifts, shift, awardCode = '') {
+  // MA000016 cl. 14.5 is a roster-cycle long-break rule, not a calendar-week
+  // hard cap. The pay engine still prices overtime above ordinary hours.
+  if (String(awardCode).toUpperCase() === 'MA000016') return true
   const weekHours = ownShifts
     .filter((own) => own.weekBucket === shift.weekBucket)
     .reduce((sum, own) => sum + (Number(own.hours) || 0), 0)
@@ -152,8 +158,8 @@ export function buildRosterProposal(parsedCache, timesheetData, {
       }
 
       for (const receiver of pool.eligible) {
-        if (!restOk(receiver.shifts, shift)) { tallyRejection('restPeriod', shift, holderName, receiver.profile.employeeName); continue }
-        if (!weeklyCapOk(receiver.shifts, shift)) { tallyRejection('weeklyCap', shift, holderName, receiver.profile.employeeName); continue }
+        if (!restOk(receiver.shifts, shift, receiver.profile.awardCode)) { tallyRejection('restPeriod', shift, holderName, receiver.profile.employeeName); continue }
+        if (!weeklyCapOk(receiver.shifts, shift, receiver.profile.awardCode)) { tallyRejection('weeklyCap', shift, holderName, receiver.profile.employeeName); continue }
         evaluated += 1
         const receiverCost = marginalCost(parsedCache, receiver.identity, receiver.shifts, [shift])
         const delta = round2(receiverCost.cost - holderSaving.cost)

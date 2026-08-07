@@ -8,8 +8,8 @@ import { keyForAwardLevel } from '../src/domain/utils.js'
 
 // --- fixtures ---------------------------------------------------------------
 
-function shift(dateKey, start, finish, hours, { breakMinutes = 30, weekBucket = '2026-W28' } = {}) {
-  return { dateKey, date: dateKey, day: '', start, finish, hours, breakMinutes, weekBucket }
+function shift(dateKey, start, finish, hours, { breakMinutes = 30, weekBucket = '2026-W28', ...overrides } = {}) {
+  return { dateKey, date: dateKey, day: '', start, finish, hours, breakMinutes, weekBucket, ...overrides }
 }
 
 function employee(name, shifts, overrides = {}) {
@@ -95,7 +95,7 @@ describe('fatigueRisk', () => {
 
     expect(byKey.consecutiveDays.value).toBe(10)
     expect(byKey.weeklyHours.value).toBe(112) // 7 days × 16 hrs
-    expect(byKey.shortTurnarounds.value).toBe(19) // 10 same-day + 9 overnight
+    expect(byKey.shortTurnarounds.value).toBe(10) // the midnight-touching spans are continuous work periods
     expect(byKey.shortTurnarounds.points).toBe(25) // capped
     expect(assessment.band).toBe('Critical')
     expect(assessment.mitigations.length).toBeGreaterThan(0)
@@ -149,11 +149,61 @@ describe('payAnomaly', () => {
     expect(model.gate).toBe('clear')
   })
 
+  it('does not recheck a dated Security calculation against the current cached minimum', () => {
+    const parsedCache = {
+      awardLevelsByKey: { [keyForAwardLevel('MA000016', 'Security Officer Level 1')]: { basePayRateHourly: 28.42 } },
+    }
+    const row = payRow('Historical Security', {
+      awardCode: 'MA000016',
+      employeeLevel: 'Security Officer Level 1',
+      basePay: 26.22,
+      segmentEvidence: [{ minimumRate: 26.22, instrumentVersion: 'MA000016@2024-07-01' }],
+      employmentType: 'Casual',
+    })
+    const model = runPayAnomalyDetector({ rows: [row] }, parsedCache)
+    expect(model.findings.some((item) => item.type === 'award-minimum')).toBe(false)
+    expect(model.findings.some((item) => item.type === 'casual-loading')).toBe(false)
+    expect(model.gate).toBe('clear')
+  })
+
   it('Layer 1 warns on a casual with no casual loading line', () => {
     const model = runPayAnomalyDetector({ rows: [payRow('Cass Ual', { employmentType: 'Casual' })] })
     const finding = model.findings.find((item) => item.type === 'casual-loading')
     expect(finding?.severity).toBe('Warning')
     expect(model.gate).toBe('clear-with-acknowledgements')
+  })
+
+  it('Layer 1 blocks a source-payroll reconciliation difference above two cents', () => {
+    const row = payRow('Source Difference', {
+      sourceComparison: {
+        available: true,
+        source: { ordinary: 500, overtime: 50, penalties: 25, allowances: 0 },
+        calculated: { ordinary: 500, overtime: 75, penalties: 25, allowances: 0 },
+        totalSource: 575,
+        totalCalculated: 600,
+        difference: 25,
+      },
+    })
+    const model = runPayAnomalyDetector({ rows: [row] })
+    const finding = model.findings.find((item) => item.type === 'source-reconciliation')
+    expect(finding?.severity).toBe('Block')
+    expect(finding?.evidence.difference).toBe(25)
+    expect(finding?.explanation).toMatch(/potential underpayment/)
+    expect(model.gate).toBe('blocked')
+  })
+
+  it('Layer 1 accepts source reconciliation within two cents', () => {
+    const row = payRow('Source Match', {
+      sourceComparison: {
+        available: true,
+        source: { ordinary: 600, overtime: 0, penalties: 0, allowances: 0 },
+        calculated: { ordinary: 600.02, overtime: 0, penalties: 0, allowances: 0 },
+        totalSource: 600,
+        totalCalculated: 600.02,
+        difference: 0.02,
+      },
+    })
+    expect(runPayAnomalyDetector({ rows: [row] }).gate).toBe('clear')
   })
 
   it('Layer 3 flags a cohort outlier beyond 25% of the median', () => {
@@ -197,6 +247,52 @@ describe('complianceRisk', () => {
     expect(scored.score).toBe(75)
     expect(scored.band).toBe('Moderate')
     expect(model.publishGate).toBe('clear')
+  })
+
+  it('uses MA000016 rest, work-period, and meal-break evidence rules', () => {
+    const worker = employee('Security Source', [
+      shift('2026-07-06', '06:00', '19:00', 13, { breakMinutes: 0, breakRecorded: false, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+      shift('2026-07-07', '04:00', '11:00', 7, { breakMinutes: 0, breakRecorded: false, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+    ])
+    const results = { rows: [payRow('Security Source', { awardCode: 'MA000016', employeeId: worker.employeeId, validationErrors: [] })] }
+    const model = buildComplianceRisk({ employees: [worker] }, results)
+    const [scored] = model.employees
+    expect(scored.breaches.some((item) => item.type === 'restPeriod')).toBe(false) // 9-hour gap exceeds the award's 8-hour minimum
+    expect(scored.breaches.some((item) => item.type === 'longShift')).toBe(false) // 13-hour work period is below the 14-hour maximum
+    expect(scored.breaches.some((item) => item.type === 'missingBreak')).toBe(false)
+    expect(scored.breaches.some((item) => item.type === 'payValidation')).toBe(false)
+    expect(scored.evidenceGaps).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'breakEvidence' }),
+    ]))
+    expect(model.evidenceGaps.length).toBeGreaterThan(0)
+  })
+
+  it('does not treat contiguous classification segments as separate shifts', () => {
+    const worker = employee('Segmented Security', [
+      shift('2026-07-06', '08:30', '09:00', 0.5, { breakRecorded: false, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+      shift('2026-07-06', '09:00', '16:30', 7.5, { breakRecorded: false, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+      shift('2026-07-06', '16:30', '17:30', 1, { breakRecorded: false, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+    ])
+    const results = { rows: [payRow('Segmented Security', { awardCode: 'MA000016', employeeId: worker.employeeId })] }
+    const compliance = buildComplianceRisk({ employees: [worker] }, results)
+    const fatigue = buildFatigueAssessments({ employees: [worker] })
+
+    expect(compliance.employees[0].breaches.some((item) => item.type === 'restPeriod')).toBe(false)
+    expect(fatigue.employees[0].signals.find((signal) => signal.key === 'shortTurnarounds').value).toBe(0)
+  })
+
+  it('flags an MA000016 turnaround below 8 hours and a work period above 14', () => {
+    const worker = employee('Security Breach', [
+      shift('2026-07-06', '06:00', '20:30', 14.5, { breakMinutes: 30, breakRecorded: true, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+      shift('2026-07-07', '03:00', '10:00', 7, { breakMinutes: 30, breakRecorded: true, sourceAwardCode: '(NSW) Security Services Industry Award' }),
+    ])
+    const results = { rows: [payRow('Security Breach', { awardCode: 'MA000016', employeeId: worker.employeeId, validationErrors: [] })] }
+    const model = buildComplianceRisk({ employees: [worker] }, results)
+    const types = model.employees[0].breaches.map((item) => item.type)
+    expect(types).toContain('restPeriod')
+    expect(types).toContain('longShift')
+    expect(model.breachSummary.find((item) => item.type === 'restPeriod')?.basis).toBe('minimum 8-hour break between shifts')
+    expect(model.publishGate).toBe('blocked')
   })
 
   it('escalates weekly hours over 48 and gates a critical employee', () => {

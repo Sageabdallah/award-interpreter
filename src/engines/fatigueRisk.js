@@ -15,6 +15,7 @@
 
 import { round2 } from '../domain/utils.js'
 import { addDaysToKey } from '../domain/analyticsSeries.js'
+import { buildWorkPeriods } from '../domain/workPeriods.js'
 import { REST_MINIMUM_HOURS } from './coverage.js'
 
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
@@ -90,6 +91,11 @@ function linearPoints(value, { floor, ceiling, points }) {
 
 function assessEmployee(employee) {
   const spans = shiftSpans(employee.shifts || [])
+  const minimumTurnaroundHours = spans.some((shift) =>
+    /security services industry award/i.test(shift.sourceAwardCode || '')
+    || /^Security Officer Level [1-5]$/i.test(shift.sourceClassification || ''))
+    ? 8
+    : MIN_TURNAROUND_HOURS
   const workedKeys = [...new Set(spans.map((span) => span.dateKey))].sort()
 
   // Peak rolling 7-calendar-day hours.
@@ -113,13 +119,14 @@ function assessEmployee(employee) {
   }
 
   // Turnarounds under the 10-hour rest minimum.
+  const workPeriods = buildWorkPeriods(employee.shifts || [])
   const shortTurnarounds = []
-  for (let index = 1; index < spans.length; index += 1) {
-    const gapHours = (spans[index].absStart - spans[index - 1].absEnd) / 60
-    if (gapHours >= 0 && gapHours < MIN_TURNAROUND_HOURS) {
+  for (let index = 1; index < workPeriods.length; index += 1) {
+    const gapHours = (workPeriods[index].start - workPeriods[index - 1].end) / 60
+    if (gapHours >= 0 && gapHours < minimumTurnaroundHours) {
       shortTurnarounds.push({
-        fromDate: spans[index - 1].dateKey,
-        toDate: spans[index].dateKey,
+        fromDate: workPeriods[index - 1].endShift.dateKey,
+        toDate: workPeriods[index].startShift.dateKey,
         gapHours: round2(gapHours),
       })
     }
@@ -151,10 +158,10 @@ function assessEmployee(employee) {
     },
     {
       key: 'shortTurnarounds',
-      label: 'Short turnarounds (<10 hrs)',
+      label: `Short turnarounds (<${minimumTurnaroundHours} hrs)`,
       value: shortTurnarounds.length,
       display: `${shortTurnarounds.length} occurrence${shortTurnarounds.length === 1 ? '' : 's'}`,
-      threshold: `${MIN_TURNAROUND_HOURS} hr rest minimum between shifts`,
+      threshold: `${minimumTurnaroundHours} hr rest minimum between shifts`,
       points: round2(Math.min(
         FATIGUE_THRESHOLDS.shortTurnarounds.points,
         shortTurnarounds.length * FATIGUE_THRESHOLDS.shortTurnarounds.perOccurrence,
@@ -178,7 +185,7 @@ function assessEmployee(employee) {
   const mitigations = []
   if (band === 'High' || band === 'Critical') {
     if (shortTurnarounds.length) {
-      mitigations.push(`Re-time or reassign a shift to restore the ${MIN_TURNAROUND_HOURS}-hour turnaround (${shortTurnarounds.length} breach${shortTurnarounds.length === 1 ? '' : 'es'} this period).`)
+      mitigations.push(`Re-time or reassign a shift to restore the ${minimumTurnaroundHours}-hour turnaround (${shortTurnarounds.length} breach${shortTurnarounds.length === 1 ? '' : 'es'} this period).`)
     }
     if (consecutiveDays > FATIGUE_THRESHOLDS.consecutiveDays.floor) {
       mitigations.push(`Insert a full rest day — currently ${consecutiveDays} consecutive worked days.`)

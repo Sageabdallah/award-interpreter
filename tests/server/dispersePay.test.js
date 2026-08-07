@@ -22,8 +22,8 @@ function fakeMailer({ failFor = [] } = {}) {
   }
 }
 
-function makeApp(mailer) {
-  return createApp({ anthropic: null, store: stubStore, embedQuery: null, modelId: 'test', library: stubLibrary, mailer })
+function makeApp(mailer, auditStore = null) {
+  return createApp({ anthropic: null, store: stubStore, embedQuery: null, modelId: 'test', library: stubLibrary, mailer, auditStore })
 }
 
 const ROWS = [
@@ -39,7 +39,7 @@ const ROWS = [
     employmentType: 'Casual', awardCode: 'MA000034', employeeLevel: 'Nursing assistant',
     totalHours: 16, basePay: 27.65, ordinaryPay: 442.4,
     items: [{ type: 'Casual loading', detail: '', amount: 55.3 }],
-    totalCalculatedPay: 663.6,
+    totalCalculatedPay: 497.7,
   },
 ]
 
@@ -103,9 +103,54 @@ describe('POST /api/disperse-pay', () => {
     expect(response.body.ok).toBe(false)
     expect(response.body.failed).toBe(1)
     const grace = response.body.sent.find((entry) => entry.employeeName === 'Grace Whitlam')
-    expect(grace).toMatchObject({ ok: false, error: 'mailbox unavailable' })
+    expect(grace).toMatchObject({ ok: false, error: 'Delivery failed.' })
     const sofia = response.body.sent.find((entry) => entry.employeeName === 'Sofia Marino')
     expect(sofia.ok).toBe(true)
+  })
+
+  it('blocks Security Award dispatch without a matching release-cleared audit', async () => {
+    const securityRow = { ...ROWS[0], awardCode: 'MA000016' }
+    const withoutAudit = await request(makeApp(fakeMailer())).post('/api/disperse-pay').send({ ...PAYLOAD, rows: [securityRow] })
+    expect(withoutAudit.status).toBe(409)
+    expect(withoutAudit.body.error).toMatch(/release-cleared pay run audit/i)
+
+    const auditStore = {
+      backend: 'stub-audit',
+      async get(id) {
+        if (id !== 'run-clear') return null
+        return {
+          kind: 'pay-run',
+          data: {
+            releaseGate: { status: 'clear' },
+            rows: [{ employeeId: securityRow.employeeId, awardCode: 'MA000016', totalCalculatedPay: securityRow.totalCalculatedPay }],
+          },
+        }
+      },
+      async save() { return { id: 'dispatch-audit' } },
+    }
+    const approved = await request(makeApp(fakeMailer(), auditStore)).post('/api/disperse-pay')
+      .send({ ...PAYLOAD, payRunAuditId: 'run-clear', rows: [securityRow] })
+    expect(approved.status).toBe(200)
+
+    const changed = await request(makeApp(fakeMailer(), auditStore)).post('/api/disperse-pay')
+      .send({ ...PAYLOAD, payRunAuditId: 'run-clear', rows: [{ ...securityRow, ordinaryPay: securityRow.ordinaryPay + 1, totalCalculatedPay: securityRow.totalCalculatedPay + 1 }] })
+    expect(changed.status).toBe(409)
+  })
+
+  it('returns a blocked Security Award preview through the unchanged frontend payload in dry-run mode', async () => {
+    const mailer = fakeMailer()
+    mailer.mode = 'dry-run'
+    const securityRow = { ...ROWS[0], awardCode: 'MA000016' }
+    const response = await request(makeApp(mailer)).post('/api/disperse-pay').send({ ...PAYLOAD, rows: [securityRow] })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toMatchObject({
+      ok: true,
+      mode: 'dry-run',
+      deliveryBlocked: true,
+      releaseGate: { status: 'blocked' },
+      sent: [{ ok: true, preview: true }],
+    })
   })
 
   it('health advertises the mail mode; route absent without a mailer', async () => {
@@ -122,7 +167,7 @@ describe('buildPayslipEmails', () => {
     const emails = buildPayslipEmails({ ...PAYLOAD, from: 'x@y.z' })
     expect(emails).toHaveLength(2)
     expect(emails[1].html).toContain('Casual loading')
-    expect(emails[1].html).toContain('$663.60')
+    expect(emails[1].html).toContain('$497.70')
     expect(emails[1].to).toBe('sage.abdallah@isoftanz.com.au')
   })
 })

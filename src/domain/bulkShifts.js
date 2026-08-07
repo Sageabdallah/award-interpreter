@@ -13,17 +13,17 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 export const TIMESHEET_COLUMNS = ['Employee ID', 'Name', 'Role', 'Employment Type', 'Date', 'Day', 'Start', 'Finish', 'Break Mins', 'Hours', 'Location', 'Notes']
 export const MAX_BULK_DAYS = 92 // a quarter — enough for any demo, blocks runaway ranges
 
-// Bulk adds respect the same rules the compliance engine scores against, so
-// assigning a template across the roster can never flood Compliance Risk:
-// no overlaps, the 10-hour rest window, and the 48-hour weekly cap.
-const REST_MINIMUM_HOURS = 10
+// Bulk adds prevent overlaps and apply award-aware rest and business-policy
+// limits. MA000016's 48-hour rule is evaluated over the roster cycle and its
+// long breaks, so it must not be reduced to a calendar-week hard cap here.
+const DEFAULT_REST_MINIMUM_HOURS = 10
 const WEEKLY_CAP_HOURS = 48
 
 export const BULK_SKIP_LABELS = {
   duplicate: 'duplicate slot',
   overlap: 'clashes with an existing shift',
-  rest: 'inside a 10-hour rest window',
-  weeklyCap: 'over the 48-hour weekly cap',
+  rest: 'inside the required rest window',
+  weeklyCap: 'over the configured weekly policy cap',
 }
 
 function toMinutes(hhmm) {
@@ -44,17 +44,17 @@ function shiftInterval(shift) {
 }
 
 /** Why this candidate can't sit alongside the existing shifts, or null. */
-function conflictReason(candidate, intervals, weekHours) {
+function conflictReason(candidate, intervals, weekHours, { restMinimumHours, applyWeeklyCap }) {
   const interval = shiftInterval(candidate)
   if (interval) {
     for (const [start, finish] of intervals) {
       if (interval[0] < finish && interval[1] > start) return 'overlap'
       const gap = interval[0] >= finish ? interval[0] - finish : start - interval[1]
-      if (gap < REST_MINIMUM_HOURS * 60) return 'rest'
+      if (gap < restMinimumHours * 60) return 'rest'
     }
   }
   const week = candidate.weekBucket || getWeekBucket(candidate.dateKey)
-  if ((weekHours.get(week) || 0) + candidate.hours > WEEKLY_CAP_HOURS) return 'weeklyCap'
+  if (applyWeeklyCap && (weekHours.get(week) || 0) + candidate.hours > WEEKLY_CAP_HOURS) return 'weeklyCap'
   return null
 }
 
@@ -126,6 +126,13 @@ export function appendShiftsToTimesheet(timesheetData, identity, shifts) {
     employees.push(target)
   }
 
+  const securityAward = String(identity.awardCode || '').toUpperCase() === 'MA000016'
+    || target.shifts.some((shift) => /security services industry award|MA000016/i.test(shift.sourceAwardCode || ''))
+  const constraints = {
+    restMinimumHours: securityAward ? 8 : DEFAULT_REST_MINIMUM_HOURS,
+    applyWeeklyCap: !securityAward,
+  }
+
   const taken = new Set(target.shifts.map((shift) => `${shift.dateKey}|${shift.start}`))
   const intervals = target.shifts.map(shiftInterval).filter(Boolean)
   const weekHours = new Map()
@@ -138,7 +145,7 @@ export function appendShiftsToTimesheet(timesheetData, identity, shifts) {
   const skippedReasons = {}
   for (const shift of shifts) {
     const slot = `${shift.dateKey}|${shift.start}`
-    const reason = taken.has(slot) ? 'duplicate' : conflictReason(shift, intervals, weekHours)
+    const reason = taken.has(slot) ? 'duplicate' : conflictReason(shift, intervals, weekHours, constraints)
     if (reason) {
       skippedReasons[reason] = (skippedReasons[reason] || 0) + 1
       continue

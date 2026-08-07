@@ -33,6 +33,21 @@ export function validDispersePayload(body) {
     if (!row || typeof row.employeeName !== 'string' || !row.employeeName.trim()) {
       return 'Every row needs an employeeName.'
     }
+    if (row.validationErrors?.length || (row.calculationStatus && row.calculationStatus !== 'resolved')) {
+      return `Refusing to dispatch unresolved pay row for ${row.employeeName}.`
+    }
+    const numericFields = ['totalHours', 'basePay', 'ordinaryPay', 'totalCalculatedPay']
+    if (numericFields.some((field) => !Number.isFinite(Number(row[field])) || Number(row[field]) < 0)) {
+      return `Pay row for ${row.employeeName} contains an invalid numeric amount.`
+    }
+    const items = Array.isArray(row.items) ? row.items : []
+    if (items.length > 100 || items.some((item) => !item || !Number.isFinite(Number(item.amount)) || Number(item.amount) < 0)) {
+      return `Pay row for ${row.employeeName} contains invalid pay items.`
+    }
+    const reconciled = Number(row.ordinaryPay) + items.reduce((sum, item) => sum + Number(item.amount), 0)
+    if (Math.abs(reconciled - Number(row.totalCalculatedPay)) > 0.02) {
+      return `Pay row for ${row.employeeName} does not reconcile ordinary pay, items, and total pay.`
+    }
   }
   return null
 }

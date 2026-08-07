@@ -1,350 +1,501 @@
-/* Security (NSW) live data pack generator.
+/* Build a privacy-safe, lossless MSS Security upload pack from iSOFT exports.
 
-   Converts the live operational exports in ISOFT_DATA_DIR (Award.xlsx,
-   Employee.xlsx, Nsw_Payroll 1.xlsx) into the app's upload set for the
-   seeded security industry library (MA000016): employee agreement register,
-   compliance review, timesheet CSV and leave requests.
-
-   Everything is written to data/live/ which is gitignored — the source
-   workbooks and every generated file contain live payroll data and must
-   never enter the repository. Employee names are pseudonymised
-   deterministically (real EmployeeIDs are kept as the join key); the
-   real-name/site mapping stays in data/live/pseudonym-map.json.
-
-   Scope: one pay fortnight (best-covered Monday-start 14-day window of
-   2024) for one area cohort under the Security Services Industry Award,
-   capped at MAX_EMPLOYEES by shift count.
-
-     node scripts/generateSecurityLivePack.mjs
-     ISOFT_DATA_DIR=/path AREA=Sydney node scripts/generateSecurityLivePack.mjs
+   Live source data and generated artifacts stay under data/live/ (gitignored).
+   The upload CSV is compatible with the existing frontend, while the private
+   JSON ledger retains every source payroll component and source row number.
 */
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { createHash } from 'node:crypto'
+import * as fs from 'node:fs'
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import XLSX from 'xlsx'
 import { buildParsedCacheFromTexts } from '../src/domain/cacheBuilder.js'
-import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
+import { importMssSecurityData } from '../src/domain/importers/mssSecurity.js'
 import { calculateTimesheetResults } from '../src/domain/payCalculator.js'
+import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
+import { buildComplianceRisk } from '../src/engines/complianceRisk.js'
+import { runPayAnomalyDetector } from '../src/engines/payAnomaly.js'
+
+XLSX.set_fs(fs)
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const DATA_DIR = process.env.ISOFT_DATA_DIR || '/Users/sageabdallah/Desktop/isoft_data'
-const OUT_DIR = join(ROOT, 'data', 'live')
+const OUT_DIR = process.env.LIVE_OUT_DIR || join(ROOT, 'data', 'live')
 const AREA = process.env.AREA || 'Sydney'
-const MAX_EMPLOYEES = Number(process.env.MAX_EMPLOYEES || 150)
+const MAX_EMPLOYEES = process.env.MAX_EMPLOYEES
+  ? Number(process.env.MAX_EMPLOYEES)
+  : Number.MAX_SAFE_INTEGER
+const PAY_PERIOD_START = String(process.env.PAY_PERIOD_START || '').trim()
+const LEGAL_EMPLOYER = String(process.env.LEGAL_EMPLOYER || '').trim()
+const BUSINESS = LEGAL_EMPLOYER || `MSS Security source payroll export (${AREA})`
+const SOURCE_FILES = ['Award.xlsx', 'Employee.xlsx', 'Nsw_Payroll 1.xlsx', 'Projected_roster.xlsx']
 
-const AWARD_CODE = 'MA000016'
-const AWARD_RE = /security services industry award/i
-const BUSINESS = 'iSOFT Security Services (NSW)'
-const HEADERS = ['Employee ID', 'Name', 'Role', 'Employment Type', 'Date', 'Day',
-  'Start', 'Finish', 'Break Mins', 'Hours', 'Location', 'Notes']
-const DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-const excelDate = (serial) => new Date(Date.UTC(1899, 11, 30) + serial * 86400000)
-const dmy = (d) => `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`
-const hhmm = (n) => `${String(Math.floor(Number(n) / 100)).padStart(2, '0')}:${String(Number(n) % 100).padStart(2, '0')}`
-const round2 = (n) => Math.round(n * 100) / 100
-
-/* ── load the seeded MA000016 library (level names must be verbatim) ── */
-const LIBRARY_DIR = join(ROOT, 'src', 'domain', 'awardLibrary', 'security')
-const preloadedAwards = readdirSync(LIBRARY_DIR)
-  .filter((file) => file.endsWith('.json'))
-  .map((file) => ({ parsedAward: JSON.parse(readFileSync(join(LIBRARY_DIR, file), 'utf8')).parsedAward, industry: 'security' }))
-const seededLevels = preloadedAwards
-  .find((a) => a.parsedAward.awardCode === AWARD_CODE).parsedAward.levels
-  .slice()
-  .sort((a, b) => a.basePayRateHourly - b.basePayRateHourly)
-
-/* ── Award.xlsx: the MA000016-NSW rate ladder (one step per level) ── */
-const awardWb = XLSX.readFile(join(DATA_DIR, 'Award.xlsx'))
-const rateSteps = [...new Set(
-  XLSX.utils.sheet_to_json(awardWb.Sheets['Sheet1'])
-    .filter((r) => String(r.AwardCode).trim() === 'MA000016-NSW')
-    .map((r) => round2(Number(r.Rate))),
-)].sort((a, b) => a - b)
-if (rateSteps.length !== seededLevels.length) {
-  console.error(`ABORTING: Award.xlsx has ${rateSteps.length} MA000016-NSW rate steps but the seeded library has ${seededLevels.length} levels — the ladder no longer maps 1:1.`)
-  process.exit(1)
-}
-console.log('Rate ladder (Award.xlsx step → seeded level):')
-rateSteps.forEach((rate, i) => console.log(`  $${rate.toFixed(2)} → ${seededLevels[i].employeeLevel}`))
-
-/* ── Employee.xlsx: employment type per EmployeeId ── */
-const empWb = XLSX.readFile(join(DATA_DIR, 'Employee.xlsx'))
-const EMP_TYPE = { fulltime: 'Full-time', 'full time': 'Full-time', casual: 'Casual', parttime: 'Part-time', 'part time': 'Part-time' }
-const masterById = new Map()
-for (const r of XLSX.utils.sheet_to_json(empWb.Sheets['Employee'])) {
-  masterById.set(Number(r.EmployeeId), EMP_TYPE[String(r.EmployeeType || '').trim().toLowerCase()] || 'Full-time')
+function loadRows(file, sheetName) {
+  const workbook = XLSX.readFile(join(DATA_DIR, file), { dense: true })
+  const selectedSheet = sheetName || workbook.SheetNames[0]
+  return XLSX.utils.sheet_to_json(workbook.Sheets[selectedSheet], { defval: null })
+    .map((row, index) => ({ ...row, _sourceRowNumber: index + 2 }))
 }
 
-/* ── Nsw_Payroll: the area's MA000016 rows for calendar 2024 ── */
-console.log(`\nReading Nsw_Payroll 1.xlsx (large file)…`)
-const payWb = XLSX.readFile(join(DATA_DIR, 'Nsw_Payroll 1.xlsx'), { dense: true })
-const payroll = XLSX.utils.sheet_to_json(payWb.Sheets[payWb.SheetNames[0]])
-  .filter((r) => AWARD_RE.test(String(r.AwardCode)) && String(r.Area).trim() === AREA)
-console.log(`${payroll.length} pay lines for area "${AREA}" under the Security Services Industry Award`)
-if (!payroll.length) { console.error('ABORTING: no payroll rows matched.'); process.exit(1) }
-
-const isWorked = (r) => r.EarningType === 'Ordinary' || r.EarningType === 'Overtime'
-
-/* ── pick the fortnight: best-covered Monday-start 14-day window ── */
-let minSerial = Infinity
-let maxSerial = -Infinity
-for (const r of payroll) {
-  const serial = Number(r.ShiftDate)
-  if (!Number.isFinite(serial)) continue
-  if (serial < minSerial) minSerial = serial
-  if (serial > maxSerial) maxSerial = serial
-}
-let firstMonday = minSerial
-while (excelDate(firstMonday).getUTCDay() !== 1) firstMonday += 1
-const windows = []
-for (let start = firstMonday; start + 13 <= maxSerial; start += 7) {
-  const inWindow = payroll.filter((r) => r.ShiftDate >= start && r.ShiftDate < start + 14)
-  const workers = new Set(inWindow.filter(isWorked).map((r) => r.EmployeeID))
-  const complete = inWindow.filter((r) => Number.isFinite(Number(r.ShiftStartTime)) && Number.isFinite(Number(r.ShiftFinishTime)) && Number.isFinite(Number(r.Hours)))
-  windows.push({ start, workers: workers.size, completeness: inWindow.length ? complete.length / inWindow.length : 0 })
-}
-windows.sort((a, b) => b.workers * b.completeness - a.workers * a.completeness)
-console.log('\nTop fortnight candidates:')
-windows.slice(0, 3).forEach((w) => console.log(`  ${dmy(excelDate(w.start))} – ${dmy(excelDate(w.start + 13))}: ${w.workers} employees, ${(w.completeness * 100).toFixed(1)}% complete rows`))
-const WIN = windows[0]
-const winRows = payroll.filter((r) => r.ShiftDate >= WIN.start && r.ShiftDate < WIN.start + 14)
-const PERIOD = `${dmy(excelDate(WIN.start))} - ${dmy(excelDate(WIN.start + 13))}`
-
-/* ── cohort: top MAX_EMPLOYEES by worked-shift count in the window ── */
-const shiftKeysByEmp = new Map()
-for (const r of winRows.filter(isWorked)) {
-  const k = `${r.ShiftDate}|${r.ShiftID}`
-  if (!shiftKeysByEmp.has(r.EmployeeID)) shiftKeysByEmp.set(r.EmployeeID, new Set())
-  shiftKeysByEmp.get(r.EmployeeID).add(k)
-}
-const cohort = new Set([...shiftKeysByEmp.entries()]
-  .sort((a, b) => b[1].size - a[1].size)
-  .slice(0, MAX_EMPLOYEES)
-  .map(([id]) => id))
-console.log(`\nCohort: ${cohort.size} employees (of ${shiftKeysByEmp.size} active in the window, cap ${MAX_EMPLOYEES})`)
-
-/* ── deterministic pseudonyms (seeded by EmployeeID) ── */
-const FIRST = ['Aaron', 'Amira', 'Andre', 'Bianca', 'Blake', 'Carlos', 'Chloe', 'Daniel', 'Dana', 'Elena', 'Ethan', 'Farid', 'Gina', 'Harper', 'Hassan', 'Imogen', 'Ivan', 'Jade', 'Jamal', 'Kara', 'Kyle', 'Layla', 'Liam', 'Mia', 'Marcus', 'Nadia', 'Noah', 'Olive', 'Omar', 'Priya', 'Quinn', 'Rosa', 'Ryan', 'Sana', 'Theo', 'Uma', 'Victor', 'Wren', 'Yusuf', 'Zara']
-const LAST = ['Abbott', 'Barnes', 'Calder', 'Dawson', 'Ellis', 'Farrell', 'Grant', 'Hale', 'Ibrahim', 'Jansen', 'Keller', 'Lawson', 'Mercer', 'Nolan', 'Okafor', 'Petrov', 'Quigley', 'Reyes', 'Slater', 'Tran', 'Underwood', 'Vaughan', 'Walsh', 'Xu', 'Yates', 'Zhou', 'Ashford', 'Boyd', 'Costa', 'Drummond', 'Eaton', 'Ferraro', 'Gill', 'Howell', 'Inglis', 'Joyce', 'Kaur', 'Larsen', 'Moreau', 'Nash']
-function mulberry32(seed) {
-  return () => {
-    seed |= 0; seed = (seed + 0x6D2B79F5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+function sourceFingerprint() {
+  const hash = createHash('sha256')
+  for (const file of SOURCE_FILES) {
+    hash.update(file)
+    hash.update(readFileSync(join(DATA_DIR, file)))
   }
-}
-const usedNames = new Set()
-function pseudonym(id) {
-  const rand = mulberry32(Number(id))
-  for (let attempt = 0; attempt < 50; attempt += 1) {
-    const name = `${FIRST[Math.floor(rand() * FIRST.length)]} ${LAST[Math.floor(rand() * LAST.length)]}`
-    if (!usedNames.has(name)) { usedNames.add(name); return name }
-  }
-  const fallback = `Employee ${id}`
-  usedNames.add(fallback)
-  return fallback
+  return hash.digest('hex')
 }
 
-/* ── per-employee profile: dominant ordinary rate → level (nearest step) ── */
-const ROLE_BY_INDEX = ['Security Officer', 'Security Officer', 'Security Officer', 'Senior Security Officer', 'Security Supervisor']
-const employees = new Map()
-const mappingReport = [['EmployeeID', 'DominantOrdinaryRate', 'MatchedStep', 'StepDistance', 'AssignedLevel', 'Method', 'EmploymentType', 'PayrollClassifications']]
-for (const id of cohort) {
-  const empRows = winRows.filter((r) => r.EmployeeID === id)
-  const rateHours = new Map()
-  for (const r of empRows.filter((r) => r.EarningType === 'Ordinary')) {
-    const rate = round2(Number(r.Rate))
-    rateHours.set(rate, (rateHours.get(rate) || 0) + Number(r.Hours || 0))
-  }
-  const classifications = [...new Set(empRows.map((r) => String(r.AwardClassificationCode || '').trim()).filter(Boolean))]
-  let levelIndex
-  let method
-  let dominantRate = null
-  let distance = null
-  if (rateHours.size) {
-    dominantRate = [...rateHours.entries()].sort((a, b) => b[1] - a[1])[0][0]
-    // Nearest ladder step; the payroll year straddles a July rate increase, so
-    // exact equality with the Award.xlsx snapshot cannot be assumed.
-    levelIndex = rateSteps.reduce((best, step, i) => (Math.abs(step - dominantRate) < Math.abs(rateSteps[best] - dominantRate) ? i : best), 0)
-    distance = round2(Math.abs(rateSteps[levelIndex] - dominantRate))
-    method = 'rate'
-    if (distance > 0.6) method = 'rate (weak match)'
-  } else {
-    const text = classifications.join(' ').toLowerCase()
-    levelIndex = /manager|supervisor/.test(text) ? 4 : /leader/.test(text) ? 3 : /senior/.test(text) ? 2 : 0
-    method = 'keyword'
-    dominantRate = rateSteps[levelIndex]
-  }
-  const hasCasualLoading = empRows.some((r) => /casual loading/i.test(String(r.EarningCode)))
-  const employmentType = hasCasualLoading ? 'Casual' : (masterById.get(Number(id)) || 'Full-time')
-  const level = seededLevels[levelIndex]
-  employees.set(id, {
-    id,
-    name: pseudonym(id),
-    level: level.employeeLevel,
-    levelIndex,
-    role: ROLE_BY_INDEX[levelIndex] || 'Security Officer',
-    rate: dominantRate,
-    stepRate: rateSteps[levelIndex],
-    employmentType,
-    classifications,
-  })
-  mappingReport.push([id, dominantRate, rateSteps[levelIndex], distance ?? '', level.employeeLevel, method, employmentType, classifications.join('; ')])
+const SOURCE_FINGERPRINT = sourceFingerprint()
+
+function csvCell(value) {
+  const string = String(value ?? '')
+  return /[",\n\r]/.test(string) ? `"${string.replace(/"/g, '""')}"` : string
 }
 
-/* ── collapse pay lines → one timesheet row per worked shift ── */
-const groups = new Map()
-for (const r of winRows) {
-  if (!cohort.has(r.EmployeeID)) continue
-  const key = `${r.EmployeeID}|${r.ShiftDate}|${r.ShiftID}`
-  if (!groups.has(key)) groups.set(key, [])
-  groups.get(key).push(r)
+function toCsv(rows) {
+  return rows.map((row) => row.map(csvCell).join(',')).join('\r\n')
 }
-const shifts = []
-const leaveByEmp = new Map()
-for (const group of groups.values()) {
-  const worked = group.filter(isWorked)
-  const emp = employees.get(group[0].EmployeeID)
-  const date = excelDate(Number(group[0].ShiftDate))
-  if (!worked.length) {
-    const leaveRow = group.find((r) => r.EarningType === 'Leave' && /ANNUAL|PERSONAL/i.test(String(r.EarningCode)))
-    if (leaveRow) {
-      const type = /ANNUAL/i.test(String(leaveRow.EarningCode)) ? 'Annual' : 'Personal'
-      if (!leaveByEmp.has(emp.id)) leaveByEmp.set(emp.id, [])
-      leaveByEmp.get(emp.id).push({ serial: Number(group[0].ShiftDate), type })
-    }
-    continue
-  }
-  const start = Number(worked[0].ShiftStartTime)
-  const finish = Number(worked[0].ShiftFinishTime)
-  if (!Number.isFinite(start) || !Number.isFinite(finish)) continue
-  const hours = round2(worked.reduce((sum, r) => sum + Number(r.Hours || 0), 0))
-  if (!hours) continue
-  let spanMins = (Math.floor(finish / 100) * 60 + (finish % 100)) - (Math.floor(start / 100) * 60 + (start % 100))
-  if (spanMins <= 0) spanMins += 24 * 60
-  const breakMins = Math.max(0, Math.round(spanMins - hours * 60))
-  const isPublicHoliday = group.some((r) => /P\/HOL|PUBLIC HOL/i.test(String(r.EarningCode)))
-  shifts.push({
-    empId: emp.id,
-    name: emp.name,
-    role: emp.role,
-    employmentType: emp.employmentType,
-    serial: Number(group[0].ShiftDate),
-    dateStr: dmy(date),
-    day: DOW[date.getUTCDay()],
-    start: hhmm(start),
-    finish: hhmm(finish),
-    breakMins,
-    hours,
-    notes: isPublicHoliday ? 'Public holiday' : '',
-  })
-}
-shifts.sort((a, b) => a.empId - b.empId || a.serial - b.serial || (a.start < b.start ? -1 : 1))
-console.log(`Timesheet: ${shifts.length} shifts, ${round2(shifts.reduce((s, x) => s + x.hours, 0))} worked hours`)
 
-/* ── documents in the app's block grammar ── */
-const sortedEmployees = [...employees.values()].sort((a, b) => a.id - b.id)
-const agreementText = `AXI-WFM EMPLOYEE AGREEMENT REGISTER
+function dmy(dateKey) {
+  const [year, month, day] = String(dateKey).split('-')
+  return year && month && day ? `${day}/${month}/${year}` : ''
+}
+
+function excelSerialForDateKey(dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return undefined
+  const time = Date.parse(`${dateKey}T00:00:00Z`)
+  return Number.isFinite(time) ? Math.round((time - Date.UTC(1899, 11, 30)) / 86400000) : undefined
+}
+
+function agreementBlock(profile) {
+  return [
+    `Employee: ${profile.employeeName}`,
+    `Employee ID: ${profile.employeeId}`,
+    'Award Code: MA000016',
+    'Instrument Type: modern-award',
+    'Instrument Code: MA000016',
+    ...(LEGAL_EMPLOYER ? [`Legal Employer: ${LEGAL_EMPLOYER}`] : []),
+    'Industry: security-services',
+    `Employee Level: ${profile.employeeLevel}`,
+    `Job Role: ${profile.jobRole}`,
+    `Employment Type: ${profile.employmentType}`,
+    ...(profile.employmentStart ? [`Employment Start: ${profile.employmentStart}`] : []),
+    `Area: ${profile.area}`,
+    `PHL Area: ${profile.phlArea}`,
+    `Employee Rank: ${profile.employeeRank}`,
+    `Time Rotation: ${profile.timeRotation}`,
+    `Seven Day Worker: ${profile.sevenDayWorker ? 'yes' : 'no'}`,
+    `Payroll Batch Code: ${profile.payrollBatchCode}`,
+    `Source Award Code: ${profile.sourceAwardCode}`,
+    `Override Post Award: ${profile.overridePostAward ? 'yes' : 'no'}`,
+    'Source Rate Only: yes',
+    `Classification Basis: ${profile.classificationBasis}`,
+    ...(Object.entries(profile.sourceNonShiftPayroll || {})
+      .filter(([, amount]) => Number(amount) !== 0)
+      .map(([component, amount]) => `Source Non-Shift ${component === 'penalties' ? 'Penalty' : component === 'allowances' ? 'Allowance' : component[0].toUpperCase() + component.slice(1)} Amount: $${Number(amount).toFixed(2)}`)),
+    ...(profile.agreementBasePayRate != null ? [`Base Pay Rate: $${profile.agreementBasePayRate.toFixed(2)}/hr`] : []),
+  ].join('\n')
+}
+
+function buildAgreementText(imported) {
+  return `AXI-WFM EMPLOYEE INDUSTRIAL-INSTRUMENT REGISTER
 ${BUSINESS}
-Pay period ${PERIOD} — security industry award library (preloaded), rates as paid in the source payroll
+Pay period ${imported.meta.payPeriod}
+Source classification and base rate are retained from the payroll export. No enterprise agreement, 12-hour agreement, part-time pattern, or allowance eligibility has been invented.
 
-${sortedEmployees.map((e) => `Employee: ${e.name}
-Employee ID: ${e.id}
-Award Code: ${AWARD_CODE}
-Employee Level: ${e.level}
-Job Role: ${e.role}
-Base Pay Rate: $${Number(e.rate).toFixed(2)}/hr`).join('\n\n')}
+${imported.profiles.map(agreementBlock).join('\n\n')}
 `
+}
 
-const overAward = sortedEmployees.filter((e) => e.rate > e.stepRate + 0.05)
-const casuals = sortedEmployees.filter((e) => e.employmentType === 'Casual')
-const currentMinimums = seededLevels.map((l) => `${l.employeeLevel} $${l.basePayRateHourly.toFixed(2)}/hr`).join(', ')
-const complianceText = `AXI-WFM COMPLIANCE REVIEW
-${BUSINESS} — payroll data review, pay period ${PERIOD}
+function buildComplianceText(imported) {
+  const levelBlocks = [...new Set(imported.profiles.map((profile) => profile.employeeLevel))].sort().map((level) => `Award Code: MA000016
+Employee Level: ${level}
+Note: Source payroll components are retained separately from calculated legal entitlements. The export has no break positions, legal employer/site contract, full roster-cycle agreement, 12-hour agreement, or allowance nomination roster; calculation fails closed where any missing fact changes pay.`)
+  const partTimeBlocks = imported.profiles.filter((profile) => profile.employmentType === 'Part-time').map((profile) => `Employee: ${profile.employeeName}
+Employee ID: ${profile.employeeId}
+Award Code: MA000016
+Employee Level: ${profile.employeeLevel}
+Note: Employee.xlsx records part-time employment but does not contain the written agreed weekly and per-shift ordinary-hours pattern required for deterministic overtime calculation.`)
+  const classificationBlocks = imported.profiles.filter((profile) => profile.sourceClassifications.length > 1).map((profile) => `Employee: ${profile.employeeName}
+Employee ID: ${profile.employeeId}
+Award Code: MA000016
+Employee Level: ${profile.employeeLevel}
+Note: Multiple payroll classifications occur in the period (${profile.sourceClassifications.join(', ')}). Shift-level source classification is retained and takes precedence for each calculation.`)
+  return `AXI-WFM SOURCE EVIDENCE REVIEW
+${BUSINESS} - ${imported.meta.payPeriod}
 
-Award Code: ${AWARD_CODE}
-Employee Level: ${seededLevels[0].employeeLevel}
-Note: Agreement rates in this register are the rates actually paid in the source payroll period. The preloaded award library carries the current FWC minimum rates (${currentMinimums}); differences appear as agreement-rate overrides and should be reviewed against the pay period's applicable award version.
-${seededLevels.map((l) => `
-Award Code: ${AWARD_CODE}
-Employee Level: ${l.employeeLevel}
-Note: Timesheets show 0 break minutes on every shift. This does not mean officers work without breaks: under this award rest breaks are paid and count as time worked (cl. 14.2), so they never appear as a gap in paid hours. What the data does show is that no unpaid 30-minute meal break is recorded (cl. 14.3) — permitted where a break is operationally impracticable, as is common for security posts that cannot be left unattended. Each "missing meal break" finding marks a shift where that basis should be evidenced.`).join('\n')}
-${overAward.map((e) => `
-Employee: ${e.name}
-Employee ID: ${e.id}
-Award Code: ${AWARD_CODE}
-Employee Level: ${e.level}
-Note: Paid rate $${e.rate.toFixed(2)}/hr sits above the internal ${e.level} step of $${e.stepRate.toFixed(2)}/hr. Confirm the over-award arrangement is documented.
-Expected Base Pay Rate: $${e.stepRate.toFixed(2)}/hr`).join('\n')}
-${casuals.slice(0, 5).map((e) => `
-Employee: ${e.name}
-Employee ID: ${e.id}
-Award Code: ${AWARD_CODE}
-Employee Level: ${e.level}
-Note: Casual engagement — verify the 25% casual loading is itemised separately on payslips (cl. 11.2).`).join('\n')}
+${[...levelBlocks, ...partTimeBlocks, ...classificationBlocks].join('\n\n')}
 `
+}
 
-/* ── timesheet + leave rows ── */
-const sheetRows = [
-  ['Pay Period', PERIOD],
-  ['Business', BUSINESS],
-  ['Generated', dmy(new Date())],
-  [],
-  HEADERS,
-  ...shifts.map((s) => [s.empId, s.name, s.role, s.employmentType, s.dateStr, s.day, s.start, s.finish, s.breakMins, s.hours, AREA, s.notes]),
+const TIMESHEET_HEADERS = [
+  'Employee ID', 'Name', 'Role', 'Employment Type', 'Date', 'Day', 'Start', 'Finish',
+  'Break Mins', 'Break Recorded', 'Break Start', 'Unallocated Span Minutes', 'Hours', 'Location', 'Notes',
+  'Public Holiday Date', 'Public Holiday Dates', 'Public Holiday Basis', 'Broken Shift', 'Aviation Security', 'Meal Allowance Eligible',
+  'Shift ID', 'Source Award Code', 'Source Classification', 'Source Classification Raw', 'Source Shift Definition',
+  'Source Ordinary Base Rate', 'Source Ordinary Hours', 'Source Overtime Hours', 'Source Ordinary Amount', 'Source Overtime Amount',
+  'Source Penalty Amount', 'Source Allowance Amount', 'Source Import Warnings', 'Source Components JSON',
+  'Source First Aid Paid', 'Source Relieving Officer Paid', 'Source Permanent Night Paid',
+  'Source Aviation Allowance Paid', 'Source Meal Allowance Paid',
 ]
-const csvEsc = (value) => {
-  const str = String(value ?? '')
-  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
-}
-const csv = sheetRows.map((row) => row.map(csvEsc).join(',')).join('\r\n')
 
-const LEAVE_HEADERS = ['Employee ID', 'Name', 'Leave Type', 'Start Date', 'End Date', 'Notes']
-const leaveRows = []
-for (const [id, days] of leaveByEmp.entries()) {
-  const emp = employees.get(id)
-  days.sort((a, b) => a.serial - b.serial)
-  let run = null
-  const flush = () => { if (run) leaveRows.push([id, emp.name, run.type, dmy(excelDate(run.from)), dmy(excelDate(run.to)), 'From source payroll']) }
-  for (const day of days) {
-    if (run && day.type === run.type && day.serial === run.to + 1) run.to = day.serial
-    else { flush(); run = { type: day.type, from: day.serial, to: day.serial } }
-  }
-  flush()
+function timesheetRow(shift) {
+  return [
+    shift.employeeId, shift.employeeName, shift.jobRole, shift.employmentType, shift.date, shift.day,
+    shift.start, shift.finish, shift.breakMinutes, shift.breakRecorded ? 'yes' : 'no', shift.breakStart,
+    shift.unallocatedSpanMinutes, shift.hours, shift.location, shift.notes, shift.publicHolidayDate,
+    shift.publicHolidayDates.join(' | '), shift.publicHolidayBasis,
+    shift.brokenShift == null ? '' : shift.brokenShift ? 'yes' : 'no',
+    shift.aviationSecurity == null ? '' : shift.aviationSecurity ? 'yes' : 'no',
+    shift.mealAllowanceEligible == null ? '' : shift.mealAllowanceEligible ? 'yes' : 'no',
+    shift.sourceShiftId, shift.sourceAwardCode, shift.sourceClassification, shift.sourceClassificationRaw,
+    shift.sourceShiftDefinition, shift.sourceOrdinaryBaseRate, shift.sourceOrdinaryHours, shift.sourceOvertimeHours,
+    shift.sourceOrdinaryAmount, shift.sourceOvertimeAmount, shift.sourcePenaltyAmount, shift.sourceAllowanceAmount,
+    shift.sourceImportWarnings.join(' | '), JSON.stringify(shift.sourceComponents),
+    shift.sourceFirstAidPaid ? 'yes' : '', shift.sourceRelievingOfficerPaid ? 'yes' : '',
+    shift.sourcePermanentNightPaid ? 'yes' : '', shift.sourceAviationAllowancePaid ? 'yes' : '',
+    shift.sourceMealAllowancePaid ? 'yes' : '',
+  ]
 }
-const leaveCsv = [LEAVE_HEADERS, ...leaveRows].map((row) => row.map(csvEsc).join(',')).join('\r\n')
 
-/* ── self-verify with the real cache builder + calculator before writing ── */
-const verifyCache = await buildParsedCacheFromTexts(
-  { complianceText, agreementText },
-  { cacheFingerprint: 'security-live-pack-verify', industry: 'security', preloadedAwards },
-)
-const verifyTimesheet = parseTimesheetRows(sheetRows, 'timesheet-security-nsw.csv')
-const results = calculateTimesheetResults(verifyCache, verifyTimesheet)
-const rows = results.rows || results
-const unmatched = rows.filter((r) => (r.validationErrors || []).length || !r.awardCode)
-if (unmatched.length) {
-  console.error(`ABORTING: ${unmatched.length}/${rows.length} employees failed matching or validation:`)
-  unmatched.slice(0, 5).forEach((r) => console.error(`  ${r.employeeName || r.employeeId}: ${(r.validationErrors || ['no award code']).join('; ')}`))
+function buildTimesheetRows(imported) {
+  return [
+    ['Pay Period', imported.meta.payPeriod],
+    ['Business', BUSINESS],
+    ['Source Schema', imported.schemaVersion],
+    ['Source Fingerprint', SOURCE_FINGERPRINT],
+    [],
+    TIMESHEET_HEADERS,
+    ...imported.shifts.map(timesheetRow),
+  ]
+}
+
+function buildLeaveRows(imported) {
+  const headers = ['Employee ID', 'Name', 'Leave Type', 'Start Date', 'End Date', 'Notes']
+  return [headers, ...imported.leaveRequests.map((request) => [
+    request.employeeId,
+    request.employeeName,
+    request.leaveType,
+    dmy(request.startDate),
+    dmy(request.endDate),
+    'From source payroll component ledger',
+  ])]
+}
+
+function buildClassificationRows(imported) {
+  return [
+    ['Employee ID', 'Pseudonym', 'Assigned Level', 'Source Classifications', 'Classification Basis', 'Employment Type', 'Base Rate', 'Master Award Code', 'Area', 'Employee Rank', 'Time Rotation'],
+    ...imported.profiles.map((profile) => [
+      profile.employeeId, profile.employeeName, profile.employeeLevel, profile.sourceClassifications.join('; '),
+      profile.classificationBasis, profile.employmentType, profile.agreementBasePayRate,
+      profile.sourceAwardCode, profile.area, profile.employeeRank, profile.timeRotation,
+    ]),
+  ]
+}
+
+function buildCoverageRows(imported) {
+  return [
+    ['Source Instrument', 'Normalized Instrument', 'Type', 'Support Status', 'Rows', 'Employees', 'First Date', 'Last Date', 'Areas', 'Required Evidence'],
+    ...imported.coverageInventory.map((entry) => [
+      entry.sourceCode, entry.normalizedInstrumentCode, entry.instrumentType, entry.supportStatus,
+      entry.rowCount, entry.employeeCount, entry.firstShiftDate, entry.lastShiftDate,
+      entry.areas.join('; '), entry.requiredEvidence.join('; '),
+    ]),
+  ]
+}
+
+console.log('Reading source workbooks...')
+const awardRows = loadRows('Award.xlsx', 'Sheet1')
+const employeeRows = loadRows('Employee.xlsx', 'Employee')
+const payrollRows = loadRows('Nsw_Payroll 1.xlsx', 'Nsw_Payroll')
+const projectedRosterRows = loadRows('Projected_roster.xlsx', 'Projected Roster')
+
+const windowStartSerial = PAY_PERIOD_START ? excelSerialForDateKey(PAY_PERIOD_START) : undefined
+if (PAY_PERIOD_START && windowStartSerial == null) {
+  console.error('PAY_PERIOD_START must use YYYY-MM-DD format.')
   process.exit(1)
 }
-console.log(`Verification: all ${rows.length} employees matched to ${AWARD_CODE} levels and calculated cleanly`)
+const imported = importMssSecurityData({ awardRows, employeeRows, payrollRows, area: AREA, maxEmployees: MAX_EMPLOYEES, windowStartSerial })
+if (imported.errors.length) {
+  console.error(`Import failed with ${imported.errors.length} blocking error(s):`)
+  imported.errors.slice(0, 20).forEach((error) => console.error(`  - ${error}`))
+  process.exit(1)
+}
 
-/* ── write everything (data/live/ is gitignored) ── */
+function publicId(prefix, value) {
+  return `${prefix}-${createHash('sha256').update(`axi-mss-public/v1/${value}`).digest('hex').slice(0, 10).toUpperCase()}`
+}
+
+const publicEmployeeIds = new Map(imported.profiles.map((profile) => [
+  String(profile.employeeId),
+  publicId('MSS', profile.employeeId),
+]))
+const publicShiftId = (value) => String(value || '').split('|').filter(Boolean)
+  .map((id) => publicId('SHIFT', id)).join('|')
+const publicComponent = (component) => ({
+  ...component,
+  sourceRow: undefined,
+  EmployeeID: publicEmployeeIds.get(String(component.EmployeeID)) || publicId('MSS', component.EmployeeID),
+  ShiftID: publicShiftId(component.ShiftID),
+})
+const publicImported = {
+  ...imported,
+  profiles: imported.profiles.map((profile) => ({
+    ...profile,
+    employeeId: publicEmployeeIds.get(String(profile.employeeId)),
+    sourceMaster: undefined,
+    sourceNonShiftComponents: (profile.sourceNonShiftComponents || []).map(publicComponent),
+  })),
+  shifts: imported.shifts.map((shift) => ({
+    ...shift,
+    employeeId: publicEmployeeIds.get(String(shift.employeeId)),
+    sourceShiftId: publicShiftId(shift.sourceShiftId),
+    sourceShiftIds: (shift.sourceShiftIds || []).map(publicShiftId),
+    sourceComponents: (shift.sourceComponents || []).map(publicComponent),
+  })),
+  leaveRequests: imported.leaveRequests.map((request) => ({
+    ...request,
+    employeeId: publicEmployeeIds.get(String(request.employeeId)),
+    sourceComponents: (request.sourceComponents || []).map(publicComponent),
+  })),
+}
+function sanitizePublicMessage(message) {
+  let sanitized = String(message || '').replace(/Shift\s+[\d.|]+:/g, 'Source shift [redacted]:')
+  for (const [rawId, demoId] of publicEmployeeIds) {
+    sanitized = sanitized.replace(new RegExp(`\\b${rawId}\\b`, 'g'), demoId)
+  }
+  return sanitized
+}
+
+const agreementText = buildAgreementText(publicImported)
+const complianceText = buildComplianceText(publicImported)
+const timesheetRows = buildTimesheetRows(publicImported)
+const timesheetCsv = toCsv(timesheetRows)
+const uploadWorkbook = XLSX.read(timesheetCsv, { type: 'string' })
+const uploadSheet = uploadWorkbook.Sheets[uploadWorkbook.SheetNames[0]]
+const serializedTimesheetRows = XLSX.utils.sheet_to_json(uploadSheet, {
+  header: 1,
+  raw: false,
+  defval: '',
+  blankrows: false,
+})
+
+const libraryDir = join(ROOT, 'src', 'domain', 'awardLibrary', 'security')
+const preloadedAwards = readdirSync(libraryDir)
+  .filter((file) => file.endsWith('.json'))
+  .map((file) => ({ parsedAward: JSON.parse(readFileSync(join(libraryDir, file), 'utf8')).parsedAward, industry: 'security' }))
+const parsedCache = await buildParsedCacheFromTexts(
+  { complianceText, agreementText },
+  { cacheFingerprint: `mss-${SOURCE_FINGERPRINT}`, industry: 'security', preloadedAwards },
+)
+// Validate the serialized upload, not the pre-serialization arrays. This is
+// the same SheetJS path the browser uses and guarantees report/UI parity.
+const timesheetData = parseTimesheetRows(serializedTimesheetRows, 'timesheet-security-nsw.csv')
+const calculation = calculateTimesheetResults(parsedCache, timesheetData)
+const resultRows = calculation.rows || calculation
+const payAnomaly = runPayAnomalyDetector(calculation, parsedCache)
+const compliance = buildComplianceRisk(timesheetData, calculation)
+const unresolved = resultRows.filter((row) => row.calculationStatus === 'unresolved' || (row.validationErrors || []).length)
+const evidenceGapRows = resultRows.filter((row) => (row.releaseBlockingGaps || []).length)
+const evidenceGapCounts = [...resultRows.reduce((counts, row) => {
+  for (const gap of row.releaseBlockingGaps || []) counts.set(gap, (counts.get(gap) || 0) + 1)
+  return counts
+}, new Map())].map(([gap, employeeCount]) => ({ gap, employeeCount }))
+  .sort((left, right) => right.employeeCount - left.employeeCount || left.gap.localeCompare(right.gap))
+const reconciliationRows = resultRows
+  .filter((row) => row.sourceComparison?.available)
+  .map((row) => ({
+    employeeId: row.employeeId || row.id,
+    source: row.sourceComparison.source,
+    calculated: row.sourceComparison.calculated,
+    totalSource: row.sourceComparison.totalSource,
+    totalCalculated: row.sourceComparison.totalCalculated,
+    difference: row.sourceComparison.difference,
+  }))
+const reconciliation = {
+  comparedEmployeeRows: reconciliationRows.length,
+  withinTwoCents: reconciliationRows.filter((row) => Math.abs(row.difference) <= 0.02).length,
+  calculatedAboveSource: reconciliationRows.filter((row) => row.difference > 0.02).length,
+  calculatedBelowSource: reconciliationRows.filter((row) => row.difference < -0.02).length,
+  totalSource: reconciliationRows.reduce((sum, row) => sum + row.totalSource, 0),
+  totalCalculated: reconciliationRows.reduce((sum, row) => sum + row.totalCalculated, 0),
+  totalDifference: reconciliationRows.reduce((sum, row) => sum + row.difference, 0),
+  largestAbsoluteDifferences: [...reconciliationRows]
+    .sort((left, right) => Math.abs(right.difference) - Math.abs(left.difference))
+    .slice(0, 25),
+}
+
+const sourceEarningCodeSummary = [...imported.ledger.reduce((summary, component) => {
+  const code = String(component.EarningCode || '(missing)').trim() || '(missing)'
+  const current = summary.get(code) || { earningCode: code, earningType: String(component.EarningType || ''), rows: 0, employees: new Set(), hours: 0, amount: 0 }
+  current.rows += 1
+  current.employees.add(String(component.EmployeeID || ''))
+  current.hours += Number(component.Hours) || 0
+  current.amount += Number(component.Amount) || 0
+  summary.set(code, current)
+  return summary
+}, new Map()).values()]
+  .map((entry) => ({
+    earningCode: entry.earningCode,
+    earningType: entry.earningType,
+    rows: entry.rows,
+    employees: entry.employees.size,
+    hours: Math.round(entry.hours * 100) / 100,
+    amount: Math.round(entry.amount * 100) / 100,
+  }))
+  .sort((left, right) => right.amount - left.amount || right.rows - left.rows)
+const recognizedSourceEarningCode = (code) => [
+  /^ORDINARY$/i,
+  /^O\/T\s+(?:1\.5|2\.0|2\.5)$/i,
+  /^(?:21\.7% SHFT|30% SHIFT|50% SHIFT|100% SHIFT|25% Casual Loading|P\/HOL 150% S)$/i,
+  /^(?:ANNUAL LVE|PUBLIC HOL|PERSONAL LEAVE - PAID|COMPAS LVE)$/i,
+  /^MAKEUP ORD$/i,
+  /^(?:FIRST AID(?: 2)?|RELIEF OFFICER ALLOW|AVIATION)$/i,
+].some((pattern) => pattern.test(String(code || '').trim()))
+const unmappedSourceEarningCodes = sourceEarningCodeSummary
+  .filter((entry) => !recognizedSourceEarningCode(entry.earningCode))
+const leaveComponents = imported.ledger.filter((component) => component.EarningType === 'Leave')
+const missingInstrumentDocuments = imported.coverageInventory
+  .filter((entry) => entry.supportStatus !== 'supported')
+  .map((entry) => ({
+    sourceInstrument: entry.sourceCode,
+    instrumentType: entry.instrumentType,
+    rows: entry.rowCount,
+    employees: entry.employeeCount,
+    requiredEvidence: entry.requiredEvidence,
+  }))
+const systemCapabilityGaps = [
+  {
+    capability: 'Leave entitlement and leave-pay calculation',
+    status: 'unsupported',
+    impact: `${leaveComponents.length} source leave rows across ${new Set(leaveComponents.map((component) => String(component.EmployeeID))).size} employees are retained for reconciliation only; annual-leave loading, the shiftworker extra week, balances and NES eligibility are not calculated.`,
+  },
+  {
+    capability: 'Projected-versus-worked roster validation',
+    status: 'blocked-by-source-schema',
+    impact: `${projectedRosterRows.length} projected-roster rows cannot be joined because the workbook exposes no verified employee or payroll-shift key.`,
+  },
+  {
+    capability: 'Superannuation, PAYG withholding, deductions and net pay',
+    status: 'unsupported',
+    impact: 'The engine calculates gross award interpretation only and must not be used as an end-to-end payroll calculation.',
+  },
+  {
+    capability: 'Statutory payslip production',
+    status: 'unsupported',
+    impact: 'The existing email output omits verified employer identifiers, pay date, net pay, tax, superannuation and deduction records; Security Award dispatch remains release-gated.',
+  },
+  {
+    capability: 'Historical pay-run baseline and remediation calculations',
+    status: 'unsupported',
+    impact: 'Only one selected fortnight is calculated; rolling anomaly history, back-pay interest and remediation across prior periods are not available.',
+  },
+  {
+    capability: 'Company-specific earning-code rules',
+    status: unmappedSourceEarningCodes.length ? 'blocked-by-missing-rules' : 'supported-for-selected-period',
+    impact: unmappedSourceEarningCodes.length
+      ? `${unmappedSourceEarningCodes.reduce((sum, entry) => sum + entry.rows, 0)} source rows totalling $${unmappedSourceEarningCodes.reduce((sum, entry) => sum + entry.amount, 0).toFixed(2)} use earning codes with no verified award, agreement or contract rule; they remain source-only reconciliation amounts.`
+      : 'Every selected source earning code has an explicit treatment.',
+  },
+]
+
+const fingerprint = SOURCE_FINGERPRINT
+const validationReport = {
+  schemaVersion: imported.schemaVersion,
+  generatedAt: new Date().toISOString(),
+  sourceFingerprint: fingerprint,
+  sourceFiles: SOURCE_FILES,
+  importMeta: imported.meta,
+  sourceCounts: {
+    awardRows: awardRows.length,
+    employeeRows: employeeRows.length,
+    payrollRows: payrollRows.length,
+    projectedRosterRows: projectedRosterRows.length,
+  },
+  retainedLedgerRows: imported.ledger.length,
+  retainedShiftRows: imported.shifts.length,
+  parserShiftRows: timesheetData.shifts.length,
+  parserEmployeeRows: timesheetData.employees.length,
+  calculatedEmployeeRows: resultRows.length,
+  calculationStats: calculation.stats,
+  unresolvedEmployeeRows: unresolved.length,
+  releaseBlockingEvidenceEmployeeRows: evidenceGapRows.length,
+  releaseBlockingEvidenceGaps: evidenceGapCounts,
+  missingIndustrialInstrumentDocuments: missingInstrumentDocuments,
+  systemCapabilityGaps,
+  sourceEarningCodeSummary,
+  unmappedSourceEarningCodes,
+  unresolved: unresolved.map((row) => ({
+    employeeId: row.employeeId || row.id,
+    employeeName: row.employeeName,
+    errors: row.validationErrors || [],
+    warnings: row.validationWarnings || [],
+  })),
+  releaseGate: {
+    status: unresolved.length || evidenceGapRows.length || payAnomaly?.gate === 'blocked' || compliance?.publishGate === 'blocked'
+      ? 'blocked'
+      : payAnomaly?.gate === 'clear-with-acknowledgements'
+        ? 'review-required'
+        : 'clear',
+    unresolvedEmployeeRows: unresolved.length,
+    evidenceGapEmployeeRows: evidenceGapRows.length,
+    evidenceGapCounts,
+    payAnomaly: payAnomaly
+      ? { gate: payAnomaly.gate, counts: payAnomaly.counts, findingCount: payAnomaly.findings.length }
+      : null,
+    compliance: compliance
+      ? {
+          gate: compliance.publishGate,
+          siteScore: compliance.siteScore,
+          breachCount: compliance.breaches.length,
+          evidenceGapCount: compliance.evidenceGaps.length,
+          breachSummary: compliance.breachSummary,
+        }
+      : null,
+  },
+  reconciliation,
+  importWarnings: imported.warnings.map(sanitizePublicMessage),
+  parserWarnings: parsedCache.parseWarnings,
+}
+
+const privateLedger = {
+  schemaVersion: imported.schemaVersion,
+  sourceFingerprint: fingerprint,
+  sourceFiles: SOURCE_FILES,
+  importMeta: imported.meta,
+  awardSnapshot: imported.awardSnapshot,
+  profiles: imported.profiles,
+  shifts: imported.shifts,
+  leaveRequests: imported.leaveRequests,
+  sourcePayrollComponents: imported.ledger,
+  projectedRoster: {
+    status: 'unjoined',
+    reason: 'Projected_roster.xlsx exposes ComponentId but no verified key connecting it to employee or payroll shift identifiers.',
+    rows: projectedRosterRows,
+  },
+}
+
 mkdirSync(OUT_DIR, { recursive: true })
-writeFileSync(join(OUT_DIR, 'timesheet-security-nsw.csv'), '﻿' + csv, 'utf8')
+writeFileSync(join(OUT_DIR, 'timesheet-security-nsw.csv'), `\ufeff${timesheetCsv}`, 'utf8')
 writeFileSync(join(OUT_DIR, 'employee-agreement-security-nsw.txt'), agreementText, 'utf8')
 writeFileSync(join(OUT_DIR, 'compliance-document-security-nsw.txt'), complianceText, 'utf8')
-writeFileSync(join(OUT_DIR, 'leave-requests-security-nsw.csv'), '﻿' + leaveCsv, 'utf8')
-writeFileSync(join(OUT_DIR, 'classification-mapping-report.csv'), mappingReport.map((row) => row.map(csvEsc).join(',')).join('\r\n'), 'utf8')
-writeFileSync(join(OUT_DIR, 'pseudonym-map.json'), `${JSON.stringify(Object.fromEntries(sortedEmployees.map((e) => [e.id, { pseudonym: e.name, classifications: e.classifications }])), null, 2)}\n`, 'utf8')
+writeFileSync(join(OUT_DIR, 'leave-requests-security-nsw.csv'), `\ufeff${toCsv(buildLeaveRows(publicImported))}`, 'utf8')
+writeFileSync(join(OUT_DIR, 'classification-mapping-report.csv'), toCsv(buildClassificationRows(publicImported)), 'utf8')
+writeFileSync(join(OUT_DIR, 'industrial-instrument-coverage-report.csv'), toCsv(buildCoverageRows(imported)), 'utf8')
+writeFileSync(join(OUT_DIR, 'industrial-instrument-coverage-report.json'), `${JSON.stringify(imported.coverageInventory, null, 2)}\n`, 'utf8')
+writeFileSync(join(OUT_DIR, 'import-validation-report.json'), `${JSON.stringify(validationReport, null, 2)}\n`, 'utf8')
+writeFileSync(join(OUT_DIR, 'source-ledger.private.json'), `${JSON.stringify(privateLedger, null, 2)}\n`, 'utf8')
+writeFileSync(join(OUT_DIR, 'pseudonym-map.private.json'), `${JSON.stringify(Object.fromEntries(imported.profiles.map((profile) => [profile.employeeId, {
+  publicEmployeeId: publicEmployeeIds.get(String(profile.employeeId)),
+  pseudonym: profile.employeeName,
+}])), null, 2)}\n`, 'utf8')
 
-console.log(`\nWrote live pack to ${OUT_DIR}`)
-console.log(`  timesheet-security-nsw.csv          ${shifts.length} shifts / ${cohort.size} employees / ${PERIOD}`)
-console.log(`  employee-agreement-security-nsw.txt ${sortedEmployees.length} employee blocks`)
-console.log(`  compliance-document-security-nsw.txt ${overAward.length} over-award + ${Math.min(casuals.length, 5)} casual notes`)
-console.log(`  leave-requests-security-nsw.csv     ${leaveRows.length} requests`)
-console.log(`  classification-mapping-report.csv   review "keyword" / "weak match" rows`)
-console.log(`  pseudonym-map.json                  internal reconciliation only — never share`)
+console.log(`Generated ${imported.meta.payPeriod} for ${imported.meta.cohortEmployeeCount} employees.`)
+console.log(`Retained ${imported.ledger.length}/${imported.meta.sourcePayrollRowCount} source payroll components losslessly; ${imported.meta.cohortPayrollRowCount} belong to the worked cohort across ${imported.shifts.length} shifts.`)
+if (imported.meta.attendanceExcludedPayrollRowCount) {
+  console.log(`${imported.meta.attendanceExcludedPayrollRowCount} leave, adjustment-only, or cohort-limit rows remain in the private ledger but are excluded from attendance calculations.`)
+}
+console.log(`Calculation resolved ${resultRows.length - unresolved.length}/${resultRows.length} employees; unresolved evidence gaps are in import-validation-report.json.`)
+console.log(`Artifacts: ${OUT_DIR}`)

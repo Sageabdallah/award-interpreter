@@ -17,9 +17,76 @@ const HEADER_ALIASES = {
   start: 'start',
   finish: 'finish',
   breakmins: 'breakMinutes',
+  breakstart: 'breakStart',
   hours: 'hours',
   location: 'location',
   notes: 'notes',
+  shiftid: 'sourceShiftId',
+  sourceshiftid: 'sourceShiftId',
+  sourceaward: 'sourceAwardCode',
+  sourceawardcode: 'sourceAwardCode',
+  sourceclassification: 'sourceClassification',
+  sourceclassificationraw: 'sourceClassificationRaw',
+  sourceshiftdefinition: 'sourceShiftDefinition',
+  sourceordinarybaserate: 'sourceOrdinaryBaseRate',
+  sourcecomponentsjson: 'sourceComponentsJson',
+  sourceimportwarnings: 'sourceImportWarnings',
+  breakrecorded: 'breakRecorded',
+  unallocatedspanminutes: 'unallocatedSpanMinutes',
+  publicholiday: 'publicHoliday',
+  publicholidaydate: 'publicHolidayDate',
+  publicholidaydates: 'publicHolidayDates',
+  publicholidaybasis: 'publicHolidayBasis',
+  firstaidnominated: 'firstAidNominated',
+  firearmrequired: 'firearmRequired',
+  brokenshift: 'brokenShift',
+  supervisedemployees: 'supervisedEmployees',
+  relievingofficer: 'relievingOfficer',
+  aviationsecurity: 'aviationSecurity',
+  motorvehiclekm: 'motorVehicleKm',
+  motorcyclekm: 'motorcycleKm',
+  mealallowanceeligible: 'mealAllowanceEligible',
+  higherdutieslevel: 'higherDutiesLevel',
+  higherdutieshours: 'higherDutiesHours',
+  higherdutiesstart: 'higherDutiesStart',
+  callbacktype: 'callbackType',
+  shortrestdirected: 'shortRestDirected',
+  minimumengagementapplies: 'minimumEngagementApplies',
+  minimumengagementtopuphours: 'minimumEngagementTopUpHours',
+  brokenshifttopuphours: 'brokenShiftTopUpHours',
+  sourceordinaryhours: 'sourceOrdinaryHours',
+  sourceovertimehours: 'sourceOvertimeHours',
+  sourceordinaryamount: 'sourceOrdinaryAmount',
+  sourceovertimeamount: 'sourceOvertimeAmount',
+  sourcepenaltyamount: 'sourcePenaltyAmount',
+  sourceallowanceamount: 'sourceAllowanceAmount',
+  sourcefirstaidpaid: 'sourceFirstAidPaid',
+  sourcerelievingofficerpaid: 'sourceRelievingOfficerPaid',
+  sourcepermanentnightpaid: 'sourcePermanentNightPaid',
+  sourceaviationallowancepaid: 'sourceAviationAllowancePaid',
+  sourcemealallowancepaid: 'sourceMealAllowancePaid',
+}
+
+function parseBoolean(value = '') {
+  if (/^(?:yes|true|y|1)$/i.test(String(value).trim())) return true
+  if (/^(?:no|false|n|0)$/i.test(String(value).trim())) return false
+  return undefined
+}
+
+function parseOptionalNumber(value = '') {
+  if (String(value).trim() === '') return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function parseJsonArray(value = '') {
+  if (!String(value).trim()) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
 }
 
 function rowIsBlank(row = []) {
@@ -63,9 +130,54 @@ export function parseTimesheetRows(rows, sourceName = 'timesheet') {
       start: record.start || '',
       finish: record.finish || '',
       breakMinutes: Number(record.breakMinutes || 0),
+      breakStart: record.breakStart || '',
       hours: round2(hours),
       location: record.location || '',
       notes: record.notes || '',
+      sourceShiftId: record.sourceShiftId || '',
+      sourceAwardCode: record.sourceAwardCode || '',
+      sourceClassification: record.sourceClassification || '',
+      sourceClassificationRaw: record.sourceClassificationRaw || '',
+      sourceShiftDefinition: record.sourceShiftDefinition || '',
+      sourceOrdinaryBaseRate: parseOptionalNumber(record.sourceOrdinaryBaseRate),
+      sourceComponents: parseJsonArray(record.sourceComponentsJson),
+      sourceImportWarnings: record.sourceImportWarnings ? record.sourceImportWarnings.split('|').map((warning) => warning.trim()).filter(Boolean) : [],
+      breakRecorded: parseBoolean(record.breakRecorded),
+      unallocatedSpanMinutes: parseOptionalNumber(record.unallocatedSpanMinutes),
+      publicHoliday: parseBoolean(record.publicHoliday),
+      publicHolidayDate: record.publicHolidayDate ? formatDateKey(record.publicHolidayDate) : '',
+      publicHolidayDates: record.publicHolidayDates
+        ? record.publicHolidayDates.split('|').map((date) => formatDateKey(date.trim())).filter(Boolean)
+        : [],
+      publicHolidayBasis: record.publicHolidayBasis || '',
+      firstAidNominated: parseBoolean(record.firstAidNominated),
+      firearmRequired: parseBoolean(record.firearmRequired),
+      brokenShift: parseBoolean(record.brokenShift),
+      supervisedEmployees: parseOptionalNumber(record.supervisedEmployees),
+      relievingOfficer: parseBoolean(record.relievingOfficer),
+      aviationSecurity: parseBoolean(record.aviationSecurity),
+      motorVehicleKm: parseOptionalNumber(record.motorVehicleKm),
+      motorcycleKm: parseOptionalNumber(record.motorcycleKm),
+      mealAllowanceEligible: parseBoolean(record.mealAllowanceEligible),
+      higherDutiesLevel: record.higherDutiesLevel || '',
+      higherDutiesHours: parseOptionalNumber(record.higherDutiesHours),
+      higherDutiesStart: record.higherDutiesStart || '',
+      callbackType: record.callbackType || '',
+      shortRestDirected: parseBoolean(record.shortRestDirected),
+      minimumEngagementApplies: parseBoolean(record.minimumEngagementApplies),
+      minimumEngagementTopUpHours: parseOptionalNumber(record.minimumEngagementTopUpHours),
+      brokenShiftTopUpHours: parseOptionalNumber(record.brokenShiftTopUpHours),
+      sourceOrdinaryHours: parseOptionalNumber(record.sourceOrdinaryHours),
+      sourceOvertimeHours: parseOptionalNumber(record.sourceOvertimeHours),
+      sourceOrdinaryAmount: parseOptionalNumber(record.sourceOrdinaryAmount),
+      sourceOvertimeAmount: parseOptionalNumber(record.sourceOvertimeAmount),
+      sourcePenaltyAmount: parseOptionalNumber(record.sourcePenaltyAmount),
+      sourceAllowanceAmount: parseOptionalNumber(record.sourceAllowanceAmount),
+      sourceFirstAidPaid: parseBoolean(record.sourceFirstAidPaid),
+      sourceRelievingOfficerPaid: parseBoolean(record.sourceRelievingOfficerPaid),
+      sourcePermanentNightPaid: parseBoolean(record.sourcePermanentNightPaid),
+      sourceAviationAllowancePaid: parseBoolean(record.sourceAviationAllowancePaid),
+      sourceMealAllowancePaid: parseBoolean(record.sourceMealAllowancePaid),
       sourceName,
     })
   }

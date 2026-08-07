@@ -8,17 +8,18 @@
 // Good (80–94), Clean (95–100).
 //
 // Breach detectors, each traceable to its Fair Work / WHS basis:
-//   rest-period breach     <10 hrs between one shift's finish and the next start
+//   rest-period breach     below the applicable award minimum between shifts
 //   missing meal break     shift over 5 hrs recorded with a 0-minute break
 //   excessive weekly hours >38 hrs in a timesheet week (advisory), >48 escalates
 //   excessive consecutive  more than 6 worked days without a full day off
-//   long shift             a single shift over 12 hours
+//   long shift             a work period over the applicable maximum
 //   pay validation         a pay line that failed validation (when a run exists)
 // ---------------------------------------------------------------------------
 
 import { round2 } from '../domain/utils.js'
 import { addDaysToKey } from '../domain/analyticsSeries.js'
-import { REST_MINIMUM_HOURS } from './coverage.js'
+import { buildWorkPeriods } from '../domain/workPeriods.js'
+import { REST_MINIMUM_HOURS, restMinimumHoursForAward } from './coverage.js'
 
 export const BREACH_WEIGHTS = {
   restPeriod: { deduction: 15, label: 'Rest period breach', basis: 'minimum 10-hour break between shifts' },
@@ -26,7 +27,7 @@ export const BREACH_WEIGHTS = {
   weeklyHours: { deduction: 5, label: 'Weekly hours over 38', basis: 'ordinary weekly hours — overtime exposure' },
   weeklyHoursSevere: { deduction: 15, label: 'Weekly hours over 48', basis: 'excessive hours — WHS fatigue exposure' },
   consecutiveDays: { deduction: 10, label: 'More than 6 consecutive days', basis: 'no full rest day across the run' },
-  longShift: { deduction: 10, label: 'Shift over 12 hours', basis: 'extended single-shift duration' },
+  longShift: { deduction: 10, label: 'Excessive work period', basis: 'work period exceeds the applicable maximum' },
   payValidation: { deduction: 20, label: 'Pay line failed validation', basis: 'unmatched or invalid pay calculation' },
 }
 
@@ -39,6 +40,7 @@ export const COMPLIANCE_BANDS = [
 ]
 
 export const PUBLISH_GATE_THRESHOLD = 40
+const HARD_BLOCK_BREACH_TYPES = new Set(['longShift'])
 
 export function complianceBand(score) {
   return COMPLIANCE_BANDS.find(({ min, max }) => score >= min && score <= max)?.band || 'Critical'
@@ -52,41 +54,69 @@ function minutesOf(hhmm) {
   return Number(match[1]) * 60 + Number(match[2])
 }
 
-function breach(type, detail) {
+function breach(type, detail, basis) {
   const weight = BREACH_WEIGHTS[type]
-  return { type, label: weight.label, basis: weight.basis, deduction: weight.deduction, detail }
+  return { type, label: weight.label, basis: basis || weight.basis, deduction: weight.deduction, detail }
 }
 
-function detectEmployeeBreaches(employee) {
+function evidenceGap(type, label, basis, detail) {
+  return { type, label, basis, detail, deduction: 0 }
+}
+
+function shiftSpanHours(shift) {
+  const start = minutesOf(shift.start)
+  let finish = minutesOf(shift.finish)
+  if (start == null || finish == null) return Number(shift.hours) || 0
+  if (finish <= start) finish += 24 * 60
+  return (finish - start) / 60
+}
+
+function detectEmployeeBreaches(employee, resultRow) {
   const breaches = []
+  const evidenceGaps = []
+  const securityAward = String(resultRow?.awardCode || '').toUpperCase() === 'MA000016'
+    || (employee.shifts || []).some((shift) => /security services industry award/i.test(shift.sourceAwardCode || ''))
+  const minimumRestHours = securityAward ? restMinimumHoursForAward('MA000016') : REST_MINIMUM_HOURS
+  const maximumWorkPeriodHours = securityAward ? 14 : 12
   const shifts = (employee.shifts || [])
     .filter((shift) => DATE_KEY_PATTERN.test(shift.dateKey))
     .sort((left, right) => (left.dateKey + (left.start || '')).localeCompare(right.dateKey + (right.start || '')))
 
-  // Rest periods between consecutive shifts (cross-midnight aware).
-  for (let index = 1; index < shifts.length; index += 1) {
-    const previous = shifts[index - 1]
-    const current = shifts[index]
-    const prevStart = minutesOf(previous.start)
-    let prevFinish = minutesOf(previous.finish)
-    const currStart = minutesOf(current.start)
-    if (prevStart == null || prevFinish == null || currStart == null) continue
-    if (prevFinish <= prevStart) prevFinish += 24 * 60
-    const dayGap = (new Date(`${current.dateKey}T00:00:00`) - new Date(`${previous.dateKey}T00:00:00`)) / 86400000
-    const gapHours = (dayGap * 24 * 60 + currStart - prevFinish) / 60
-    if (gapHours >= 0 && gapHours < REST_MINIMUM_HOURS) {
-      breaches.push(breach('restPeriod', `${round2(gapHours)} hr turnaround between ${previous.dateKey} (${previous.finish}) and ${current.dateKey} (${current.start}).`))
+  const workPeriods = buildWorkPeriods(shifts)
+
+  // Contiguous classification/rate segments form one attendance period.
+  for (let index = 1; index < workPeriods.length; index += 1) {
+    const previous = workPeriods[index - 1]
+    const current = workPeriods[index]
+    const gapHours = (current.start - previous.end) / 60
+    if (gapHours >= 0 && gapHours < minimumRestHours) {
+      breaches.push(breach('restPeriod', `${round2(gapHours)} hr turnaround between ${previous.endShift.dateKey} (${previous.endShift.finish}) and ${current.startShift.dateKey} (${current.startShift.start}).`, `minimum ${minimumRestHours}-hour break between shifts`))
     }
   }
 
-  // Meal breaks and shift length.
-  for (const shift of shifts) {
-    if (shift.hours > 5 && !(Number(shift.breakMinutes) > 0)) {
-      breaches.push(breach('missingBreak', `${shift.hours} hr shift on ${shift.dateKey} recorded with no break.`))
+  // Meal breaks and length apply to the complete attendance period.
+  const unverifiedBreakShifts = []
+  for (const period of workPeriods) {
+    const breakRecorded = period.shifts.some((shift) => Number(shift.breakMinutes) > 0 || shift.breakRecorded === true)
+    if (period.spanHours > 5 && !breakRecorded) {
+      if (securityAward && period.shifts.some((shift) => shift.breakRecorded === false)) unverifiedBreakShifts.push(period.startShift.dateKey)
+      else if (!period.shifts.some((shift) => shift.mealBreakOperationalException === true)) {
+        breaches.push(breach('missingBreak', `${period.spanHours} hr work period on ${period.startShift.dateKey} recorded with no break.`, securityAward
+          ? '30-minute meal break after 5 hours unless operationally impracticable (MA000016 cl. 14.3)'
+          : undefined))
+      }
     }
-    if (shift.hours > 12) {
-      breaches.push(breach('longShift', `${shift.hours} hr shift on ${shift.dateKey}.`))
+    if (period.spanHours > maximumWorkPeriodHours) {
+      breaches.push(breach('longShift', `${period.spanHours} hr work period on ${period.startShift.dateKey}.`, `maximum ${maximumWorkPeriodHours}-hour work period`))
     }
+  }
+  if (unverifiedBreakShifts.length) {
+    evidenceGaps.push(evidenceGap(
+      'breakEvidence',
+      'Meal-break evidence unavailable',
+      'MA000016 cl. 14.3 includes an operational-impracticability exception',
+      `${unverifiedBreakShifts.length} shift${unverifiedBreakShifts.length === 1 ? '' : 's'} over 5 hours have no break position or exception evidence in the source export.`,
+    ))
   }
 
   // Weekly hours by the parser's week bucket.
@@ -96,7 +126,9 @@ function detectEmployeeBreaches(employee) {
     byWeek.set(week, (byWeek.get(week) || 0) + shift.hours)
   }
   for (const [week, hours] of byWeek) {
-    if (hours > 48) breaches.push(breach('weeklyHoursSevere', `${round2(hours)} hrs in week ${week}.`))
+    if (securityAward && hours > 38) {
+      evidenceGaps.push(evidenceGap('rosterCycleEvidence', 'Roster-cycle evidence unavailable', 'MA000016 ordinary hours may be arranged over a 2-8 week roster cycle', `${round2(hours)} paid hrs in week ${week}; the source export does not identify the agreed roster cycle or ordinary-hour allocation.`))
+    } else if (hours > 48) breaches.push(breach('weeklyHoursSevere', `${round2(hours)} hrs in week ${week}.`))
     else if (hours > 38) breaches.push(breach('weeklyHours', `${round2(hours)} hrs in week ${week}.`))
   }
 
@@ -110,11 +142,11 @@ function detectEmployeeBreaches(employee) {
     longestRun = Math.max(longestRun, run)
     previousKey = key
   }
-  if (longestRun > 6) {
+  if (!securityAward && longestRun > 6) {
     breaches.push(breach('consecutiveDays', `${longestRun} consecutive worked days without a full day off.`))
   }
 
-  return breaches
+  return { breaches, evidenceGaps }
 }
 
 /**
@@ -125,15 +157,17 @@ function detectEmployeeBreaches(employee) {
 export function buildComplianceRisk(timesheetData, results = null) {
   if (!timesheetData?.employees?.length) return null
 
-  const validationByName = new Map()
+  const resultByIdentity = new Map()
   for (const row of results?.rows || []) {
-    if (row.validationErrors?.length) validationByName.set(row.employeeName, row.validationErrors)
+    if (row.employeeId || row.id) resultByIdentity.set(String(row.employeeId || row.id), row)
+    resultByIdentity.set(row.employeeName, row)
   }
 
   const employees = timesheetData.employees.map((employee) => {
-    const breaches = detectEmployeeBreaches(employee)
-    const validationErrors = validationByName.get(employee.employeeName)
-    if (validationErrors) {
+    const resultRow = resultByIdentity.get(String(employee.employeeId)) || resultByIdentity.get(employee.employeeName)
+    const { breaches, evidenceGaps } = detectEmployeeBreaches(employee, resultRow)
+    const validationErrors = resultRow?.validationErrors
+    if (validationErrors?.length) {
       breaches.push(breach('payValidation', validationErrors.join(' ')))
     }
     const deduction = breaches.reduce((sum, item) => sum + item.deduction, 0)
@@ -144,6 +178,7 @@ export function buildComplianceRisk(timesheetData, results = null) {
       jobRole: employee.jobRole || '',
       totalHours: round2(employee.totalHours || 0),
       breaches,
+      evidenceGaps,
       score,
       band: complianceBand(score),
     }
@@ -161,21 +196,29 @@ export function buildComplianceRisk(timesheetData, results = null) {
 
   const allBreaches = employees.flatMap((employee) =>
     employee.breaches.map((item) => ({ employeeName: employee.employeeName, ...item })))
+  const allEvidenceGaps = employees.flatMap((employee) =>
+    employee.evidenceGaps.map((item) => ({ employeeName: employee.employeeName, ...item })))
   const byType = new Map()
   for (const item of allBreaches) {
-    byType.set(item.type, (byType.get(item.type) || 0) + 1)
+    const key = `${item.type}\u0000${item.basis}`
+    const current = byType.get(key) || { type: item.type, basis: item.basis, count: 0 }
+    current.count += 1
+    byType.set(key, current)
   }
 
   return {
     employees,
     siteScore,
     siteBand: complianceBand(siteScore),
-    publishGate: siteScore < PUBLISH_GATE_THRESHOLD || employees.some((employee) => employee.score < PUBLISH_GATE_THRESHOLD)
+    publishGate: siteScore < PUBLISH_GATE_THRESHOLD
+      || employees.some((employee) => employee.score < PUBLISH_GATE_THRESHOLD
+        || employee.breaches.some((item) => HARD_BLOCK_BREACH_TYPES.has(item.type)))
       ? 'blocked'
       : 'clear',
     breaches: allBreaches,
-    breachSummary: [...byType.entries()]
-      .map(([type, count]) => ({ type, label: BREACH_WEIGHTS[type].label, basis: BREACH_WEIGHTS[type].basis, count }))
+    evidenceGaps: allEvidenceGaps,
+    breachSummary: [...byType.values()]
+      .map(({ type, basis, count }) => ({ type, label: BREACH_WEIGHTS[type].label, basis, count }))
       .sort((left, right) => right.count - left.count),
     weights: BREACH_WEIGHTS,
   }

@@ -890,6 +890,33 @@ function firstNumberMatch(text, patterns, fallback) {
   return fallback
 }
 
+export function extractOfficialOvertimeBand(text, fallbackHours = 3) {
+  const prose = text.match(/(\d+(?:\.\d+)?)%[^.]*?for the first (\d+(?:\.\d+)?) hours and (\d+(?:\.\d+)?)%/i)
+  if (prose) {
+    return {
+      firstBandHours: Number(prose[2]),
+      firstBandMultiplier: round2(Number(prose[1]) / 100),
+      afterFirstBandMultiplier: round2(Number(prose[3]) / 100),
+    }
+  }
+
+  const firstRow = text.match(/(?:Monday to Saturday\s*[\u2014\u2013-]\s*)?first\s+(\d+(?:\.\d+)?)\s+hours?[\s\S]{0,80}?(\d+(?:\.\d+)?)%/i)
+  const afterRow = text.match(/(?:Monday to Saturday\s*[\u2014\u2013-]\s*)?after\s+(\d+(?:\.\d+)?)\s+hours?[\s\S]{0,80}?(\d+(?:\.\d+)?)%/i)
+  if (firstRow && afterRow && Number(firstRow[1]) === Number(afterRow[1])) {
+    return {
+      firstBandHours: Number(firstRow[1]),
+      firstBandMultiplier: round2(Number(firstRow[2]) / 100),
+      afterFirstBandMultiplier: round2(Number(afterRow[2]) / 100),
+    }
+  }
+
+  return {
+    firstBandHours: fallbackHours,
+    firstBandMultiplier: 1.5,
+    afterFirstBandMultiplier: 2,
+  }
+}
+
 export function parseOfficialAwardDocument(text, sourceName = 'award-document') {
   const warnings = []
   const lines = textToLines(text)
@@ -902,7 +929,7 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
     baseRate: findClauseRef(clauseIndex, [/minimum (?:weekly |hourly )?(?:wages|rates)/i, /minimum rates/i, /minimum wages/i, /classifications and minimum/i]),
     casualLoading: findClauseRef(clauseIndex, [/casual employees/i]),
     overtime: findClauseRef(clauseIndex, [/^overtime$/i, /overtime/i]),
-    penalties: findClauseRef(clauseIndex, [/public holidays and sunday/i, /public holiday/i, /penalty rates/i]),
+    penalties: findClauseRef(clauseIndex, [/^penalty rates$/i, /public holidays and sunday/i, /public holiday/i, /penalty rates/i]),
     allowancesClause: findClauseRef(clauseIndex, [/^allowances$/i, /allowances/i]),
     allowancesSchedule: findClauseRef(clauseIndex, [/monetary allowances/i]),
     skillSchedule: findClauseRef(clauseIndex, [/skill level descriptions/i]),
@@ -940,24 +967,26 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
   const casualLoadingPct = firstNumberMatch(casualText, [/(\d+)%\s+loading/i], 25)
   const casualLoading = round2(casualLoadingPct / 100)
 
-  const overtimeBand = overtimeText.match(/(\d+)%[^.]*?for the first (\d+) hours and (\d+)%/i)
-  const firstTwoMultiplier = overtimeBand ? round2(Number(overtimeBand[1]) / 100) : 1.5
-  const firstBandHours = overtimeBand ? Number(overtimeBand[2]) : 3
-  const afterTwoMultiplier = overtimeBand ? round2(Number(overtimeBand[3]) / 100) : 2
+  const overtimeBand = extractOfficialOvertimeBand(overtimeText)
+  const firstTwoMultiplier = overtimeBand.firstBandMultiplier
+  const firstBandHours = overtimeBand.firstBandHours
+  const afterTwoMultiplier = overtimeBand.afterFirstBandMultiplier
   const overtimeSundayMultiplier = round2(firstNumberMatch(overtimeText, [/Sunday[\s\S]{0,160}?(\d+)% of the minimum hourly rate/i], 200) / 100)
   const publicHolidayMultiplier = round2(firstNumberMatch(penaltyText, [/(\d+)% of the minimum hourly rate[\s\S]{0,80}?public holiday/i, /public holiday[\s\S]{0,120}?(\d+)% of the minimum hourly rate/i], 250) / 100)
+  const overtimePublicHolidayMultiplier = round2(firstNumberMatch(overtimeText, [/public holiday[\s\S]{0,120}?(\d+(?:\.\d+)?)%/i], publicHolidayMultiplier * 100) / 100)
+  const saturdayOrdinaryMultiplier = round2(firstNumberMatch(penaltyText, [/Saturday[\s\S]{0,80}?(\d+(?:\.\d+)?)%/i], firstTwoMultiplier * 100) / 100)
   const sundayOrdinaryMultiplier = round2(firstNumberMatch(penaltyText, [/(\d+)% of the minimum hourly rate for work done on Sundays/i, /Sundays?[\s\S]{0,120}?(\d+)% of the minimum hourly rate/i], 200) / 100)
   const dailyThreshold = firstNumberMatch(ordinaryText, [/more than (\d+(?:\.\d+)?) ordinary hours on any one day/i], 10)
   const weeklyThreshold = firstNumberMatch(ordinaryText, [/will be (\d+) or an average/i, /average of (\d+) per week/i], 38)
 
   const weekend = {
     standard: {
-      saturday: firstTwoMultiplier,
+      saturday: saturdayOrdinaryMultiplier,
       sunday: sundayOrdinaryMultiplier,
       public_holiday: publicHolidayMultiplier,
     },
     casual: {
-      saturday: round2(firstTwoMultiplier + casualLoading),
+      saturday: round2(saturdayOrdinaryMultiplier + casualLoading),
       sunday: round2(sundayOrdinaryMultiplier + casualLoading),
       public_holiday: round2(publicHolidayMultiplier + casualLoading),
     },
@@ -968,14 +997,14 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
     baseRate: slots.baseRate,
     casualLoading: slots.casualLoading,
     penalties: slots.penalties,
-    eveningNight: findClauseRef(clauseIndex, [/shiftwork penalty/i]),
+    eveningNight: findClauseRef(clauseIndex, [/shiftwork penalty/i]) || slots.penalties,
     overtime: slots.overtime,
     allowances: [slots.allowancesClause, slots.allowancesSchedule].filter(Boolean).join(' / '),
   }
 
   const penaltyRates = [
-    { type: 'Saturday', mode: 'multiplier', value: weekend.standard.saturday, unit: 'hour', employment: 'standard', trigger: 'day:saturday', clause: references.overtime },
-    { type: 'Saturday', mode: 'multiplier', value: weekend.casual.saturday, unit: 'hour', employment: 'casual', trigger: 'day:saturday', clause: references.overtime },
+    { type: 'Saturday', mode: 'multiplier', value: weekend.standard.saturday, unit: 'hour', employment: 'standard', trigger: 'day:saturday', clause: references.penalties },
+    { type: 'Saturday', mode: 'multiplier', value: weekend.casual.saturday, unit: 'hour', employment: 'casual', trigger: 'day:saturday', clause: references.penalties },
     { type: 'Sunday', mode: 'multiplier', value: weekend.standard.sunday, unit: 'hour', employment: 'standard', trigger: 'day:sunday', clause: references.penalties },
     { type: 'Sunday', mode: 'multiplier', value: weekend.casual.sunday, unit: 'hour', employment: 'casual', trigger: 'day:sunday', clause: references.penalties },
     { type: 'Public holiday', mode: 'multiplier', value: weekend.standard.public_holiday, unit: 'hour', employment: 'standard', trigger: 'day:public_holiday', clause: references.penalties },
@@ -983,7 +1012,7 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
     { type: `Overtime — first ${firstBandHours} hours`, mode: 'multiplier', value: firstTwoMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:first_band', clause: references.overtime },
     { type: `Overtime — after ${firstBandHours} hours`, mode: 'multiplier', value: afterTwoMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:after_first_band', clause: references.overtime },
     { type: 'Overtime — Sunday', mode: 'multiplier', value: overtimeSundayMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:sunday', clause: references.overtime },
-    { type: 'Overtime — public holiday', mode: 'multiplier', value: publicHolidayMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:public_holiday', clause: references.penalties },
+    { type: 'Overtime — public holiday', mode: 'multiplier', value: overtimePublicHolidayMultiplier, unit: 'hour', employment: 'standard', trigger: 'overtime:public_holiday', clause: references.overtime },
   ]
 
   const { allowances: allowancesAll, penalties: penaltyRatesAll } =
@@ -1023,7 +1052,7 @@ export function parseOfficialAwardDocument(text, sourceName = 'award-document') 
           firstTwoMultiplier,
           afterTwoMultiplier,
           sundayMultiplier: overtimeSundayMultiplier,
-          publicHolidayMultiplier,
+          publicHolidayMultiplier: overtimePublicHolidayMultiplier,
         },
       },
       sourceName,

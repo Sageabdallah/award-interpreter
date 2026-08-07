@@ -22,6 +22,9 @@ export function explainRiskRoute({ anthropic, store, embedQuery, modelId, reason
     if (!subject || typeof subject !== 'string' || !facts || typeof facts !== 'object') {
       return res.status(400).json({ error: 'Body must be { subject, facts } plus optional awardCode, clauseRefs, query.' })
     }
+    if (subject.length > 2000 || String(query || '').length > 2000 || !Array.isArray(clauseRefs) || clauseRefs.length > 20 || JSON.stringify(facts).length > 20000) {
+      return res.status(400).json({ error: 'Risk explanation input exceeds the supported size.' })
+    }
 
     const chunks = await retrieveForRisk({ store, embedQuery }, { awardCode, clauseRefs, query: query || subject })
     const chunksBlock = chunks.length ? chunksToPromptBlock(chunks) : ''

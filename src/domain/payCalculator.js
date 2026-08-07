@@ -6,6 +6,7 @@ import {
   round2,
   sumAmounts,
 } from './utils.js'
+import { calculateSecurityEmployee } from './payEngine/securityCalculator.js'
 
 function detectPublicHoliday(shift) {
   return /public holiday|ph\b/i.test(`${shift.day} ${shift.notes}`)
@@ -291,6 +292,7 @@ function calculateAllowanceItems(level, employee, baseRate, overtimeItems) {
 function buildUnmatchedRow(employee) {
   return {
     id: employee.employeeId || normalizeName(employee.employeeName),
+    employeeId: employee.employeeId || '',
     employeeName: employee.employeeName,
     awardCode: 'Unmatched',
     employeeLevel: 'Validation error',
@@ -380,6 +382,85 @@ function buildExtrasInterpretation(profileInterpretation, extrasItems) {
   ].sort((left, right) => Number(right.applied) - Number(left.applied))
 }
 
+function usesSecurityInstrument(profile = {}) {
+  return profile.awardCode === 'MA000016'
+    || profile.instrumentCode === 'MA000016'
+}
+
+function securityResultRow(profile, employee, awardLevel) {
+  const calculation = calculateSecurityEmployee(profile, employee)
+  if (calculation.status !== 'resolved') {
+    return {
+      ...buildUnmatchedRow(employee),
+      awardCode: profile.instrumentId || profile.instrumentCode || profile.awardCode || 'Unresolved',
+      employeeLevel: profile.employeeLevel || 'Validation error',
+      jobRole: profile.jobRole || employee.jobRole || 'Validation error',
+      validationErrors: calculation.issues,
+      complianceNotes: calculation.warnings,
+      releaseBlockingGaps: calculation.releaseBlockingGaps || [],
+      interpretation: {
+        ...(profile.interpretation || {}),
+        status: 'unresolved-instrument',
+        issues: calculation.issues,
+        extras: [],
+        instrumentVersions: [],
+        segmentEvidence: calculation.segments || [],
+      },
+    }
+  }
+
+  const extrasItems = calculation.items
+  const complianceNotes = [
+    ...(profile.complianceNotes?.map((note) => note.note).filter(Boolean) || []),
+    ...calculation.warnings,
+  ]
+  const workSummary = buildWorkSummary(employee, extrasItems, calculation.ordinaryPay, calculation.totalCalculatedPay)
+  const recordedRate = Number(profile.agreementBasePayRate)
+  const minimumRate = calculation.segments[0]?.minimumRate
+  const overrideReason = Number.isFinite(recordedRate) && recordedRate > minimumRate
+    ? `Recorded rate ${round2(recordedRate).toFixed(2)} is used as an over-award base; award minimum floors remain enforced per segment.`
+    : ''
+
+  return {
+    id: employee.employeeId || normalizeName(employee.employeeName),
+    employeeId: employee.employeeId || '',
+    employeeName: employee.employeeName,
+    awardCode: profile.instrumentId || profile.instrumentCode || profile.awardCode,
+    employeeLevel: profile.employeeLevel,
+    jobRole: profile.jobRole || employee.jobRole || awardLevel?.roleLabel || 'Validation error',
+    basePay: calculation.basePay,
+    ordinaryPay: calculation.ordinaryPay,
+    extrasAllowances: {
+      total: calculation.extrasTotal,
+      items: extrasItems,
+    },
+    totalCalculatedPay: calculation.totalCalculatedPay,
+    effectiveHourlyRate: employee.totalHours > 0 ? round2(calculation.totalCalculatedPay / employee.totalHours) : 0,
+    validationErrors: [],
+    complianceNotes,
+    releaseBlockingGaps: calculation.releaseBlockingGaps || [],
+    overrideReason,
+    totalHours: employee.totalHours,
+    employmentType: employee.employmentType,
+    shifts: employee.shifts,
+    roleLabel: awardLevel?.roleLabel || profile.employeeLevel,
+    calculationStatus: calculation.status,
+    instrumentVersions: calculation.instrumentVersions,
+    segmentEvidence: calculation.segments,
+    sourceComparison: calculation.sourceComparison,
+    interpretation: {
+      ...(profile.interpretation || {}),
+      status: 'matched',
+      issues: [],
+      extras: buildExtrasInterpretation(profile.interpretation, extrasItems),
+      workSummary,
+      instrumentVersions: calculation.instrumentVersions,
+      segmentEvidence: calculation.segments,
+      sourceComparison: calculation.sourceComparison,
+    },
+  }
+}
+
 export function calculateTimesheetResults(parsedCache, timesheetData) {
   const rows = timesheetData.employees.map((employee) => {
     const profile = employee.employeeId
@@ -391,6 +472,9 @@ export function calculateTimesheetResults(parsedCache, timesheetData) {
     }
 
     const awardLevel = parsedCache.awardLevelsByKey[keyForAwardLevel(profile.awardCode, profile.employeeLevel)]
+    if (usesSecurityInstrument(profile)) {
+      return securityResultRow(profile, employee, awardLevel)
+    }
     if (!awardLevel) {
       return {
         ...buildUnmatchedRow(employee),
@@ -416,6 +500,7 @@ export function calculateTimesheetResults(parsedCache, timesheetData) {
 
     return {
       id: employee.employeeId || normalizeName(employee.employeeName),
+      employeeId: employee.employeeId || '',
       employeeName: employee.employeeName,
       awardCode: profile.awardCode,
       employeeLevel: profile.employeeLevel,

@@ -20,10 +20,13 @@
    Output:                mvp-documents/healthcare-custom/
 */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import * as fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import XLSX from 'xlsx'
 import { keyForAwardLevel } from '../src/domain/utils.js'
+
+XLSX.set_fs(fs)
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const PACK_DIR = join(ROOT, 'mvp-documents', 'healthcare-custom')

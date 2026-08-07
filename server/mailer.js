@@ -128,6 +128,7 @@ function createResendMailer({ resendApiKey, mailFrom }) {
 
 export function createMailer(config) {
   const { smtpHost, smtpPort, smtpSecure, smtpUser, smtpPass, mailFrom } = config
+  if (config.mailDeliveryEnabled !== true) return createDryRunMailer(mailFrom)
   if (smtpHost && smtpUser && smtpPass) {
     const transport = nodemailer.createTransport({
       host: smtpHost,
@@ -147,6 +148,10 @@ export function createMailer(config) {
   const saved = config.graphClientId ? readGraphToken(config.graphTokenFile) : null
   if (saved) return createGraphMailer(config, saved)
 
+  return createDryRunMailer(mailFrom)
+}
+
+function createDryRunMailer(mailFrom) {
   const transport = nodemailer.createTransport({ jsonTransport: true })
   return {
     mode: 'dry-run',

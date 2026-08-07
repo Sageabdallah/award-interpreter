@@ -21,7 +21,7 @@
 export const SCHEMA_VERSION = '1.0.0'
 
 /** Industries the award library is grouped by. */
-export const INDUSTRIES = Object.freeze(['healthcare', 'airport', 'hospitality', 'other'])
+export const INDUSTRIES = Object.freeze(['healthcare', 'airport', 'hospitality', 'security', 'other'])
 
 /**
  * Controlled vocabulary for an entitlement/penalty category. Covers the airport

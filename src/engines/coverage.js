@@ -23,6 +23,10 @@ export const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 // that reasons about turnarounds.
 export const REST_MINIMUM_HOURS = 10
 
+export function restMinimumHoursForAward(awardCode = '') {
+  return String(awardCode).toUpperCase() === 'MA000016' ? 8 : REST_MINIMUM_HOURS
+}
+
 // --- span helpers -------------------------------------------------------------
 
 function minutesOf(hhmm) {

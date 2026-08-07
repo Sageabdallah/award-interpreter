@@ -147,6 +147,24 @@ describe('conflict-aware bulk appends (compliance-safe)', () => {
     expect(outcome.timesheetData.totalHours).toBe(42.5)
   })
 
+  it('does not treat 48 hours as a Security Award calendar-week hard cap', () => {
+    const dates = expandBulkDates({ startKey: '2026-07-06', endKey: '2026-07-11', daysOfWeek: [0, 1, 2, 3, 4, 5] })
+    const shifts = buildBulkShifts({ dates, start: '08:00', finish: '17:00', breakMinutes: 30 })
+    const outcome = appendShiftsToTimesheet(null, { employeeName: 'Security Cap Test', awardCode: 'MA000016' }, shifts)
+    expect(outcome.added).toBe(6)
+    expect(outcome.skippedReasons).toEqual({})
+    expect(outcome.timesheetData.totalHours).toBe(51)
+  })
+
+  it('uses the Security Award eight-hour rest threshold for bulk shifts', () => {
+    const [first] = buildBulkShifts({ dates: ['2026-07-06'], start: '08:00', finish: '16:00' })
+    const initial = appendShiftsToTimesheet(null, { employeeName: 'Security Rest Test', awardCode: 'MA000016' }, [first]).timesheetData
+    const [next] = buildBulkShifts({ dates: ['2026-07-07'], start: '00:00', finish: '04:00' })
+    const outcome = appendShiftsToTimesheet(initial, { employeeName: 'Security Rest Test', awardCode: 'MA000016' }, [next])
+    expect(outcome.added).toBe(1)
+    expect(outcome.skipped).toBe(0)
+  })
+
   it('bulk-assigning a template across the whole roster cannot flood Compliance Risk', async () => {
     const { timesheetData } = await loadPack()
     // The reported bug: an ad-hoc 09:00-17:00 template, every day, for every

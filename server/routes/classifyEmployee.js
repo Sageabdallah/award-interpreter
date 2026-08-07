@@ -54,6 +54,9 @@ export function classifyEmployeeRoute({ anthropic, store, embedQuery, modelId, l
     if (!text || typeof text !== 'string' || text.trim().length < 20) {
       return res.status(400).json({ error: 'Body must include { text } — a job description or agreement excerpt (min 20 chars).' })
     }
+    if (text.length > 20000 || !Number.isInteger(Number(maxSuggestions)) || Number(maxSuggestions) < 1 || Number(maxSuggestions) > 5) {
+      return res.status(400).json({ error: 'Classification text is limited to 20,000 characters and maxSuggestions must be 1-5.' })
+    }
 
     const chunks = await retrieveClassifications({ store, embedQuery }, { text })
     if (!chunks.length) {
@@ -69,7 +72,7 @@ export function classifyEmployeeRoute({ anthropic, store, embedQuery, modelId, l
       maxTokens: 2048,
     })
 
-    const suggestions = (output.suggestions || []).slice(0, maxSuggestions).map((suggestion) => {
+    const suggestions = (output.suggestions || []).slice(0, Number(maxSuggestions)).map((suggestion) => {
       const grounded = verifyCitations(suggestion.citations, chunks)
       return {
         ...suggestion,

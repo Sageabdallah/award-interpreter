@@ -12,7 +12,9 @@
     "mail:auth": "node --env-file-if-exists=.env scripts/outlookAuth.mjs",
     "mail:test": "node --env-file-if-exists=.env scripts/sendTestEmail.mjs",
     "rag:index": "node --env-file-if-exists=.env scripts/buildRagIndex.mjs",
-    "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs"
+    "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs",
+    "award:sync-security": "node scripts/syncSecurityAwardLibrary.mjs",
+    "verify:mss-browser": "node scripts/verifyMssBrowser.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",
@@ -21,16 +23,22 @@
     "lucide-react": "^0.469.0",
     "mammoth": "^1.12.0",
     "nodemailer": "^9.0.3",
-    "pdfjs-dist": "^6.0.227",
+    "pdfjs-dist": "^6.2.108",
+    "pg": "^8.22.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "weaviate-client": "^3.13.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "overrides": {
+    "adm-zip": "^0.6.0",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
+    "@playwright/test": "^1.62.1",
+    "@vitejs/plugin-react": "^6.0.5",
     "supertest": "^7.2.2",
-    "vite": "^5.4.11",
+    "vite": "^8.2.1",
     "vitest": "^4.1.8"
   }
 }

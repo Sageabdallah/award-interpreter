@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import XLSX from 'xlsx'
 import { describe, expect, it } from 'vitest'
-import { isOfficialAwardDocument, parseAwardDocument, parseOfficialAwardDocument } from '../src/domain/awardParser.js'
+import { extractOfficialOvertimeBand, isOfficialAwardDocument, parseAwardDocument, parseOfficialAwardDocument } from '../src/domain/awardParser.js'
 import { buildParsedCacheFromTexts } from '../src/domain/cacheBuilder.js'
 import { calculateTimesheetResults } from '../src/domain/payCalculator.js'
 import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
@@ -9,6 +9,22 @@ import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
 const officialText = fs.readFileSync(new URL('./fixtures/ma000049/MA000049-award-official-2026.txt', import.meta.url), 'utf8')
 
 describe('official FWC consolidated award document (MA000049, amendments to 23 Jan 2026)', () => {
+  it('extracts overtime bands from both prose and FWC table layouts', () => {
+    expect(extractOfficialOvertimeBand('150% of the minimum hourly rate for the first 3 hours and 200% thereafter')).toEqual({
+      firstBandHours: 3,
+      firstBandMultiplier: 1.5,
+      afterFirstBandMultiplier: 2,
+    })
+    expect(extractOfficialOvertimeBand(`
+      Monday to Saturday-first 2 hours 150%
+      Monday to Saturday-after 2 hours 200%
+    `)).toEqual({
+      firstBandHours: 2,
+      firstBandMultiplier: 1.5,
+      afterFirstBandMultiplier: 2,
+    })
+  })
+
   it('is detected and routed as an official award document', () => {
     expect(isOfficialAwardDocument(officialText)).toBe(true)
     const routed = parseAwardDocument(officialText, 'ma000049-official.pdf')

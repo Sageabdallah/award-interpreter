@@ -12,6 +12,17 @@
 import { openFlatStore } from './flatStore.js'
 import { openWeaviateStore } from './weaviateStore.js'
 
+export function disabledVectorStore(reason = 'No vector index is configured.') {
+  return {
+    backend: 'disabled',
+    meta: { reason },
+    async search() { return [] },
+    async byClauseRef() { return [] },
+    async listAwards() { return [] },
+    async close() {},
+  }
+}
+
 /**
  * @param {object} config
  * @param {string} config.indexDir      local flat index dir (data/rag-index)
@@ -27,5 +38,10 @@ export async function openVectorStore({ indexDir, weaviateUrl, weaviateApiKey, l
       log(`Weaviate unavailable (${error.message}) — falling back to local index.`)
     }
   }
-  return openFlatStore(indexDir)
+  try {
+    return openFlatStore(indexDir)
+  } catch (error) {
+    log(`${error.message} — AI retrieval is disabled; core ERP routes remain available.`)
+    return disabledVectorStore(error.message)
+  }
 }

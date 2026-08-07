@@ -66,6 +66,26 @@ Job Role: Mystery Role
     expect(interpretation.entitlements).toHaveLength(0)
   })
 
+  it('retains a historical source rate without presenting it as an agreement override', async () => {
+    const awardText = fs.readFileSync(new URL('./fixtures/award-rulebook-sample.txt', import.meta.url), 'utf8')
+    const cache = await buildParsedCacheFromTexts({
+      awardText,
+      agreementText: `
+Employee: Historical Worker
+Employee ID: EMP-HIST
+Award Code: MA000009
+Employee Level: Level 4
+Base Pay Rate: $24.00/hr
+Source Rate Only: yes
+`,
+    })
+
+    expect(cache.employeesById['EMP-HIST'].agreementBasePayRate).toBe(24)
+    expect(cache.employeesById['EMP-HIST'].effectiveBasePayRateHourly).not.toBe(24)
+    expect(cache.employeesById['EMP-HIST'].overrideReason).toBeUndefined()
+    expect(cache.overrides['EMP-HIST']).toBeUndefined()
+  })
+
   it('attaches a schema-valid award interpretation to the cache', async () => {
     const awardText = fs.readFileSync(new URL('./fixtures/award-rulebook-sample.txt', import.meta.url), 'utf8')
     const cache = await buildParsedCacheFromTexts(

@@ -101,6 +101,19 @@ describe('GET /api/health', () => {
     expect(res.status).toBe(200)
     expect(res.body).toMatchObject({ ok: true, backend: 'stub', awards: ['MA000034'], model: 'claude-test' })
   })
+
+  it('reports AI unavailable without taking the core API offline', async () => {
+    const app = createApp({
+      anthropic: null,
+      store: { backend: 'disabled', meta: {} },
+      embedQuery: null,
+      modelId: 'test',
+      library: LIBRARY,
+    })
+    const health = await request(app).get('/api/health')
+    expect(health.body).toMatchObject({ ok: true, aiAvailable: false })
+    expect((await request(app).post('/api/explain-row').send({})).status).toBe(503)
+  })
 })
 
 describe('POST /api/explain-row', () => {

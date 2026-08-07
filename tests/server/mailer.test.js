@@ -13,6 +13,7 @@ const base = {
   smtpHost: '', smtpPort: 587, smtpSecure: false, smtpUser: '', smtpPass: '', mailFrom: '',
   resendApiKey: '',
   graphClientId: '', graphTenant: 'common', graphTokenFile: '/nonexistent/.outlook-token.json',
+  mailDeliveryEnabled: true,
 }
 
 function tempTokenFile(contents) {
@@ -22,6 +23,11 @@ function tempTokenFile(contents) {
 }
 
 describe('createMailer transport selection', () => {
+  it('requires explicit delivery enablement even when credentials exist', () => {
+    const mailer = createMailer({ ...base, mailDeliveryEnabled: false, resendApiKey: 're_key' })
+    expect(mailer.mode).toBe('dry-run')
+  })
+
   it('uses SMTP when credentials are present', () => {
     const mailer = createMailer({ ...base, smtpHost: 'smtp.example.com', smtpUser: 'u@example.com', smtpPass: 'p' })
     expect(mailer.mode).toBe('smtp')

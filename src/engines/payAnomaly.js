@@ -33,6 +33,9 @@ const median = (values) => {
 
 function layer1Findings(row, parsedCache) {
   const findings = []
+  const versionedSecurityCalculation = row.awardCode === 'MA000016'
+    && Array.isArray(row.segmentEvidence)
+    && row.segmentEvidence.length > 0
 
   if (row.validationErrors?.length) {
     findings.push({
@@ -47,7 +50,7 @@ function layer1Findings(row, parsedCache) {
 
   const levelKey = keyForAwardLevel(row.awardCode, row.employeeLevel)
   const awardMinimum = parsedCache?.awardLevelsByKey?.[levelKey]?.basePayRateHourly
-  if (awardMinimum != null && row.basePay < awardMinimum) {
+  if (!versionedSecurityCalculation && awardMinimum != null && row.basePay < awardMinimum) {
     // A documented agreement override is already surfaced on the pay run as an
     // override flag — the same fact must not also hard-block the export here.
     // It stays visible as an Advisory (historical pay periods legitimately
@@ -76,9 +79,33 @@ function layer1Findings(row, parsedCache) {
     })
   }
 
+  const sourceComparison = row.sourceComparison
+  if (sourceComparison?.available && Math.abs(Number(sourceComparison.difference)) > 0.02) {
+    const difference = round2(sourceComparison.difference)
+    const calculatedAboveSource = difference > 0
+    findings.push({
+      layer: 1,
+      type: 'source-reconciliation',
+      severity: 'Block',
+      explanation: calculatedAboveSource
+        ? `Award calculation is $${Math.abs(difference).toFixed(2)} above the source payroll ($${sourceComparison.totalCalculated.toFixed(2)} vs $${sourceComparison.totalSource.toFixed(2)}), indicating a potential underpayment or missing source component.`
+        : `Award calculation is $${Math.abs(difference).toFixed(2)} below the source payroll ($${sourceComparison.totalCalculated.toFixed(2)} vs $${sourceComparison.totalSource.toFixed(2)}), indicating an over-award payment or calculation evidence gap.`,
+      suggestedAction: calculatedAboveSource
+        ? 'Review the source ordinary, overtime, penalty, and allowance components before publishing or dispatching pay.'
+        : 'Confirm over-award arrangements and supply the roster or allowance eligibility evidence that explains the difference.',
+      evidence: {
+        difference,
+        totalSource: sourceComparison.totalSource,
+        totalCalculated: sourceComparison.totalCalculated,
+        source: sourceComparison.source,
+        calculated: sourceComparison.calculated,
+      },
+    })
+  }
+
   const isCasual = /casual/i.test(row.employmentType || '')
   const hasCasualLoading = (row.extrasAllowances?.items || []).some((item) => /casual loading/i.test(item.type))
-  if (isCasual && row.totalHours > 0 && !hasCasualLoading) {
+  if (!versionedSecurityCalculation && isCasual && row.totalHours > 0 && !hasCasualLoading) {
     findings.push({
       layer: 1,
       type: 'casual-loading',
@@ -165,7 +192,7 @@ export function runPayAnomalyDetector(results, parsedCache = null) {
         layer: 1,
         name: 'Rule-based guards',
         active: true,
-        detail: 'Award minimum rate, casual loading presence, zero-pay on worked hours, and match validation — checked on every pay line.',
+        detail: 'Award minimum rate, source-payroll reconciliation, casual loading presence, zero-pay on worked hours, and match validation — checked on every pay line.',
       },
       {
         layer: 2,

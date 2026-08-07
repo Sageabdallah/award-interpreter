@@ -3,6 +3,17 @@ import path from 'node:path'
 const ROOT = process.cwd()
 
 const smtpPort = Number(process.env.SMTP_PORT || 587)
+const production = process.env.NODE_ENV === 'production'
+const defaultOrigins = production
+  ? 'https://award-interpreter.vercel.app,*.vercel.app'
+  : 'https://award-interpreter.vercel.app,http://localhost:5173'
+
+function trustProxySetting(value) {
+  if (!value) return production ? 1 : false
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return Number.isFinite(Number(value)) ? Number(value) : value
+}
 
 export const config = {
   port: Number(process.env.PORT || 8787),
@@ -36,4 +47,34 @@ export const config = {
   graphClientId: process.env.GRAPH_CLIENT_ID || '',
   graphTenant: process.env.GRAPH_TENANT || 'common',
   graphTokenFile: process.env.GRAPH_TOKEN_FILE || path.join(ROOT, '.outlook-token.json'),
+  mailDeliveryEnabled: process.env.MAIL_DELIVERY_ENABLED === 'true',
+  apiToken: process.env.API_TOKEN || '',
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || defaultOrigins)
+    .split(',').map((origin) => origin.trim()).filter(Boolean),
+  production,
+  trustProxy: trustProxySetting(process.env.TRUST_PROXY),
+  globalRateLimit: Number(process.env.GLOBAL_RATE_LIMIT || 120),
+  aiRateLimit: Number(process.env.AI_RATE_LIMIT || 30),
+  mailRateLimit: Number(process.env.MAIL_RATE_LIMIT || 3),
+  rateLimitMaxEntries: Number(process.env.RATE_LIMIT_MAX_ENTRIES || 10000),
+  databaseUrl: process.env.DATABASE_URL || '',
+  databaseSsl: process.env.DATABASE_SSL === 'true',
+  auditTable: process.env.AUDIT_TABLE || 'axi_audit_records',
+  auditLogFile: process.env.AUDIT_LOG_FILE || path.join(ROOT, 'data/private/pay-run-audit.jsonl'),
+  auditHmacKey: process.env.AUDIT_HMAC_KEY || '',
+  payRunPayloadLimit: process.env.PAY_RUN_PAYLOAD_LIMIT || '15mb',
+}
+
+export function validateProductionConfig(candidate = config) {
+  if (!candidate.production) return candidate
+  if (!candidate.allowedOrigins.length && !candidate.apiToken) {
+    throw new Error('Production requires ALLOWED_ORIGINS or API_TOKEN.')
+  }
+  if ((candidate.databaseUrl || candidate.auditLogFile) && String(candidate.auditHmacKey).length < 32) {
+    throw new Error('Production pay-run persistence requires AUDIT_HMAC_KEY with at least 32 characters.')
+  }
+  if (candidate.mailDeliveryEnabled && !candidate.apiToken) {
+    throw new Error('Production live mail requires API_TOKEN.')
+  }
+  return candidate
 }

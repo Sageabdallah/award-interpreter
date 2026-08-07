@@ -188,7 +188,7 @@ export async function buildParsedCacheFromTexts(
     let effectiveBasePayRateHourly = awardLevel?.basePayRateHourly ?? null
     let overrideReason
 
-    if (profile.agreementBasePayRate != null) {
+    if (profile.agreementBasePayRate != null && profile.sourceRateOnly !== true) {
       if (effectiveBasePayRateHourly != null && Math.abs(profile.agreementBasePayRate - effectiveBasePayRateHourly) > 0.01) {
         overrideReason = `Agreement rate ${round2(profile.agreementBasePayRate).toFixed(2)} overrides award rate ${round2(effectiveBasePayRateHourly).toFixed(2)}.`
       } else if (effectiveBasePayRateHourly == null) {

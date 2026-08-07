@@ -16,6 +16,7 @@
      node scripts/generateHealthcareDemoPack.mjs
 */
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs'
+import * as fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import XLSX from 'xlsx'
@@ -24,6 +25,8 @@ import { parseLeaveRequestRows } from '../src/domain/leaveParser.js'
 import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
 import { buildLeaveImpactModel } from '../src/engines/leaveImpact.js'
 import { buildRosterProposal } from '../src/engines/rosterOptimisation.js'
+
+XLSX.set_fs(fs)
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const PACK_DIR = join(ROOT, 'mvp-documents', 'healthcare')

@@ -23,6 +23,7 @@
    Output:                mvp-documents/nurses/
 */
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import * as fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import XLSX from 'xlsx'
@@ -30,6 +31,8 @@ import { keyForAwardLevel } from '../src/domain/utils.js'
 import { buildParsedCacheFromTexts } from '../src/domain/cacheBuilder.js'
 import { parseTimesheetRows } from '../src/domain/timesheetParser.js'
 import { calculateTimesheetResults } from '../src/domain/payCalculator.js'
+
+XLSX.set_fs(fs)
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)))
 const PACK_DIR = join(ROOT, 'mvp-documents', 'nurses')

@@ -13,6 +13,9 @@ export function explainRowRoute({ anthropic, store, embedQuery, modelId }) {
     if (!awardCode || !row || typeof row !== 'object' || !row.title) {
       return res.status(400).json({ error: 'Body must be { awardCode, row } with an InterpretationTableRow.' })
     }
+    if (!/^[A-Z0-9@._-]{1,40}$/i.test(String(awardCode)) || JSON.stringify(row).length > 50000) {
+      return res.status(400).json({ error: 'Award code or interpretation row exceeds the supported format.' })
+    }
 
     const chunks = await retrieveForRow({ store, embedQuery }, { awardCode, row })
     if (!chunks.length) {

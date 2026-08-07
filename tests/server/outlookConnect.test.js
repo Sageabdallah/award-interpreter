@@ -123,7 +123,12 @@ describe('outlook routes and live mailer swap', () => {
     const after = await request(app).get('/api/health')
     expect(after.body).toMatchObject({ mail: 'outlook', mailAccount: 'demo@outlook.com' })
 
-    const payload = { recipient: 'sage.abdallah@isoftanz.com.au', business: 'B', payPeriod: 'P', rows: [{ employeeName: 'Mei Lin' }] }
+    const payload = {
+      recipient: 'sage.abdallah@isoftanz.com.au',
+      business: 'B',
+      payPeriod: 'P',
+      rows: [{ employeeName: 'Mei Lin', totalHours: 0, basePay: 0, ordinaryPay: 0, totalCalculatedPay: 0, items: [] }],
+    }
     const dispatch = await request(app).post('/api/disperse-pay').send(payload)
     expect(dispatch.status).toBe(200)
     expect(dispatch.body.mode).toBe('outlook')
