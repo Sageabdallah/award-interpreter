@@ -285,10 +285,19 @@ implemented on the backend readiness branch. The live data remains blocked by
 the release gates, as designed. The measured findings, missing instrument
 inventory, source fingerprint and MSS evidence request are recorded in
 `docs/MSS_LIVE_DATA_AUDIT.md`. The unchanged browser completed the core Phase E
-journey and proved dry-run delivery is blocked. Roster Optimiser's live-scale
-main-thread timeout and the mobile confirmation overflow are recorded defects;
-production deployment proof remains the final release gate for this branch.
+journey locally and at `https://award-interpreter.vercel.app`, proving dry-run
+delivery is blocked. The production API at
+`https://award-interpreter.onrender.com` uses the PostgreSQL audit chain and
+passed authenticated create/list/get proof. Roster Optimiser's live-scale
+main-thread timeout and the mobile confirmation overflow remain recorded
+defects.
 
 No frontend JSX, CSS, analytics view or image asset was changed. The existing
 frontend receives additive result and health fields through its established
 domain and API contracts.
+
+Release verification: 48 Vitest files and 350 tests passed, the Vite production
+build passed, `npm audit` reported zero known vulnerabilities, and the local and
+production Playwright journeys completed without console or network errors. The
+free Render PostgreSQL instance expires on 6 September 2026 and must be replaced
+or upgraded before that date if audit history needs to persist.

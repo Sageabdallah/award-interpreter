@@ -178,15 +178,22 @@ tamper-evident 614 KB audit record without employee names, and returned this gat
 | Work-period compliance hold | 3 |
 | Missing pay-changing evidence | 587 |
 
+The production backend at `https://award-interpreter.onrender.com` reports
+`postgres-audit-chain` persistence and all ERP lifecycle capabilities enabled.
+An authenticated controlled fixture returned HTTP 201, a clear release gate,
+$232.52 for one 8-hour shift, and a persisted record that was listable and
+retrievable without the employee name. Unauthenticated pay-run creation returned
+HTTP 403. Its free Render PostgreSQL instance expires on 6 September 2026.
+
 ## Integrated Browser Proof
 
-The unchanged frontend completed the generated MSS journey against the local
-backend: document interpretation, 587-profile agreement cache, 4,170 work
-periods, pay calculation, Employees, Pay Anomalies, Compliance Risk, Reports,
-Pay Run and a Security Award payslip preview. The browser totals matched the
-server totals exactly. The preview response was HTTP 200 with `mode: dry-run`
-and `deliveryBlocked: true`; no email was delivered. There were no browser
-console errors or failed network requests.
+The unchanged frontend completed the generated MSS journey locally and at
+`https://award-interpreter.vercel.app`: document interpretation, 587-profile
+agreement cache, 4,170 work periods, pay calculation, Employees, Pay Anomalies,
+Compliance Risk, Reports, Pay Run and a Security Award payslip preview. The
+browser totals matched the server totals exactly. The production preview
+response was HTTP 200 with `mode: dry-run` and `deliveryBlocked: true`; no email
+was delivered. There were no browser console errors or failed network requests.
 
 Two frontend-scale defects remain outside this backend branch:
 
