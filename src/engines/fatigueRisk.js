@@ -218,6 +218,7 @@ function assessEmployee(employee) {
  */
 export function buildFatigueAssessments(timesheetData) {
   if (!timesheetData?.employees?.length) return null
+  if (timesheetData.sourceOnly) return null
   const employees = timesheetData.employees.map(assessEmployee)
   employees.sort((left, right) => right.score - left.score)
   const bandCounts = Object.fromEntries(FATIGUE_BANDS.map(({ band }) => [band, 0]))

@@ -4,8 +4,8 @@ import { isoftDateKey, ISOFT_PAYROLL_SCHEMA_VERSION } from '../../src/domain/imp
 const MAX_COMPONENTS = 5000
 const MAX_WORK_PERIODS = 5000
 const MAX_EMPLOYEES = 10000
-const MAX_CHUNK_ROWS = 2000
-const MAX_CHUNK_RECEIPTS = 200
+const MAX_CHUNK_ROWS = 4000
+const MAX_CHUNK_RECEIPTS = 500
 const CHUNK_KINDS = new Set(['components', 'work-periods', 'employees'])
 
 function boundedText(value, maximum = 500) {
@@ -24,7 +24,7 @@ function cleanRecord(record, maximumFields = 64) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return null
   return Object.fromEntries(Object.entries(record).slice(0, maximumFields).map(([key, value]) => [
     boundedText(key, 100),
-    typeof value === 'number' ? value : boundedText(value, 1000),
+    typeof value === 'number' || typeof value === 'boolean' ? value : boundedText(value, 1000),
   ]))
 }
 
@@ -86,13 +86,42 @@ function componentChunkSummary(components) {
   }
 }
 
-function releaseGateForSummary(summary) {
+function releaseGateForSummary(summary, employeeMaster = null) {
+  const matchedEmployees = Math.min(summary.employees, Number(employeeMaster?.matchedEmployees) || 0)
+  const employmentTypesSupplied = Math.min(summary.employees, Number(employeeMaster?.employmentTypesSupplied) || 0)
+  const missingEmploymentTypeCount = Math.max(0, summary.employees - employmentTypesSupplied)
   return {
     status: 'blocked',
-    missingEmployeeNames: true,
-    missingEmploymentTypes: true,
+    employeeNamesAvailable: false,
+    missingEmploymentTypes: missingEmploymentTypeCount > 0,
+    missingEmploymentTypeCount,
+    employeeMasterMatched: matchedEmployees,
+    employeeMasterUnmatched: Math.max(0, summary.employees - matchedEmployees),
     unverifiedInstrumentCount: summary.instruments,
-    reason: 'Source payroll is persisted for reconciliation only; award interpretation requires verified employment and operative instrument evidence.',
+    reason: 'Source payroll is persisted for reconciliation. Pay release requires remaining employee evidence, agreed ordinary-hours arrangements, and verified operative instrument rules.',
+  }
+}
+
+function employeeEvidenceForRows(rows, submitted = null) {
+  const matchedEmployees = rows.filter((row) => row.employeeMasterMatched === true).length
+  const employmentTypesSupplied = rows.filter((row) => boundedText(row.employmentType, 100).trim()).length
+  if (submitted) {
+    if (!/^[a-f0-9]{64}$/i.test(String(submitted.sourceFingerprint || ''))) return { problem: 'Employee master requires a SHA-256 source fingerprint.' }
+    if (Number(submitted.matchedEmployees) !== matchedEmployees) return { problem: 'Employee-master matched count does not reconcile with employee rows.' }
+    if (Number(submitted.employmentTypesSupplied) !== employmentTypesSupplied) return { problem: 'Employee-master employment-type count does not reconcile with employee rows.' }
+  }
+  return {
+    data: {
+      supplied: Boolean(submitted),
+      sourceName: boundedText(submitted?.sourceName || '', 255),
+      sourceFingerprint: /^[a-f0-9]{64}$/i.test(String(submitted?.sourceFingerprint || '')) ? submitted.sourceFingerprint.toLowerCase() : '',
+      sourceEmployees: Number(submitted?.sourceEmployees) || 0,
+      matchedEmployees,
+      unmatchedEmployees: Math.max(0, rows.length - matchedEmployees),
+      employmentTypesSupplied,
+      coveragePercent: rows.length ? money((matchedEmployees / rows.length) * 100) : 0,
+      privacyExcludedFields: ['Dateofbirth', 'Gender'],
+    },
   }
 }
 
@@ -137,7 +166,9 @@ export async function persistPayrollImport(auditStore, body) {
     if (existing) return { existing, summary: existing.data.summary, releaseGate: existing.data.releaseGate }
   }
 
-  const releaseGate = releaseGateForSummary(summary)
+  const employeeEvidence = employeeEvidenceForRows(body.employees, body.employeeMaster)
+  if (employeeEvidence.problem) return { problem: employeeEvidence.problem }
+  const releaseGate = releaseGateForSummary(summary, employeeEvidence.data)
   const data = {
     schemaVersion: ISOFT_PAYROLL_SCHEMA_VERSION,
     sourceName: boundedText(body.sourceName, 255),
@@ -154,6 +185,7 @@ export async function persistPayrollImport(auditStore, body) {
     employees: body.employees.map((record) => cleanRecord(record, 24)),
     workPeriods: body.workPeriods.map((record) => cleanRecord(record, 64)),
     components,
+    employeeMaster: employeeEvidence.data,
     releaseGate,
   }
   data.payloadFingerprint = payloadFingerprint(data)
@@ -180,7 +212,14 @@ export function payrollImportChunkRoute({ auditStore }) {
     try {
       summary = req.body.kind === 'components'
         ? componentChunkSummary(rows)
-        : { rowCount: rows.length }
+        : req.body.kind === 'employees'
+          ? {
+              rowCount: rows.length,
+              employeeIds: rows.map((row) => boundedText(row.employeeId, 200).trim()),
+              matchedEmployees: rows.filter((row) => row.employeeMasterMatched === true).length,
+              employmentTypesSupplied: rows.filter((row) => boundedText(row.employmentType, 100).trim()).length,
+            }
+          : { rowCount: rows.length }
     } catch (error) {
       return res.status(400).json({ error: error.message })
     }
@@ -218,6 +257,18 @@ function aggregateComponentChunks(chunks) {
     sourceGrossAmount: money(summary.sourceGrossAmount),
     employees: employeeIds.size,
     instruments: instrumentCodes.size,
+    employeeIds: [...employeeIds].sort(),
+  }
+}
+
+function aggregateEmployeeChunks(chunks) {
+  const employeeIds = chunks.flatMap((chunk) => chunk.summary.employeeIds || [])
+  return {
+    rows: chunks.reduce((sum, chunk) => sum + (Number(chunk.summary.rowCount) || 0), 0),
+    employeeIds,
+    uniqueEmployees: new Set(employeeIds).size,
+    matchedEmployees: chunks.reduce((sum, chunk) => sum + (Number(chunk.summary.matchedEmployees) || 0), 0),
+    employmentTypesSupplied: chunks.reduce((sum, chunk) => sum + (Number(chunk.summary.employmentTypesSupplied) || 0), 0),
   }
 }
 
@@ -261,17 +312,29 @@ export function completePayrollImportRoute({ auditStore }) {
     }
 
     const componentTotals = aggregateComponentChunks(byKind.components)
-    const employeeRows = byKind.employees.reduce((sum, chunk) => sum + chunk.summary.rowCount, 0)
+    const employeeTotals = aggregateEmployeeChunks(byKind.employees)
+    const employeeRows = employeeTotals.rows
     const workPeriodRows = byKind['work-periods'].reduce((sum, chunk) => sum + chunk.summary.rowCount, 0)
-    const summary = { ...componentTotals, workPeriods: workPeriodRows }
-    if (employeeRows !== summary.employees) return res.status(400).json({ error: 'Employee chunks do not reconcile with component employee IDs.' })
+    const { employeeIds: componentEmployeeIds, ...componentSummary } = componentTotals
+    const summary = { ...componentSummary, workPeriods: workPeriodRows }
+    if (employeeRows !== summary.employees || employeeTotals.uniqueEmployees !== employeeRows) return res.status(400).json({ error: 'Employee chunks contain duplicate IDs or do not reconcile with component employee IDs.' })
+    if (employeeTotals.employeeIds.some((employeeId) => !componentEmployeeIds.includes(employeeId))) return res.status(400).json({ error: 'Employee chunks contain an ID that is absent from component rows.' })
     const reconciliationProblem = verifySubmittedSummary(body.sourceSummary, summary, {
       employees: Array.from({ length: employeeRows }, (_, index) => ({ employeeId: String(index + 1) })),
       workPeriods: Array.from({ length: workPeriodRows }),
     })
     if (reconciliationProblem) return res.status(400).json({ error: reconciliationProblem })
 
-    const releaseGate = releaseGateForSummary(summary)
+    const employeeEvidence = employeeEvidenceForRows(
+      employeeTotals.employeeIds.map((employeeId, index) => ({
+        employeeId,
+        employeeMasterMatched: index < employeeTotals.matchedEmployees,
+        employmentType: index < employeeTotals.employmentTypesSupplied ? 'supplied' : '',
+      })),
+      body.employeeMaster,
+    )
+    if (employeeEvidence.problem) return res.status(400).json({ error: employeeEvidence.problem })
+    const releaseGate = releaseGateForSummary(summary, employeeEvidence.data)
     const data = {
       schemaVersion: ISOFT_PAYROLL_SCHEMA_VERSION,
       sourceName: boundedText(body.sourceName, 255),
@@ -285,6 +348,7 @@ export function completePayrollImportRoute({ auditStore }) {
         leaveOrAdjustmentPeriods: Number(body.sourceSummary.leaveOrAdjustmentPeriods) || 0,
       },
       coverageInventory: (body.coverageInventory || []).slice(0, 100).map((record) => cleanRecord(record, 32)),
+      employeeMaster: employeeEvidence.data,
       chunkRefs: verified.map((chunk) => ({
         kind: chunk.kind,
         index: chunk.index,

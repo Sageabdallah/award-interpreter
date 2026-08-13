@@ -352,7 +352,7 @@ function sourceOnlyResults(timesheetData) {
       complianceNotes: ['Source payroll amounts are retained for reconciliation; they have not been reinterpreted as award entitlements.'],
       overrideReason: '',
       totalHours: employee.totalHours,
-      employmentType: '',
+      employmentType: employee.employmentType || '',
       shifts: employee.shifts,
       calculationStatus: 'source-only-blocked',
       interpretation: {
@@ -374,6 +374,7 @@ function sourceOnlyResults(timesheetData) {
   return {
     sourceOnly: true,
     releaseBlocked: true,
+    employeeMaster: timesheetData.employeeMaster || null,
     coverageInventory: timesheetData.coverageInventory || [],
     releaseBlockingGaps: sharedGaps,
     rows,

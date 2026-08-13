@@ -15,7 +15,8 @@
     "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs",
     "award:sync-security": "node scripts/syncSecurityAwardLibrary.mjs",
     "payroll:import": "node --env-file-if-exists=.env scripts/importIsoftPayroll.mjs",
-    "verify:mss-browser": "node scripts/verifyMssBrowser.mjs"
+    "verify:mss-browser": "node scripts/verifyMssBrowser.mjs",
+    "verify:annual-payroll": "node scripts/verifyAnnualPayrollBrowser.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

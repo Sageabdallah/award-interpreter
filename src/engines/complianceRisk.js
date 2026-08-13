@@ -156,6 +156,10 @@ function detectEmployeeBreaches(employee, resultRow) {
  */
 export function buildComplianceRisk(timesheetData, results = null) {
   if (!timesheetData?.employees?.length) return null
+  // Source payroll imports are financial ledgers, not complete attendance
+  // rosters. Large files retain only bounded preview periods in the browser,
+  // so scoring breaks, rest and consecutive days would create false breaches.
+  if (timesheetData.sourceOnly) return null
 
   const resultByIdentity = new Map()
   for (const row of results?.rows || []) {

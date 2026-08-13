@@ -153,6 +153,28 @@ function LockedState({ engine, onNavigate }) {
   )
 }
 
+function SourceLedgerState({ engine, timesheetData, onNavigate }) {
+  return (
+    <div style={{
+      background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12,
+      padding: '40px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, textAlign: 'center',
+    }}>
+      <engine.icon size={30} strokeWidth={1.5} color={COLORS.muted} />
+      <div style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600 }}>Source payroll loaded, assessment held</div>
+      <div style={{ fontSize: 13.5, color: COLORS.muted, maxWidth: 540, lineHeight: 1.6 }}>
+        This annual payroll is valid for source reconciliation, but it is not a complete attendance roster.
+        The browser preview retains up to 10 work periods per employee, so {engine.shortName.toLowerCase()} will not produce incomplete or misleading findings.
+      </div>
+      <div className="pill" style={{ fontSize: 12 }}>
+        {(timesheetData.sourceSummary?.componentRows || 0).toLocaleString()} source rows safely retained in totals
+      </div>
+      <button className="btn-primary" onClick={() => onNavigate('time-entry')} style={{ marginTop: 6 }}>
+        Review source payroll <ArrowRight size={17} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
 // --- Pay Anomaly Detector ----------------------------------------------------
 
 function GateBanner({ gate }) {
@@ -1387,12 +1409,14 @@ function BudgetForecasterView({ timesheetData, results }) {
 
 export default function EngineWorkspace({ engineId, parsedCache, timesheetData, results, leave, worklist, onBackToFlow, onOpenEngine }) {
   const engine = engineById(engineId)
+  const sourceLedgerOnly = Boolean(timesheetData?.sourceOnly)
   // Feature-detects the optional RAG server — the compliance view gains its
   // AI explain affordances only when /api/health answers.
   const { available: ragAvailable } = useServerHealth()
 
   const model = useMemo(() => {
     if (!engine) return null
+    if (sourceLedgerOnly) return null
     switch (engine.id) {
       case 'pay-anomaly': return runPayAnomalyDetector(results, parsedCache)
       case 'labour-cost': return buildLabourCostModel(results)
@@ -1417,7 +1441,7 @@ export default function EngineWorkspace({ engineId, parsedCache, timesheetData, 
         })
       default: return null
     }
-  }, [engine, parsedCache, timesheetData, results, leave?.data, leave?.decisions, worklist?.fills, worklist?.adHocShifts])
+  }, [engine, sourceLedgerOnly, parsedCache, timesheetData, results, leave?.data, leave?.decisions, worklist?.fills, worklist?.adHocShifts])
 
   if (!engine) return null
 
@@ -1427,20 +1451,22 @@ export default function EngineWorkspace({ engineId, parsedCache, timesheetData, 
   // Registry-driven so the next 'timesheet+profiles' engine only needs a
   // view branch below, not another hardcoded id list.
   const isCoverageEngine = engine.requires === 'timesheet+profiles'
-  const coverageReady = isCoverageEngine && engineAvailable(engine, {
+  const coverageReady = !sourceLedgerOnly && isCoverageEngine && engineAvailable(engine, {
     hasTimesheet: Boolean(timesheetData?.employees?.length),
     hasProfiles: Boolean(parsedCache?.employeeProfiles?.length),
   })
   // Budget holds interactive inputs (target, stress slider), so it renders
   // its own view rather than a precomputed model.
   const isBudget = engine.id === 'budget-forecaster'
-  const budgetReady = isBudget && Boolean(results?.rows?.length)
+  const budgetReady = !sourceLedgerOnly && isBudget && Boolean(results?.rows?.length)
 
   return (
     <div className="fade-up">
       <style dangerouslySetInnerHTML={{ __html: ENGINE_CSS }} />
       <EngineHeader engine={engine} onBackToFlow={onBackToFlow} />
-      {isCoverageEngine
+      {sourceLedgerOnly
+        ? <SourceLedgerState engine={engine} timesheetData={timesheetData} onNavigate={onOpenEngine} />
+        : isCoverageEngine
         ? (coverageReady
           ? (engine.id === 'leave-impact'
             ? <LeaveImpactView parsedCache={parsedCache} timesheetData={timesheetData} leave={leave} />

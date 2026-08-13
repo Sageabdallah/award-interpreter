@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { importIsoftPayrollRows } from '../src/domain/importers/isoftPayroll.js'
 import { calculateTimesheetResults } from '../src/domain/payCalculator.js'
+import { buildComplianceRisk } from '../src/engines/complianceRisk.js'
+import { buildFatigueAssessments } from '../src/engines/fatigueRisk.js'
+import { runPayAnomalyDetector } from '../src/engines/payAnomaly.js'
 
 const HEADERS = [
   'BatchShiftSplitDetailID', 'BatchShiftDetailID', 'EmployeeID', 'SplitStartDate', 'SplitEndDate',
@@ -38,5 +41,8 @@ describe('iSOFT payroll importer', () => {
     expect(results).toMatchObject({ sourceOnly: true, releaseBlocked: true })
     expect(results.stats).toMatchObject({ employees: 1, sourceGrossPay: 178.3, totalCalculatedPay: 0 })
     expect(results.rows[0].calculationStatus).toBe('source-only-blocked')
+    expect(buildComplianceRisk(parsed, results)).toBeNull()
+    expect(buildFatigueAssessments(parsed)).toBeNull()
+    expect(runPayAnomalyDetector(results)).toBeNull()
   })
 })

@@ -3,13 +3,15 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { gzipSync } from 'node:zlib'
 import { importIsoftPayrollRows } from '../src/domain/importers/isoftPayroll.js'
+import { parseEmployeeMasterFile } from '../src/domain/employeeMasterParser.js'
 import { readSpreadsheetSheet } from '../src/domain/fileReaders.js'
 
 const sourcePath = path.resolve(process.argv[2] || '')
+const employeeMasterPath = process.argv[3] ? path.resolve(process.argv[3]) : ''
 const apiUrl = String(process.env.AXI_API_URL || 'https://award-interpreter.onrender.com').replace(/\/$/, '')
 const apiToken = process.env.API_TOKEN || ''
 
-if (!process.argv[2]) throw new Error('Usage: npm run payroll:import -- /absolute/path/to/payroll.xlsx')
+if (!process.argv[2]) throw new Error('Usage: npm run payroll:import -- /absolute/path/to/payroll.xlsx [/absolute/path/to/Employee.xlsx]')
 if (!apiToken) throw new Error('API_TOKEN is required to import payroll data.')
 
 const bytes = await fs.readFile(sourcePath)
@@ -30,10 +32,21 @@ async function requestJson(route, { method = 'GET', body } = {}) {
     headers['Content-Type'] = 'application/json'
     headers['Content-Encoding'] = 'gzip'
   }
-  const response = await fetch(`${apiUrl}${route}`, { method, headers, body: requestBody })
-  const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(result.error || `${route} failed with HTTP ${response.status}.`)
-  return result
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const response = await fetch(`${apiUrl}${route}`, { method, headers, body: requestBody })
+    const result = await response.json().catch(() => ({}))
+    if (response.ok) return result
+    if (![429, 502, 503, 504].includes(response.status) || attempt === 9) {
+      throw new Error(result.error || `${route} failed with HTTP ${response.status}.`)
+    }
+    const retryAfter = Number(response.headers.get('retry-after'))
+    const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+      ? retryAfter * 1000
+      : Math.min(30000, 1000 * (2 ** attempt))
+    console.log(`${route} returned HTTP ${response.status}; retrying in ${Math.ceil(waitMs / 1000)}s.`)
+    await new Promise((resolve) => setTimeout(resolve, waitMs))
+  }
+  throw new Error(`${route} retry budget was exhausted.`)
 }
 
 const existing = await requestJson('/api/payroll-imports').catch(() => ({ payrollImports: [] }))
@@ -49,7 +62,46 @@ const parsed = importIsoftPayrollRows(sheet.rows(), sourceName, { includeLedger:
 sheet.release?.()
 console.log(`Validated ${parsed.sourceSummary.componentRows.toLocaleString()} components, ${parsed.sourceSummary.workPeriods.toLocaleString()} work periods, and ${parsed.sourceSummary.employees.toLocaleString()} employees.`)
 
-const employeeRows = parsed.employees.map((employee) => ({
+let employeeMaster = null
+let employeeMasterSummary = null
+if (employeeMasterPath) {
+  const employeeBytes = await fs.readFile(employeeMasterPath)
+  const employeeFile = {
+    name: path.basename(employeeMasterPath),
+    size: employeeBytes.length,
+    arrayBuffer: async () => employeeBytes.buffer.slice(employeeBytes.byteOffset, employeeBytes.byteOffset + employeeBytes.byteLength),
+  }
+  employeeMaster = await parseEmployeeMasterFile(employeeFile)
+  const payrollIds = new Set(parsed.employees.map((employee) => employee.employeeId))
+  const matchedEmployees = [...payrollIds].filter((employeeId) => employeeMaster.profilesById[employeeId]).length
+  const employmentTypesSupplied = [...payrollIds].filter((employeeId) => employeeMaster.profilesById[employeeId]?.employmentType).length
+  employeeMasterSummary = {
+    sourceName: employeeFile.name,
+    sourceFingerprint: createHash('sha256').update(employeeBytes).digest('hex'),
+    sourceEmployees: employeeMaster.summary.uniqueEmployees,
+    matchedEmployees,
+    unmatchedEmployees: payrollIds.size - matchedEmployees,
+    employmentTypesSupplied,
+    coveragePercent: payrollIds.size ? Math.round((matchedEmployees / payrollIds.size) * 10000) / 100 : 0,
+    privacyExcludedFields: employeeMaster.summary.privacyExcludedFields,
+  }
+  console.log(`Matched ${matchedEmployees.toLocaleString()} of ${payrollIds.size.toLocaleString()} payroll employees to ${employeeFile.name}.`)
+}
+
+const employeeRows = parsed.employees.map((employee) => {
+  const profile = employeeMaster?.profilesById?.[employee.employeeId]
+  return {
+    employmentType: profile?.employmentType || '',
+    employeeMasterMatched: Boolean(profile),
+    employeeRank: profile?.employeeRank || '',
+    stateCode: profile?.stateCode || '',
+    area: profile?.area || '',
+    publicHolidayArea: profile?.publicHolidayArea || '',
+    employmentStart: profile?.employmentStart || '',
+    timeRotation: profile?.timeRotation || '',
+    employeeMasterAwardCode: profile?.awardCode || '',
+    payrollBatchCode: profile?.payrollBatchCode || '',
+    sevenDayWorker: profile?.sevenDayWorker,
     employeeId: employee.employeeId,
     sourceAwardCodes: employee.sourceAwardCodes,
     sourceClassification: employee.jobRole,
@@ -57,8 +109,8 @@ const employeeRows = parsed.employees.map((employee) => ({
     sourceGrossAmount: employee.sourceGrossAmount,
     sourceComponentCount: employee.sourceComponentCount,
     workPeriodCount: employee.workPeriodCount || employee.shifts.length,
-    employmentType: '',
-  }))
+  }
+})
 const workPeriodRows = parsed.shifts.map((shift) => ({
     employeeId: shift.employeeId,
     sourceShiftId: shift.sourceShiftId,
@@ -89,7 +141,7 @@ const workPeriodRows = parsed.shifts.map((shift) => ({
   }))
 
 const receipts = []
-async function uploadChunks(kind, rows, size = 1000) {
+async function uploadChunks(kind, rows, size = 4000) {
   const total = Math.ceil(rows.length / size)
   for (let index = 0; index < total; index += 1) {
     const result = await requestJson('/api/payroll-imports/chunks', {
@@ -128,6 +180,7 @@ const result = await requestJson('/api/payroll-imports/complete', {
     business: 'MSS Security',
     sourceSummary: parsed.sourceSummary,
     coverageInventory: parsed.coverageInventory,
+    employeeMaster: employeeMasterSummary,
     chunks: receipts,
   },
 })

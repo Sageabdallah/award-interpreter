@@ -398,9 +398,11 @@ export function importIsoftPayrollRows(rows, sourceName = 'iSOFT payroll export'
     },
     coverageInventory,
     releaseBlockingGaps: [
-      'Employee names are not present in the source payroll export.',
       'Employment type and ordinary-hours arrangements are not present in the source payroll export.',
       'The operative historical rule document has not been verified for every source instrument and shift date.',
+    ],
+    sourceDataNotes: [
+      'Employee names are not present in the source payroll export; employee IDs are retained as the reconciliation key.',
     ],
     ...(ledger ? { ledger } : {}),
   }

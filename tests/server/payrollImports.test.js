@@ -42,8 +42,16 @@ describe('payroll import API', () => {
   it('persists large imports as verified bounded chunks and a compact manifest', async () => {
     const auditStore = memoryAuditStore()
     const app = appFor(auditStore)
+    const employeeMaster = {
+      sourceName: 'Employee.xlsx',
+      sourceFingerprint: 'b'.repeat(64),
+      sourceEmployees: 6461,
+      matchedEmployees: 1,
+      unmatchedEmployees: 0,
+      employmentTypesSupplied: 1,
+    }
     const chunks = [
-      { kind: 'employees', rows: payload.employees },
+      { kind: 'employees', rows: payload.employees.map((employee) => ({ ...employee, employmentType: 'Full-time', employeeMasterMatched: true })) },
       { kind: 'work-periods', rows: payload.workPeriods },
       { kind: 'components', rows: payload.components },
     ]
@@ -68,14 +76,19 @@ describe('payroll import API', () => {
       sourceFingerprint: payload.sourceFingerprint,
       sourceSummary: payload.sourceSummary,
       coverageInventory: payload.coverageInventory,
+      employeeMaster,
       chunks: receipts,
     })
     expect(completed.status).toBe(201)
-    expect(completed.body).toMatchObject({ summary: { componentRows: 1, workPeriods: 1, employees: 1 }, releaseGate: { status: 'blocked' } })
+    expect(completed.body).toMatchObject({
+      summary: { componentRows: 1, workPeriods: 1, employees: 1 },
+      releaseGate: { status: 'blocked', employeeMasterMatched: 1, employeeMasterUnmatched: 0, missingEmploymentTypes: false },
+    })
     const manifest = auditStore.records.at(-1)
     expect(manifest.kind).toBe('payroll-import')
     expect(manifest.data).not.toHaveProperty('components')
     expect(manifest.data.chunkRefs).toHaveLength(3)
+    expect(manifest.data.employeeMaster).toMatchObject({ sourceName: 'Employee.xlsx', matchedEmployees: 1, coveragePercent: 100 })
 
     const componentReceipt = receipts.find((receipt) => receipt.kind === 'components')
     const fetched = await request(app).get(`/api/payroll-imports/${payload.sourceFingerprint}/chunks/${componentReceipt.auditId}`)

@@ -163,6 +163,7 @@ function layer3Findings(rows) {
  */
 export function runPayAnomalyDetector(results, parsedCache = null) {
   if (!results?.rows?.length) return null
+  if (results.sourceOnly) return null
 
   const findings = []
   for (const row of results.rows) {

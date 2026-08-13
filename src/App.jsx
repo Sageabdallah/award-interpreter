@@ -46,6 +46,7 @@ import { buildRosterProposal } from './engines/rosterOptimisation.js'
 import { buildUnallocatedWorklist } from './engines/unallocatedShifts.js'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
 import { appendAssignmentsToTimesheet, appendShiftsToTimesheet } from './domain/bulkShifts.js'
+import { enrichSourcePayroll, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
 import { parseLeaveRequestFile } from './domain/leaveParser.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
@@ -106,8 +107,12 @@ const initialState = {
   stepIndex: 0,
   processingError: '',
   timesheetFile: null,
+  sourceTimesheetData: null,
   timesheetData: null,
   timesheetError: '',
+  employeeMasterFile: null,
+  employeeMasterData: null,
+  employeeMasterError: '',
   results: null,
   leaveFile: null,
   leaveData: null,
@@ -131,6 +136,7 @@ function reducer(state, action) {
         parsedCache: null,
         processingError: '',
         timesheetFile: null,
+        sourceTimesheetData: null,
         timesheetData: null,
         timesheetError: '',
         results: null,
@@ -145,6 +151,7 @@ function reducer(state, action) {
         parsedCache: null,
         processingError: '',
         timesheetFile: null,
+        sourceTimesheetData: null,
         timesheetData: null,
         timesheetError: '',
         results: null,
@@ -159,11 +166,44 @@ function reducer(state, action) {
     case 'setParsedCache':
       return { ...state, parsedCache: action.cache, processingError: '', stepIndex: PARSE_STEPS.length }
     case 'setTimesheetStart':
-      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: '', results: null, ...leaveReset }
+      return { ...state, timesheetFile: action.file, sourceTimesheetData: null, timesheetData: null, timesheetError: '', results: null, ...leaveReset }
     case 'setTimesheetSuccess':
-      return { ...state, timesheetFile: action.file, timesheetData: action.data, timesheetError: action.error || '', results: null, ...leaveReset }
+      return {
+        ...state,
+        timesheetFile: action.file,
+        sourceTimesheetData: action.sourceData || action.data,
+        timesheetData: action.data,
+        timesheetError: action.error || '',
+        results: null,
+        ...leaveReset,
+      }
     case 'setTimesheetError':
-      return { ...state, timesheetFile: action.file, timesheetData: null, timesheetError: action.error, results: null, ...leaveReset }
+      return { ...state, timesheetFile: action.file, sourceTimesheetData: null, timesheetData: null, timesheetError: action.error, results: null, ...leaveReset }
+    case 'setEmployeeMasterStart':
+      return { ...state, employeeMasterFile: action.file, employeeMasterData: null, employeeMasterError: '', results: null }
+    case 'setEmployeeMasterSuccess': {
+      const timesheetData = enrichSourcePayroll(state.sourceTimesheetData || state.timesheetData, action.data)
+      return {
+        ...state,
+        employeeMasterFile: action.file,
+        employeeMasterData: action.data,
+        employeeMasterError: '',
+        timesheetData,
+        timesheetError: buildTimesheetMatchMessage(state.parsedCache, timesheetData),
+        results: null,
+        ...leaveReset,
+      }
+    }
+    case 'setEmployeeMasterError':
+      return {
+        ...state,
+        employeeMasterFile: action.file,
+        employeeMasterData: null,
+        employeeMasterError: action.error,
+        timesheetData: state.sourceTimesheetData || state.timesheetData,
+        results: null,
+        ...leaveReset,
+      }
     case 'setResults':
       return { ...state, results: action.results }
     case 'setLeave':
@@ -179,6 +219,7 @@ function reducer(state, action) {
       // unallocated duties survive (they reprice against the new roster).
       return {
         ...state,
+        sourceTimesheetData: action.timesheetData,
         timesheetData: action.timesheetData,
         timesheetError: '',
         results: null,
@@ -219,6 +260,10 @@ function countTimesheetMatches(parsedCache, timesheetData) {
 
 function buildTimesheetMatchMessage(parsedCache, timesheetData) {
   if (!parsedCache || !timesheetData?.employees?.length) return ''
+  // A source payroll ledger is reconciled by employee ID against its employee
+  // master, not against the small agreement-profile cache used by ordinary
+  // pay-period timesheets.
+  if (timesheetData.sourceOnly) return ''
   const matchedCount = countTimesheetMatches(parsedCache, timesheetData)
   if (matchedCount === timesheetData.employees.length) return ''
 
@@ -369,6 +414,8 @@ const GLOBAL_CSS = `
   .flag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px;
     color: var(--warn); background: var(--warn-bg);
     border: 1px solid rgba(178,106,0,0.3); border-radius: var(--r-sm); padding: 9px 13px; }
+  .success-flag { color: var(--sage); background: rgba(47,125,87,0.1); border-color: rgba(47,125,87,0.3); }
+  .info-flag { color: var(--ink); background: var(--surface-2); border-color: var(--line-strong); }
 
   .clause-ref { position: relative; cursor: help;
     border-bottom: 1px dotted rgba(20,22,28,0.35); }
@@ -448,11 +495,18 @@ const GLOBAL_CSS = `
   .table-inner { min-width: 920px; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .timesheet-upload-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
+  @media (max-width: 1440px) {
+    .timesheet-upload-grid { grid-template-columns: 1fr 1fr; }
+    .timesheet-upload-grid > .ucard:last-child { grid-column: 1 / -1; }
+  }
+
   @media (max-width: 860px) {
     .upload-grid { grid-template-columns: 1fr !important; }
+    .timesheet-upload-grid > .ucard:last-child { grid-column: auto; }
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
     .table-inner { min-width: 860px; }
@@ -636,10 +690,12 @@ function StepRow({ step, status, delay }) {
   )
 }
 
-function Flag({ children, danger = false }) {
+function Flag({ children, danger = false, success = false, info = false }) {
+  const Icon = success ? CheckCircle2 : info ? Database : AlertTriangle
+  const tone = danger ? ' danger-flag' : success ? ' success-flag' : info ? ' info-flag' : ''
   return (
-    <span className={`flag${danger ? ' danger-flag' : ''}`}>
-      <AlertTriangle size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+    <span className={`flag${tone}`}>
+      <Icon size={15} strokeWidth={1.8} style={{ flexShrink: 0 }} />
       {children}
     </span>
   )
@@ -1403,9 +1459,22 @@ function InterpretationStage({ parsedCache, onBack, onContinue }) {
 
 // Stage 4 — the pay run itself: upload the timesheet against the cache built
 // in stages 2–3, preview the parsed shifts, then calculate.
-function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
+function TimesheetStage({
+  parsedCache,
+  timesheetFile,
+  timesheetData,
+  timesheetError,
+  employeeMasterFile,
+  employeeMasterData,
+  employeeMasterError,
+  onTimesheetFile,
+  onEmployeeMasterFile,
+  onBack,
+  onContinue,
+}) {
   // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
   const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
+  const parsingEmployeeMaster = Boolean(employeeMasterFile) && !employeeMasterData && !employeeMasterError
   const [reviewPage, setReviewPage] = useState(0)
   useEffect(() => setReviewPage(0), [timesheetData])
   const visibleEmployees = timesheetData?.employees?.slice(
@@ -1422,22 +1491,34 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
           Upload and review the timesheet.
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
-          The award, agreement and compliance cache is ready. Upload the pay-period timesheet to match
-          employees against cached award levels without re-parsing the documents.
+          {timesheetData?.sourceOnly
+            ? 'The annual source payroll is loaded for reconciliation. Add the employee master to supply employment facts by employee ID while preserving every source instrument and total.'
+            : 'The award, agreement and compliance cache is ready. Upload a pay-period timesheet, or load an annual source payroll with its employee master.'}
         </p>
       </div>
 
-      <div className="upload-grid" style={{ marginBottom: 24 }}>
+      <div className="upload-grid timesheet-upload-grid" style={{ marginBottom: 24 }}>
         <UploadCard
           index="01"
           icon={FileSpreadsheet}
-          title="Timesheet"
-          subtitle="Shift entries for the pay period"
+          title="Source payroll"
+          subtitle="Pay-period or annual timesheet export"
           accept=".csv,.xlsx,.xls,.pdf"
           formats="CSV · XLSX · XLS · PDF"
           file={timesheetFile}
           onFile={onTimesheetFile}
           onRemove={() => onTimesheetFile(null)}
+        />
+        <UploadCard
+          index="02"
+          icon={Users}
+          title="Employee master"
+          subtitle="Employment type and award assignment"
+          accept=".csv,.xlsx,.xls"
+          formats="CSV · XLSX · XLS"
+          file={employeeMasterFile}
+          onFile={onEmployeeMasterFile}
+          onRemove={() => onEmployeeMasterFile(null)}
         />
         <div className="ucard ready">
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -1453,7 +1534,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                 <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
               </div>
             </div>
-            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>02</span>
+            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>03</span>
           </div>
           <div style={{ display: 'grid', gap: 10 }}>
             <div className="chip">
@@ -1470,7 +1551,9 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
             </div>
           </div>
           <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
-            Timesheet submission will only hit this cached structure. The backend parser is not re-run unless the rule documents change.
+            {timesheetData?.sourceOnly
+              ? 'Source-ledger employees reconcile by ID against the employee master. This agreement cache does not reject payroll IDs that are outside its current profile set.'
+              : 'Pay-period timesheets use this cached structure. Rule documents are only re-parsed when the document set changes.'}
           </div>
         </div>
       </div>
@@ -1481,10 +1564,23 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
         </div>
       )}
 
+      {employeeMasterError && (
+        <div style={{ marginBottom: 18 }}>
+          <Flag danger>{employeeMasterError}</Flag>
+        </div>
+      )}
+
       {parsingTimesheet && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '14px 16px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
           <Loader2 className="spin" size={16} strokeWidth={2.2} color={COLORS.ochre} />
           <span style={{ fontSize: 13.5, color: COLORS.muted }}>Parsing timesheet…</span>
+        </div>
+      )}
+
+      {parsingEmployeeMaster && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '14px 16px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
+          <Loader2 className="spin" size={16} strokeWidth={2.2} color={COLORS.ochre} />
+          <span style={{ fontSize: 13.5, color: COLORS.muted }}>Reading employee master…</span>
         </div>
       )}
 
@@ -1500,12 +1596,30 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
 
           {timesheetData.sourceOnly && (
             <div style={{ marginBottom: 22 }}>
-              <Flag danger>
-                The complete source payroll is loaded for reconciliation. Award calculation and pay release remain blocked until employee employment types and the operative historical instrument versions are supplied.
+              <Flag success>
+                Source payroll loaded successfully. All {timesheetData.sourceSummary.componentRows.toLocaleString()} rows, {timesheetData.sourceSummary.workPeriods.toLocaleString()} work periods and {timesheetData.sourceSummary.sourceGrossAmount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })} source gross were processed.
               </Flag>
+              <div style={{ marginTop: 10 }}>
+                {timesheetData.employeeMaster ? (
+                  timesheetData.employeeMaster.unmatchedEmployees > 0 ? (
+                    <Flag>
+                      Employee master matched {timesheetData.employeeMaster.matchedEmployees.toLocaleString()} of {timesheetData.employees.length.toLocaleString()} payroll employees ({timesheetData.employeeMaster.coveragePercent}%). The remaining {timesheetData.employeeMaster.unmatchedEmployees.toLocaleString()} historical IDs need a master-data record before employee-level award calculation.
+                    </Flag>
+                  ) : (
+                    <Flag success>Employee master matched all {timesheetData.employees.length.toLocaleString()} payroll employees.</Flag>
+                  )
+                ) : (
+                  <Flag info>Upload Employee.xlsx to add employment type, rank, location, rotation and employee award assignment by employee ID.</Flag>
+                )}
+              </div>
+              <div style={{ marginTop: 10 }}>
+                <Flag info>
+                  Award calculation remains held while the operative historical rules for all {timesheetData.coverageInventory.length} source instruments are verified. The source payroll remains available for reconciliation and review.
+                </Flag>
+              </div>
               {timesheetData.detailTruncated && (
                 <div style={{ marginTop: 10 }}>
-                  <Flag>All totals were processed. To keep this annual export responsive, the review shows up to 10 work periods per employee; the protected backend import retains every source component.</Flag>
+                  <Flag info>To keep this annual export responsive, the screen previews up to 10 work periods per employee. This does not truncate the processed totals or source-row counts.</Flag>
                 </div>
               )}
             </div>
@@ -1517,7 +1631,9 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
                   <span className="mono" style={{ fontSize: 11, color: COLORS.muted }}>{employee.employeeId || 'NO-ID'}</span>
                   <span style={{ fontSize: 15.5, fontWeight: 600 }}>{employee.employeeName}</span>
-                  <span style={{ fontSize: 12.5, color: COLORS.muted }}>{employee.jobRole || 'Role unavailable'} · {employee.employmentType || 'Employment unavailable'}</span>
+                  <span style={{ fontSize: 12.5, color: COLORS.muted }}>
+                    {employee.employeeRank || employee.jobRole || 'Classification not supplied'} · {employee.employmentType || 'Employment type not in payroll export'}
+                  </span>
                 </div>
                 <span className="mono" style={{ fontSize: 13, color: COLORS.ink }}>{employee.totalHours} hrs</span>
               </div>
@@ -2081,9 +2197,9 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
         <div>
-          <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: sourceOnly ? COLORS.red : COLORS.sage }}>
-            {sourceOnly ? <AlertTriangle size={14} strokeWidth={1.9} /> : <BadgeCheck size={14} strokeWidth={1.9} />}
-            {sourceOnly ? 'Source payroll · release blocked' : 'Pay Run · calculation complete'}
+          <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: sourceOnly ? COLORS.sage : COLORS.sage }}>
+            {sourceOnly ? <Database size={14} strokeWidth={1.9} /> : <BadgeCheck size={14} strokeWidth={1.9} />}
+            {sourceOnly ? 'Source payroll · reconciliation mode' : 'Pay Run · calculation complete'}
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
             {results.stats.employees} {sourceOnly ? 'source employees loaded' : 'employees calculated'}
@@ -2103,12 +2219,15 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
         <StatCard icon={Clock} label={sourceOnly ? 'Payable hours' : 'Total hours'} value={`${results.stats.totalHours}`} caption="across the uploaded payroll" accent={COLORS.ink} />
         <StatCard icon={Banknote} label={sourceOnly ? 'Source gross' : 'Base pay'} value={fmt(sourceOnly ? results.stats.sourceGrossPay : results.stats.totalBasePay)} caption={sourceOnly ? 'recorded amount, not recalculated entitlement' : 'hours × matched base pay rate'} accent={COLORS.sage} />
         <StatCard icon={Layers} label={sourceOnly ? 'Source rows' : 'Extras'} value={sourceOnly ? results.stats.sourceComponentRows.toLocaleString() : fmt(results.stats.totalExtras)} caption={sourceOnly ? `${results.stats.sourceWorkPeriods.toLocaleString()} grouped work periods` : 'allowances and penalties'} accent={COLORS.ochre} />
-        <StatCard icon={AlertTriangle} label={sourceOnly ? 'Instruments blocked' : 'Validation rows'} value={`${sourceOnly ? results.stats.sourceInstruments : results.stats.validationErrors}`} caption={sourceOnly ? 'historical rule evidence required' : 'employees needing manual review'} accent={COLORS.red} />
+        <StatCard icon={Scale} label={sourceOnly ? 'Instruments pending' : 'Validation rows'} value={`${sourceOnly ? results.stats.sourceInstruments : results.stats.validationErrors}`} caption={sourceOnly ? 'historical rule evidence required' : 'employees needing manual review'} accent={sourceOnly ? COLORS.warn : COLORS.red} />
       </div>
 
       {sourceOnly && (
         <div style={{ marginBottom: 22 }}>
-          <Flag danger>All source rows are retained, but no entitlement has been recalculated. Pay release is disabled until the missing employment and historical instrument evidence is resolved.</Flag>
+          <Flag success>All source rows and recorded totals are retained for reconciliation.</Flag>
+          <div style={{ marginTop: 10 }}>
+            <Flag>No entitlement has been recalculated. Pay release remains held until employee gaps, ordinary-hours arrangements and historical instrument evidence are resolved.</Flag>
+          </div>
         </div>
       )}
 
@@ -2159,7 +2278,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
 
       <div className="sticky-bar" style={{ marginTop: 22 }}>
         <div>
-          <span className="eyebrow">{sourceOnly ? 'Release blocked' : 'Ready to disperse'}</span>
+          <span className="eyebrow">{sourceOnly ? 'Calculation held' : 'Ready to disperse'}</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
             <span style={{ fontWeight: 600 }}>{results.stats.employees} employees</span>
             <span style={{ color: COLORS.muted }}> · {sourceOnly ? `${fmt(results.stats.sourceGrossPay)} source gross retained` : `${fmt(results.stats.totalCalculatedPay)} total calculated pay`}</span>
@@ -2510,9 +2629,13 @@ export default function App() {
   // newer parse of the same kind started, and (b) the workspace inputs it was
   // validated against are still current. Without this, a slow parse resolving
   // after the user swapped documents resurrects state the reducer just reset.
-  const parseSeqRef = useRef({ timesheet: 0, leave: 0 })
+  const parseSeqRef = useRef({ timesheet: 0, employeeMaster: 0, leave: 0 })
   const latestInputsRef = useRef({})
-  latestInputsRef.current = { parsedCache: state.parsedCache, timesheetData: state.timesheetData }
+  latestInputsRef.current = {
+    parsedCache: state.parsedCache,
+    timesheetData: state.timesheetData,
+    employeeMasterData: state.employeeMasterData,
+  }
   // Dashboard navigation — one page id, AXI-WFM style. Module pages mount
   // the original workflow components (upload/processing, interpretation,
   // timesheet, results); engine ids mount their EngineWorkspace views.
@@ -2564,6 +2687,7 @@ export default function App() {
   }, [state.results, state.parsedCache, state.timesheetData, state.leaveData])
 
   const worklistBadge = useMemo(() => {
+    if (state.timesheetData?.sourceOnly) return {}
     const worklist = buildUnallocatedWorklist(state.parsedCache, state.timesheetData, {
       decisions: state.leaveDecisions,
       leaveRequests: state.leaveData?.requests || [],
@@ -2574,6 +2698,7 @@ export default function App() {
   }, [state.parsedCache, state.timesheetData, state.leaveData, state.leaveDecisions, state.shiftFills, state.adHocUnallocated])
 
   const rosterBadge = useMemo(() => {
+    if (state.timesheetData?.sourceOnly) return {}
     // The optimiser's local search prices every legal move through the pay
     // engine — unbounded user-supplied timesheets must not freeze the render
     // path just to draw a badge. Past the cap the engine still runs fine on
@@ -2590,6 +2715,7 @@ export default function App() {
   // sidebar badge shows its Critical count.
   const alertFeed = useMemo(() => {
     if (!state.timesheetData?.employees?.length) return null
+    if (state.timesheetData.sourceOnly) return buildAlertFeed({ parsedCache: state.parsedCache })
     return buildAlertFeed({
       payAnomaly: runPayAnomalyDetector(state.results, state.parsedCache),
       compliance: buildComplianceRisk(state.timesheetData, state.results),
@@ -2676,17 +2802,41 @@ export default function App() {
     const cacheAtStart = state.parsedCache
     dispatch({ type: 'setTimesheetStart', file })
     try {
-      const data = await parseTimesheetFile(file)
+      const sourceData = await parseTimesheetFile(file)
       if (seq !== parseSeqRef.current.timesheet || latestInputsRef.current.parsedCache !== cacheAtStart) return
+      const data = enrichSourcePayroll(sourceData, latestInputsRef.current.employeeMasterData)
       dispatch({
         type: 'setTimesheetSuccess',
         file,
         data,
+        sourceData,
         error: buildTimesheetMatchMessage(cacheAtStart, data),
       })
     } catch (error) {
       if (seq !== parseSeqRef.current.timesheet) return
       dispatch({ type: 'setTimesheetError', file, error: error instanceof Error ? error.message : 'Timesheet parsing failed.' })
+    }
+  }
+
+  const handleEmployeeMasterFile = async (file) => {
+    const seq = ++parseSeqRef.current.employeeMaster
+    if (!file) {
+      dispatch({ type: 'setEmployeeMasterError', file: null, error: '' })
+      return
+    }
+
+    dispatch({ type: 'setEmployeeMasterStart', file })
+    try {
+      const data = await parseEmployeeMasterFile(file)
+      if (seq !== parseSeqRef.current.employeeMaster) return
+      dispatch({ type: 'setEmployeeMasterSuccess', file, data })
+    } catch (error) {
+      if (seq !== parseSeqRef.current.employeeMaster) return
+      dispatch({
+        type: 'setEmployeeMasterError',
+        file,
+        error: error instanceof Error ? error.message : 'Employee master parsing failed.',
+      })
     }
   }
 
@@ -2752,8 +2902,8 @@ export default function App() {
 
   const availability = {
     hasCache: Boolean(state.parsedCache),
-    hasTimesheet: Boolean(state.timesheetData),
-    hasResults: Boolean(state.results),
+    hasTimesheet: Boolean(state.timesheetData && !state.timesheetData.sourceOnly),
+    hasResults: Boolean(state.results && !state.results.sourceOnly),
     hasProfiles: Boolean(state.parsedCache?.employeeProfiles?.length),
   }
 
@@ -2803,7 +2953,7 @@ export default function App() {
     employees: availability.hasCache,
     'bulk-shifts': availability.hasCache,
     'time-entry': availability.hasCache,
-    'pay-run': availability.hasTimesheet,
+    'pay-run': Boolean(state.timesheetData),
     reports: availability.hasCache,
     ...Object.fromEntries(LIVE_ENGINES.map((engine) => [engine.id, engineAvailable(engine, availability)])),
   }
@@ -2881,7 +3031,11 @@ export default function App() {
           timesheetFile={state.timesheetFile}
           timesheetData={state.timesheetData}
           timesheetError={state.timesheetError}
+          employeeMasterFile={state.employeeMasterFile}
+          employeeMasterData={state.employeeMasterData}
+          employeeMasterError={state.employeeMasterError}
           onTimesheetFile={handleTimesheetFile}
+          onEmployeeMasterFile={handleEmployeeMasterFile}
           onBack={() => navigate('award-interpretation')}
           onContinue={() => { handleCalculate(); navigate('pay-run') }}
         />
