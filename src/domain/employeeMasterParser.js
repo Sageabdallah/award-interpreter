@@ -105,7 +105,10 @@ export function parseEmployeeMasterRows(rows, sourceName = 'employee master') {
 
 export async function parseEmployeeMasterFile(file) {
   if (!file) return null
-  return parseEmployeeMasterRows(await readSpreadsheetRows(file), file.name)
+  return {
+    ...parseEmployeeMasterRows(await readSpreadsheetRows(file), file.name),
+    sourceSize: Number(file.size) || 0,
+  }
 }
 
 export function enrichSourcePayroll(timesheetData, employeeMasterData) {

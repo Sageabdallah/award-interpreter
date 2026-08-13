@@ -62,6 +62,11 @@ function describeExtras(row) {
 
 export function resultsToCsv(rows) {
   if (rows.some((row) => row.calculationStatus === 'source-only-blocked')) {
+    const evidenceLabel = (row) => ({
+      'employee-and-instrument-matched': 'Calculation held - employee and instrument matched',
+      'employee-matched-instrument-pending': 'Calculation held - instrument evidence needed',
+      'employee-pending': 'Calculation held - employee evidence needed',
+    }[row.evidenceStatus] || 'Calculation held - evidence review needed')
     const sourceBody = rows.map((row) => [
       row.employeeId,
       row.employeeName,
@@ -71,7 +76,7 @@ export function resultsToCsv(rows) {
       row.sourceComponentCount || 0,
       row.totalHours,
       row.sourceGrossPay,
-      'Blocked - source only',
+      evidenceLabel(row),
       row.validationErrors.join('; '),
     ])
     return [SOURCE_RESULT_COLUMN_ORDER, ...sourceBody]

@@ -46,6 +46,15 @@ import { buildRosterProposal } from './engines/rosterOptimisation.js'
 import { buildUnallocatedWorklist } from './engines/unallocatedShifts.js'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
 import { appendAssignmentsToTimesheet, appendShiftsToTimesheet } from './domain/bulkShifts.js'
+import {
+  clearEmployeeMasterCache,
+  clearInterpretationCache,
+  clearWorkspaceCache,
+  loadEmployeeMasterCache,
+  loadInterpretationCache,
+  saveEmployeeMasterCache,
+  saveInterpretationCache,
+} from './domain/workspaceCache.js'
 import { enrichSourcePayroll, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
 import { parseLeaveRequestFile } from './domain/leaveParser.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
@@ -165,6 +174,15 @@ function reducer(state, action) {
       return { ...state, processingError: action.error }
     case 'setParsedCache':
       return { ...state, parsedCache: action.cache, processingError: '', stepIndex: PARSE_STEPS.length }
+    case 'restoreInterpretationCache':
+      return {
+        ...state,
+        stage: 3,
+        industry: action.industry || '',
+        parsedCache: action.cache,
+        processingError: '',
+        stepIndex: PARSE_STEPS.length,
+      }
     case 'setTimesheetStart':
       return { ...state, timesheetFile: action.file, sourceTimesheetData: null, timesheetData: null, timesheetError: '', results: null, ...leaveReset }
     case 'setTimesheetSuccess':
@@ -233,7 +251,18 @@ function reducer(state, action) {
     case 'addAdHocUnallocated':
       return { ...state, adHocUnallocated: [...state.adHocUnallocated, ...action.entries] }
     case 'reset':
-      return initialState
+      return action.preserveEmployeeMaster
+        ? {
+            ...initialState,
+            stage: state.parsedCache ? 3 : 1,
+            industry: state.industry,
+            parsedCache: state.parsedCache,
+            stepIndex: state.parsedCache ? PARSE_STEPS.length : 0,
+            employeeMasterFile: state.employeeMasterFile,
+            employeeMasterData: state.employeeMasterData,
+            employeeMasterError: state.employeeMasterError,
+          }
+        : initialState
     default:
       return state
   }
@@ -514,6 +543,7 @@ const GLOBAL_CSS = `
 
   @media (max-width: 600px) {
     .stats-grid { grid-template-columns: 1fr !important; }
+    .sticky-bar { position: static; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1467,6 +1497,7 @@ function TimesheetStage({
   employeeMasterFile,
   employeeMasterData,
   employeeMasterError,
+  employeeMasterCacheStatus,
   onTimesheetFile,
   onEmployeeMasterFile,
   onBack,
@@ -1475,6 +1506,9 @@ function TimesheetStage({
   // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
   const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
   const parsingEmployeeMaster = Boolean(employeeMasterFile) && !employeeMasterData && !employeeMasterError
+  const pendingInstruments = (timesheetData?.coverageInventory || [])
+    .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
+  const verifiedInstrumentCount = Math.max(0, (timesheetData?.coverageInventory?.length || 0) - pendingInstruments.length)
   const [reviewPage, setReviewPage] = useState(0)
   useEffect(() => setReviewPage(0), [timesheetData])
   const visibleEmployees = timesheetData?.employees?.slice(
@@ -1513,7 +1547,7 @@ function TimesheetStage({
           index="02"
           icon={Users}
           title="Employee master"
-          subtitle="Employment type and award assignment"
+          subtitle="One-time workforce setup"
           accept=".csv,.xlsx,.xls"
           formats="CSV · XLSX · XLS"
           file={employeeMasterFile}
@@ -1570,6 +1604,14 @@ function TimesheetStage({
         </div>
       )}
 
+      {employeeMasterData && employeeMasterCacheStatus !== 'unavailable' && (
+        <div style={{ marginBottom: 18 }}>
+          <Flag success>
+            Employee setup is retained on this browser and will auto-apply to every replacement payroll. Only operational fields are stored; date of birth and gender are excluded.
+          </Flag>
+        </div>
+      )}
+
       {parsingTimesheet && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '14px 16px', background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 12 }}>
           <Loader2 className="spin" size={16} strokeWidth={2.2} color={COLORS.ochre} />
@@ -1591,7 +1633,12 @@ function TimesheetStage({
             {timesheetData.meta.business && <span className="pill">{timesheetData.meta.business}</span>}
             <span className="pill"><Clock size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheetData.totalHours} hrs</span>
             {timesheetData.sourceSummary && <span className="pill"><Database size={15} strokeWidth={1.7} color={COLORS.ink} />{timesheetData.sourceSummary.componentRows.toLocaleString()} source rows</span>}
-            {timesheetData.coverageInventory && <span className="pill"><Scale size={15} strokeWidth={1.7} color={COLORS.red} />{timesheetData.coverageInventory.length} source instruments</span>}
+            {timesheetData.coverageInventory && (
+              <span className="pill">
+                <Scale size={15} strokeWidth={1.7} color={pendingInstruments.length ? COLORS.warn : COLORS.sage} />
+                {pendingInstruments.length} pending · {verifiedInstrumentCount} verified instrument{verifiedInstrumentCount === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
 
           {timesheetData.sourceOnly && (
@@ -1614,7 +1661,7 @@ function TimesheetStage({
               </div>
               <div style={{ marginTop: 10 }}>
                 <Flag info>
-                  Award calculation remains held while the operative historical rules for all {timesheetData.coverageInventory.length} source instruments are verified. The source payroll remains available for reconciliation and review.
+                  Award calculation remains held while the operative historical rules for {pendingInstruments.length} source instruments are verified. {verifiedInstrumentCount} instrument{verifiedInstrumentCount === 1 ? '' : 's'} {verifiedInstrumentCount === 1 ? 'is' : 'are'} already date-versioned and auto-matched.
                 </Flag>
               </div>
               {timesheetData.detailTruncated && (
@@ -1622,6 +1669,32 @@ function TimesheetStage({
                   <Flag info>To keep this annual export responsive, the screen previews up to 10 work periods per employee. This does not truncate the processed totals or source-row counts.</Flag>
                 </div>
               )}
+              <details style={{ marginTop: 14, borderTop: `1px solid ${COLORS.line}`, paddingTop: 12 }}>
+                <summary style={{ cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: COLORS.ink }}>
+                  Review the one-time instrument evidence queue ({pendingInstruments.length} pending)
+                </summary>
+                <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                  {(timesheetData.coverageInventory || []).map((instrument) => {
+                    const verified = instrument.supportStatus === 'supported-date-range-needs-employee-evidence'
+                    return (
+                      <div key={instrument.sourceCode} style={{ display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr) auto', gap: 10, alignItems: 'start', padding: '9px 0', borderBottom: `1px solid ${COLORS.line}` }}>
+                        {verified
+                          ? <CheckCircle2 size={16} color={COLORS.sage} strokeWidth={2} />
+                          : <AlertTriangle size={16} color={COLORS.warn} strokeWidth={1.9} />}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600 }}>{instrument.sourceCode}</div>
+                          <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 3 }}>
+                            {instrument.employeeCount.toLocaleString()} employees · {instrument.rowCount.toLocaleString()} rows · {instrument.firstShiftDate} to {instrument.lastShiftDate}
+                          </div>
+                        </div>
+                        <span className="mono" style={{ fontSize: 10.5, color: verified ? COLORS.sage : COLORS.warn, whiteSpace: 'nowrap' }}>
+                          {verified ? 'VERIFIED' : 'DOCUMENT NEEDED'}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </details>
             </div>
           )}
 
@@ -1716,6 +1789,11 @@ function payrunExplainRequest(row) {
 }
 
 function SourceResultRow({ row, isOpen, onToggle }) {
+  const evidence = {
+    'employee-and-instrument-matched': { label: 'Employee + award matched', color: COLORS.sage },
+    'employee-matched-instrument-pending': { label: 'Employee matched · instrument needed', color: COLORS.warn },
+    'employee-pending': { label: 'Employee data needed', color: COLORS.warn },
+  }[row.evidenceStatus] || { label: 'Evidence review needed', color: COLORS.warn }
   return (
     <div className="rowwrap fade-up">
       <div
@@ -1729,7 +1807,7 @@ function SourceResultRow({ row, isOpen, onToggle }) {
       >
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.employeeName}</div>
-          <div style={{ fontSize: 12.5, color: COLORS.red, marginTop: 2 }}>Release blocked</div>
+          <div style={{ fontSize: 12.5, color: evidence.color, marginTop: 2 }}>{evidence.label}</div>
         </div>
         <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }} title={row.sourceAwardCodes.join(', ')}>{row.awardCode}</span>
         <span style={{ fontSize: 13 }}>{row.employeeLevel}</span>
@@ -1749,10 +1827,16 @@ function SourceResultRow({ row, isOpen, onToggle }) {
         <div className="panel fade-up">
           <div className="panel-inner">
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 22 }}>
-              {row.validationErrors.map((error) => <Flag danger key={error}>{error}</Flag>)}
+              {row.employeeMasterMatched
+                ? <Flag success>Employee ID and employment type matched the retained employee master.</Flag>
+                : <Flag>Employee ID needs a record in the employee master.</Flag>}
+              {row.instrumentRulesAvailable
+                ? <Flag success>Historical instrument rules are available for this source code and payroll date.</Flag>
+                : <Flag>Verified operative rules are still needed for this source instrument.</Flag>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 18 }}>
               <div><div className="panel-label">Source employee ID</div><div className="mono">{row.employeeId}</div></div>
+              <div><div className="panel-label">Employment type</div><div>{row.employmentType || 'Not supplied'}</div></div>
               <div><div className="panel-label">Work periods</div><div className="mono">{row.sourceWorkPeriodCount}</div></div>
               <div><div className="panel-label">Component rows</div><div className="mono">{row.sourceComponentCount.toLocaleString()}</div></div>
               <div><div className="panel-label">Recorded source gross</div><div className="mono">{fmt(row.sourceGrossPay)}</div></div>
@@ -2188,7 +2272,7 @@ function InterpretationTable({ rows }) {
   )
 }
 
-function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow, ragAvailable }) {
+function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence, expandedRowId, onToggleRow, ragAvailable }) {
   const [resultPage, setResultPage] = useState(0)
   useEffect(() => setResultPage(0), [results])
   const sourceOnly = Boolean(results.sourceOnly)
@@ -2219,7 +2303,13 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
         <StatCard icon={Clock} label={sourceOnly ? 'Payable hours' : 'Total hours'} value={`${results.stats.totalHours}`} caption="across the uploaded payroll" accent={COLORS.ink} />
         <StatCard icon={Banknote} label={sourceOnly ? 'Source gross' : 'Base pay'} value={fmt(sourceOnly ? results.stats.sourceGrossPay : results.stats.totalBasePay)} caption={sourceOnly ? 'recorded amount, not recalculated entitlement' : 'hours × matched base pay rate'} accent={COLORS.sage} />
         <StatCard icon={Layers} label={sourceOnly ? 'Source rows' : 'Extras'} value={sourceOnly ? results.stats.sourceComponentRows.toLocaleString() : fmt(results.stats.totalExtras)} caption={sourceOnly ? `${results.stats.sourceWorkPeriods.toLocaleString()} grouped work periods` : 'allowances and penalties'} accent={COLORS.ochre} />
-        <StatCard icon={Scale} label={sourceOnly ? 'Instruments pending' : 'Validation rows'} value={`${sourceOnly ? results.stats.sourceInstruments : results.stats.validationErrors}`} caption={sourceOnly ? 'historical rule evidence required' : 'employees needing manual review'} accent={sourceOnly ? COLORS.warn : COLORS.red} />
+        <StatCard
+          icon={Scale}
+          label={sourceOnly ? 'Instruments pending' : 'Validation rows'}
+          value={`${sourceOnly ? results.stats.pendingSourceInstruments : results.stats.validationErrors}`}
+          caption={sourceOnly ? `${results.stats.verifiedSourceInstruments} verified · historical evidence required` : 'employees needing manual review'}
+          accent={sourceOnly ? COLORS.warn : COLORS.red}
+        />
       </div>
 
       {sourceOnly && (
@@ -2228,6 +2318,12 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
           <div style={{ marginTop: 10 }}>
             <Flag>No entitlement has been recalculated. Pay release remains held until employee gaps, ordinary-hours arrangements and historical instrument evidence are resolved.</Flag>
           </div>
+          {results.employeeMaster && (
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
+              <Flag success>{results.stats.employeeMasterMatched.toLocaleString()} employee records auto-matched.</Flag>
+              {results.stats.employeeMasterUnmatched > 0 && <Flag>{results.stats.employeeMasterUnmatched.toLocaleString()} employee IDs need master-data records.</Flag>}
+            </div>
+          )}
         </div>
       )}
 
@@ -2284,8 +2380,8 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
             <span style={{ color: COLORS.muted }}> · {sourceOnly ? `${fmt(results.stats.sourceGrossPay)} source gross retained` : `${fmt(results.stats.totalCalculatedPay)} total calculated pay`}</span>
           </div>
         </div>
-        <button className="btn-primary" disabled={sourceOnly} onClick={onDisperse}>
-          {sourceOnly ? 'Evidence required' : 'Disperse pay'} <ArrowRight size={18} strokeWidth={2} />
+        <button className="btn-primary" onClick={sourceOnly ? onReviewEvidence : onDisperse}>
+          {sourceOnly ? 'Review evidence gaps' : 'Disperse pay'} <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
     </div>
@@ -2625,6 +2721,7 @@ function ScrollTextIcon(props) {
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
   const [expandedRowId, setExpandedRowId] = useState(null)
+  const [employeeMasterCacheStatus, setEmployeeMasterCacheStatus] = useState('loading')
   // Guards for the async file parses: a parse result may only land if (a) no
   // newer parse of the same kind started, and (b) the workspace inputs it was
   // validated against are still current. Without this, a slow parse resolving
@@ -2641,6 +2738,40 @@ export default function App() {
   // timesheet, results); engine ids mount their EngineWorkspace views.
   const [page, setPage] = useState('dashboard')
   const health = useServerHealth()
+
+  useEffect(() => {
+    let cancelled = false
+    loadEmployeeMasterCache()
+      .then((record) => {
+        if (cancelled) return
+        if (!record?.data) {
+          setEmployeeMasterCacheStatus('empty')
+          return
+        }
+        dispatch({
+          type: 'setEmployeeMasterSuccess',
+          file: { name: record.data.sourceName || 'Employee.xlsx', size: record.data.sourceSize },
+          data: record.data,
+        })
+        setEmployeeMasterCacheStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setEmployeeMasterCacheStatus('unavailable')
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    loadInterpretationCache()
+      .then((record) => {
+        if (!cancelled && record?.parsedCache) {
+          dispatch({ type: 'restoreInterpretationCache', cache: record.parsedCache, industry: record.industry })
+        }
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   const navigate = (target) => {
     setExpandedRowId(null)
@@ -2661,6 +2792,14 @@ export default function App() {
   }, [state.stage, state.parsedCache])
 
   const handleReset = () => {
+    setExpandedRowId(null)
+    setPage('dashboard')
+    dispatch({ type: 'reset', preserveEmployeeMaster: true })
+  }
+
+  const handleSignOut = () => {
+    clearWorkspaceCache().catch(() => {})
+    setEmployeeMasterCacheStatus('empty')
     setExpandedRowId(null)
     setPage('dashboard')
     dispatch({ type: 'reset' })
@@ -2773,6 +2912,8 @@ export default function App() {
           industry: state.industry || undefined,
         })
         if (cancelled) return
+        await saveInterpretationCache(parsedCache, state.industry || '').catch(() => {})
+        if (cancelled) return
         dispatch({ type: 'setParsedCache', cache: parsedCache })
         await wait(300)
         if (!cancelled) dispatch({ type: 'setStage', stage: 3 })
@@ -2788,7 +2929,14 @@ export default function App() {
   }, [state.stage, state.industry, state.documents.award, state.documents.compliance, state.documents.agreement])
 
   const handleSetDocument = (key, file) => {
+    clearInterpretationCache().catch(() => {})
     dispatch({ type: 'setDocument', key, file })
+    setExpandedRowId(null)
+  }
+
+  const handleSetIndustry = (industry) => {
+    clearInterpretationCache().catch(() => {})
+    dispatch({ type: 'setIndustry', industry })
     setExpandedRowId(null)
   }
 
@@ -2821,6 +2969,8 @@ export default function App() {
   const handleEmployeeMasterFile = async (file) => {
     const seq = ++parseSeqRef.current.employeeMaster
     if (!file) {
+      clearEmployeeMasterCache().catch(() => {})
+      setEmployeeMasterCacheStatus('empty')
       dispatch({ type: 'setEmployeeMasterError', file: null, error: '' })
       return
     }
@@ -2829,6 +2979,12 @@ export default function App() {
     try {
       const data = await parseEmployeeMasterFile(file)
       if (seq !== parseSeqRef.current.employeeMaster) return
+      try {
+        await saveEmployeeMasterCache(data)
+        setEmployeeMasterCacheStatus('ready')
+      } catch {
+        setEmployeeMasterCacheStatus('unavailable')
+      }
       dispatch({ type: 'setEmployeeMasterSuccess', file, data })
     } catch (error) {
       if (seq !== parseSeqRef.current.employeeMaster) return
@@ -3010,7 +3166,7 @@ export default function App() {
           documents={state.documents}
           industry={state.industry}
           onSetDocument={handleSetDocument}
-          onSetIndustry={(industry) => { dispatch({ type: 'setIndustry', industry }); setExpandedRowId(null) }}
+          onSetIndustry={handleSetIndustry}
           onContinue={() => dispatch({ type: 'setStage', stage: 2 })}
         />
       )
@@ -3034,6 +3190,7 @@ export default function App() {
           employeeMasterFile={state.employeeMasterFile}
           employeeMasterData={state.employeeMasterData}
           employeeMasterError={state.employeeMasterError}
+          employeeMasterCacheStatus={employeeMasterCacheStatus}
           onTimesheetFile={handleTimesheetFile}
           onEmployeeMasterFile={handleEmployeeMasterFile}
           onBack={() => navigate('award-interpretation')}
@@ -3061,6 +3218,7 @@ export default function App() {
             onExport={handleExport}
             onReset={handleReset}
             onDisperse={() => dispatch({ type: 'setStage', stage: 6 })}
+            onReviewEvidence={() => navigate('time-entry')}
             ragAvailable={health.available}
           />
         )
@@ -3149,7 +3307,7 @@ export default function App() {
         ready={ready}
         user={{ name: 'Sage Abdallah', role: 'Admin' }}
         version="v1.0.0"
-        onSignOut={handleReset}
+        onSignOut={handleSignOut}
       >
         {renderPage()}
         <Footer />

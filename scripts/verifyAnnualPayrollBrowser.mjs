@@ -62,7 +62,7 @@ try {
     periods: /257,065 work periods/.test(body),
     employees: /1,?619 employees/.test(body),
     hours: /2534935\.27 hrs/.test(body),
-    instruments: /11 source instruments/.test(body),
+    instruments: /10 pending · 1 verified instrument/.test(body),
     masterCoverage: /matched 1,343 of 1,619 payroll employees \(82\.95%\)/.test(body),
     historicalGap: /remaining 276 historical IDs/.test(body),
     noOldMismatch: !/1469 of 1619/.test(body),
@@ -79,18 +79,53 @@ try {
   const desktopLayout = await layout()
   assert(desktopLayout.documentWidth <= desktopLayout.viewport + 1, 'Desktop document has horizontal overflow')
 
+  await page.getByRole('button', { name: /Review source payroll/i }).click()
+  await page.getByText('1619 source employees loaded', { exact: true }).waitFor({ timeout: 60_000 })
+  await page.waitForTimeout(600)
+  const rowStatus = async (employeeLabel) => page.locator('.trow').filter({ hasText: employeeLabel }).first().innerText()
+  const payRunChecks = {
+    pendingInstruments: /Instruments pending\s+10.*1 verified/i.test(await normalizedBody()),
+    matchedAwardRow: /Employee \+ award matched/.test(await rowStatus('Employee 2788')),
+    missingEmployeeRow: /Employee data needed/.test(await rowStatus('Employee 2815')),
+    pendingInstrumentRow: /Employee matched · instrument needed/.test(await rowStatus('Employee 2824')),
+    evidenceActionEnabled: await page.getByRole('button', { name: /Review evidence gaps/i }).isEnabled(),
+    noReleaseBlockedRows: await page.getByText('Release blocked', { exact: true }).count() === 0,
+  }
+  assert(Object.values(payRunChecks).every(Boolean), `Pay Run evidence checks failed: ${JSON.stringify(payRunChecks)}`)
+  await page.screenshot({ path: path.join(outputDir, 'pay-run-desktop.png') })
+
   await page.setViewportSize({ width: 390, height: 844 })
   await page.waitForTimeout(300)
-  await page.screenshot({ path: path.join(outputDir, 'time-entry-mobile.png') })
+  await page.screenshot({ path: path.join(outputDir, 'pay-run-mobile.png') })
   const mobileLayout = await layout()
   assert(mobileLayout.documentWidth <= mobileLayout.viewport + 1, 'Mobile document has horizontal overflow')
+
+  // A page reload simulates the next payroll update. The structured document
+  // interpretation and privacy-minimised Employee.xlsx setup should both be
+  // restored, leaving only the replacement payroll file to upload.
+  await page.setViewportSize({ width: 1728, height: 1117 })
+  await page.reload({ waitUntil: 'networkidle' })
+  const timeEntryNav = page.getByRole('button', { name: 'Time Entry', exact: true })
+  await timeEntryNav.waitFor({ timeout: 30_000 })
+  await page.waitForFunction(() => {
+    const button = [...document.querySelectorAll('button')].find((item) => item.textContent.trim() === 'Time Entry')
+    return button && !button.disabled
+  }, null, { timeout: 30_000 })
+  await timeEntryNav.click()
+  await page.getByText('Employee.xlsx', { exact: true }).waitFor({ timeout: 30_000 })
+  const reloadUploads = page.locator('input[type=file]')
+  assert(await reloadUploads.count() === 2, 'Restored workspace did not open directly on the payroll inputs')
+  await reloadUploads.nth(0).setInputFiles(payrollPath)
+  await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 180_000 })
+  const automaticSetupRestored = /matched 1,343 of 1,619 payroll employees \(82\.95%\)/.test(await normalizedBody())
+  assert(automaticSetupRestored, 'Retained Employee.xlsx setup did not auto-apply after reload')
 
   const optionalHealthErrors = httpErrors.filter(({ url }) => /\/api\/health(?:\?|$)/.test(url))
   const unexpectedHttpErrors = httpErrors.filter(({ url }) => !/\/api\/health(?:\?|$)/.test(url))
   const unexpectedConsoleErrors = errors.filter((error) => !/^Failed to load resource: the server responded with a status of 502/.test(error))
   const optionalHealthFailures = failedRequests.filter((request) => request.includes('/api/health'))
   const unexpectedFailedRequests = failedRequests.filter((request) => !request.includes('/api/health'))
-  const result = { parseMs, checks, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
+  const result = { parseMs, checks, payRunChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
   assert(unexpectedHttpErrors.length === 0, `HTTP errors: ${JSON.stringify(unexpectedHttpErrors)}`)
   assert(unexpectedConsoleErrors.length === 0, `Browser errors: ${unexpectedConsoleErrors.join(' | ')}`)
   assert(unexpectedFailedRequests.length === 0, `Failed requests: ${unexpectedFailedRequests.join(' | ')}`)

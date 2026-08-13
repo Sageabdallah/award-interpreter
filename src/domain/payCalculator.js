@@ -327,8 +327,19 @@ function buildUnmatchedRow(employee) {
 
 function sourceOnlyResults(timesheetData) {
   const sharedGaps = timesheetData.releaseBlockingGaps || []
+  const coverageByCode = new Map((timesheetData.coverageInventory || []).map((item) => [item.sourceCode, item]))
+  const pendingInstruments = (timesheetData.coverageInventory || [])
+    .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
   const rows = timesheetData.employees.map((employee) => {
     const sourceAwardCodes = employee.sourceAwardCodes || [...new Set(employee.shifts.map((shift) => shift.sourceAwardCode).filter(Boolean))]
+    const instrumentEvidence = sourceAwardCodes.map((sourceCode) => coverageByCode.get(sourceCode)).filter(Boolean)
+    const instrumentRulesAvailable = instrumentEvidence.length > 0
+      && instrumentEvidence.every((item) => item.supportStatus === 'supported-date-range-needs-employee-evidence')
+    const employeeMasterMatched = Boolean(employee.employeeMasterMatched)
+    const rowGaps = [
+      !employeeMasterMatched && 'Employee ID is not present in the retained employee master.',
+      !instrumentRulesAvailable && 'One or more source instruments need verified operative rules for this payroll date.',
+    ].filter(Boolean)
     const sourceGrossPay = round2(employee.sourceGrossAmount
       ?? employee.shifts.reduce((sum, shift) => sum + (Number(shift.sourceGrossAmount) || 0), 0))
     return {
@@ -344,11 +355,18 @@ function sourceOnlyResults(timesheetData) {
       totalCalculatedPay: 0,
       sourceGrossPay,
       sourceAwardCodes,
+      employeeMasterMatched,
+      instrumentRulesAvailable,
+      evidenceStatus: employeeMasterMatched && instrumentRulesAvailable
+        ? 'employee-and-instrument-matched'
+        : employeeMasterMatched
+          ? 'employee-matched-instrument-pending'
+          : 'employee-pending',
       sourceComponentCount: employee.sourceComponentCount || 0,
       sourceWorkPeriodCount: employee.workPeriodCount || employee.shifts.length,
       effectiveHourlyRate: employee.totalHours > 0 ? round2(sourceGrossPay / employee.totalHours) : 0,
-      validationErrors: sharedGaps,
-      releaseBlockingGaps: sharedGaps,
+      validationErrors: rowGaps,
+      releaseBlockingGaps: rowGaps,
       complianceNotes: ['Source payroll amounts are retained for reconciliation; they have not been reinterpreted as award entitlements.'],
       overrideReason: '',
       totalHours: employee.totalHours,
@@ -357,7 +375,7 @@ function sourceOnlyResults(timesheetData) {
       calculationStatus: 'source-only-blocked',
       interpretation: {
         status: 'source-only-blocked',
-        issues: sharedGaps,
+        issues: rowGaps,
         awardCode: '',
         awardTitle: '',
         employeeLevel: employee.jobRole || '',
@@ -389,7 +407,11 @@ function sourceOnlyResults(timesheetData) {
       sourceComponentRows: timesheetData.sourceSummary?.componentRows || 0,
       sourceWorkPeriods: timesheetData.sourceSummary?.workPeriods || timesheetData.shifts.length,
       sourceInstruments: timesheetData.coverageInventory?.length || 0,
-      validationErrors: rows.length,
+      pendingSourceInstruments: pendingInstruments.length,
+      verifiedSourceInstruments: Math.max(0, (timesheetData.coverageInventory?.length || 0) - pendingInstruments.length),
+      employeeMasterMatched: timesheetData.employeeMaster?.matchedEmployees ?? 0,
+      employeeMasterUnmatched: timesheetData.employeeMaster?.unmatchedEmployees ?? timesheetData.employees.length,
+      validationErrors: rows.filter((row) => row.validationErrors.length > 0).length,
     },
   }
 }
