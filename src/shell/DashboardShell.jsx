@@ -10,7 +10,7 @@ import { AlertTriangle, LogOut } from 'lucide-react'
 import isoftWordmark from '../assets/isoft-wordmark.png'
 
 const SHELL_CSS = `
-  .dsh { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+  .dsh { display: flex; width: 100%; min-width: 0; min-height: 100vh; position: relative; z-index: 1; }
   .dsh-side { width: 256px; flex-shrink: 0; background: #17181D; color: #B9BDC7;
     display: flex; flex-direction: column; position: sticky; top: 0;
     height: 100vh; overflow-y: auto; }
@@ -40,9 +40,10 @@ const SHELL_CSS = `
     border: none; background: transparent; cursor: pointer; color: #B9BDC7;
     font-family: var(--body); font-size: 12.5px; padding: 8px 0 0; }
   .dsh-signout:hover { color: #FFFFFF; }
-  .dsh-main { flex: 1; min-width: 0; background: var(--paper); }
-  .dsh-content { max-width: 1180px; margin: 0 auto; padding: 30px 34px 72px; }
+  .dsh-main { flex: 1; width: 100%; max-width: 100%; min-width: 0; background: var(--paper); }
+  .dsh-content { width: 100%; max-width: 1180px; min-width: 0; margin: 0 auto; padding: 30px 34px 72px; }
   @media (max-width: 980px) { .dsh-side { display: none; } }
+  @media (max-width: 600px) { .dsh-content { padding: 24px 16px 56px; } }
 `
 
 export default function DashboardShell({ nav, activePage, onNavigate, badges = {}, ready = {}, user, version, onSignOut, children }) {

@@ -444,7 +444,7 @@ const GLOBAL_CSS = `
   .ts-row:nth-child(even) { background: rgba(16,20,28,0.015); }
   .ts-row:hover { background: rgba(16,20,28,0.045); }
   .ts-row:last-child { border-bottom: none; }
-  .table-scroll { overflow-x: auto; }
+  .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
   .table-inner { min-width: 920px; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
@@ -454,8 +454,12 @@ const GLOBAL_CSS = `
   @media (max-width: 860px) {
     .upload-grid { grid-template-columns: 1fr !important; }
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
-    .table-scroll { overflow-x: auto; }
+    .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
     .table-inner { min-width: 860px; }
+  }
+
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: 1fr !important; }
   }
 
   @media (prefers-reduced-motion: reduce) {
