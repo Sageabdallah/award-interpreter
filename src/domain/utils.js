@@ -247,11 +247,11 @@ export function formatDateKey(value = '') {
 
 export function getWeekBucket(dateString = '') {
   const iso = formatDateKey(dateString)
-  const date = new Date(`${iso}T00:00:00`)
+  const date = new Date(`${iso}T00:00:00Z`)
   if (Number.isNaN(date.getTime())) return iso
-  const day = date.getDay() || 7
+  const day = date.getUTCDay() || 7
   const monday = new Date(date)
-  monday.setDate(date.getDate() - day + 1)
+  monday.setUTCDate(date.getUTCDate() - day + 1)
   return monday.toISOString().slice(0, 10)
 }
 

@@ -14,6 +14,7 @@
     "rag:index": "node --env-file-if-exists=.env scripts/buildRagIndex.mjs",
     "seed:augment": "node --env-file-if-exists=.env scripts/augmentAwardLibrary.mjs",
     "award:sync-security": "node scripts/syncSecurityAwardLibrary.mjs",
+    "payroll:import": "node --env-file-if-exists=.env scripts/importIsoftPayroll.mjs",
     "verify:mss-browser": "node scripts/verifyMssBrowser.mjs"
   },
   "dependencies": {

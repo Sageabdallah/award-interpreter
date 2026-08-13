@@ -10,6 +10,7 @@ import { awardChatRoute } from './routes/awardChat.js'
 import { awardChatStreamRoute } from './routes/awardChatStream.js'
 import { interpretPayRunRoute } from './routes/interpretPayRun.js'
 import { getPayRunRoute, listPayRunsRoute, payRunsRoute } from './routes/payRuns.js'
+import { getPayrollImportRoute, listPayrollImportsRoute, payrollImportsRoute } from './routes/payrollImports.js'
 import { apiSecurity, fixedWindowRateLimit, requireLiveMailToken, requireProductionToken } from './security.js'
 
 export function createApp({ anthropic, store, embedQuery, modelId, reasonerModelId = null, library, mailer = null, mailerRef = null, outlook = null, auditStore = null, security = {} }) {
@@ -58,6 +59,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
         payRunLifecycle: Boolean(auditStore),
         releaseGate: Boolean(auditStore),
         durablePersistence: auditStore?.backend === 'postgres-audit-chain',
+        sourcePayrollImports: Boolean(auditStore),
       },
     })
   })
@@ -70,6 +72,12 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
       protectedOperation,
       express.json({ limit: security.payRunPayloadLimit || '15mb' }),
       wrap(interpretPayRunRoute({ auditStore, library })),
+    )
+    app.post(
+      '/api/payroll-imports',
+      protectedOperation,
+      express.json({ limit: security.payrollImportPayloadLimit || '75mb' }),
+      wrap(payrollImportsRoute({ auditStore })),
     )
   }
   app.use(express.json({ limit: '1mb' }))
@@ -102,6 +110,8 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
     app.post('/api/pay-runs', protectedOperation, wrap(payRunsRoute({ auditStore })))
     app.get('/api/pay-runs', protectedOperation, wrap(listPayRunsRoute({ auditStore })))
     app.get('/api/pay-runs/:id', protectedOperation, wrap(getPayRunRoute({ auditStore })))
+    app.get('/api/payroll-imports', protectedOperation, wrap(listPayrollImportsRoute({ auditStore })))
+    app.get('/api/payroll-imports/:id', protectedOperation, wrap(getPayrollImportRoute({ auditStore })))
   }
 
   if (outlook) {

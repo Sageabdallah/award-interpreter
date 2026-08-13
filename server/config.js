@@ -63,6 +63,7 @@ export const config = {
   auditLogFile: process.env.AUDIT_LOG_FILE || path.join(ROOT, 'data/private/pay-run-audit.jsonl'),
   auditHmacKey: process.env.AUDIT_HMAC_KEY || '',
   payRunPayloadLimit: process.env.PAY_RUN_PAYLOAD_LIMIT || '15mb',
+  payrollImportPayloadLimit: process.env.PAYROLL_IMPORT_PAYLOAD_LIMIT || '75mb',
 }
 
 export function validateProductionConfig(candidate = config) {

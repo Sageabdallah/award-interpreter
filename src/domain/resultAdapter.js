@@ -12,6 +12,19 @@ export const RESULT_COLUMN_ORDER = [
   'Validation Errors',
 ]
 
+const SOURCE_RESULT_COLUMN_ORDER = [
+  'Employee ID',
+  'Employee Label',
+  'Source Instruments',
+  'Source Classification',
+  'Work Periods',
+  'Source Component Rows',
+  'Payable Hours',
+  'Source Gross Amount',
+  'Release Status',
+  'Release Blocking Gaps',
+]
+
 function escapeCsv(value) {
   const stringValue = String(value == null ? '' : value)
   return /[",\n]/.test(stringValue) ? `"${stringValue.replace(/"/g, '""')}"` : stringValue
@@ -48,6 +61,23 @@ function describeExtras(row) {
 }
 
 export function resultsToCsv(rows) {
+  if (rows.some((row) => row.calculationStatus === 'source-only-blocked')) {
+    const sourceBody = rows.map((row) => [
+      row.employeeId,
+      row.employeeName,
+      row.sourceAwardCodes?.join(' | ') || row.awardCode,
+      row.employeeLevel,
+      row.sourceWorkPeriodCount ?? row.shifts?.length ?? 0,
+      row.sourceComponentCount || 0,
+      row.totalHours,
+      row.sourceGrossPay,
+      'Blocked - source only',
+      row.validationErrors.join('; '),
+    ])
+    return [SOURCE_RESULT_COLUMN_ORDER, ...sourceBody]
+      .map((cells) => cells.map(escapeCsv).join(','))
+      .join('\r\n')
+  }
   const body = rows.map((row) => [
     row.employeeName,
     row.awardCode,

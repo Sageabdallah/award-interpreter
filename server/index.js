@@ -75,6 +75,7 @@ const app = createApp({
     mailRateLimit: config.mailRateLimit,
     rateLimitMaxEntries: config.rateLimitMaxEntries,
     payRunPayloadLimit: config.payRunPayloadLimit,
+    payrollImportPayloadLimit: config.payrollImportPayloadLimit,
   },
 })
 

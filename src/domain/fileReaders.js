@@ -1,5 +1,4 @@
 import * as mammoth from 'mammoth/mammoth.browser.js'
-import * as XLSX from 'xlsx'
 
 function normalizePdfLine(text = '') {
   return String(text)
@@ -100,28 +99,52 @@ export async function readDocumentText(file) {
 }
 
 export async function readSpreadsheetRows(file) {
-  if (!file) return []
+  const sheet = await readSpreadsheetSheet(file)
+  return [...sheet.rows()]
+}
+
+function displayCell(cell) {
+  if (cell == null) return ''
+  if (typeof cell !== 'object') return String(cell)
+  if (cell.w != null) return String(cell.w)
+  if (cell.v == null) return ''
+  return String(cell.v)
+}
+
+export async function readSpreadsheetSheet(file) {
+  if (!file) return { name: '', rowCount: 0, rows: function* emptyRows() {} }
   const name = file.name.toLowerCase()
   if (name.endsWith('.pdf')) {
     throw new Error(`PDF spreadsheets are not supported in v1: ${file.name}`)
   }
 
   let workbook
+  const XLSX = await import('xlsx')
   if (name.endsWith('.csv')) {
-    workbook = XLSX.read(await file.text(), { type: 'string' })
+    workbook = XLSX.read(await file.text(), { type: 'string', dense: true })
   } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
-    workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+    workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', dense: true })
   } else {
     // Generic wording: this reader serves timesheets AND leave requests.
     throw new Error(`Unsupported spreadsheet format: ${file.name} — use CSV or XLSX.`)
   }
 
   const firstSheetName = workbook.SheetNames[0]
-  if (!firstSheetName) return []
-  return XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {
-    header: 1,
-    raw: false,
-    defval: '',
-    blankrows: false,
-  })
+  if (!firstSheetName) return { name: '', rowCount: 0, rows: function* emptyRows() {} }
+  const worksheet = workbook.Sheets[firstSheetName]
+  const denseRows = worksheet['!data'] || []
+  return {
+    name: firstSheetName,
+    rowCount: denseRows.length,
+    release() {
+      denseRows.length = 0
+    },
+    *rows() {
+      for (const row of denseRows) {
+        if (!row) continue
+        const values = row.map(displayCell)
+        if (values.some((cell) => cell !== '')) yield values
+      }
+    },
+  }
 }

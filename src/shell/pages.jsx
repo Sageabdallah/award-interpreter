@@ -1109,7 +1109,7 @@ export function BulkShiftsPage({ parsedCache, timesheetData, onCreateAssigned, o
 
 // --- AI Award Extract (grounded award chat) ----------------------------------------------
 
-const CHAT_DEFAULT_AWARD = 'MA000034' // Nurses Award 2020 — the demo document
+const CHAT_DEFAULT_AWARD = 'MA000016' // Security Services Industry Award 2020 — the demo document
 
 // The model sometimes formats answers in markdown; we render plain text, so
 // strip the emphasis markers and turn markdown bullets into real bullets
@@ -1121,9 +1121,9 @@ function cleanAnswer(text = '') {
     .replace(/\*/g, '')
 }
 const CHAT_SUGGESTIONS = [
-  'What penalty rates apply when a registered nurse works a Saturday?',
-  'How much is the uniform and laundry allowance?',
-  'What overtime rates apply to full-time employees?',
+  'What penalty rates apply when a security officer works a Saturday?',
+  'How much is the broken shift allowance and when is it payable?',
+  'What overtime rates apply to a full-time security officer?',
   'How much notice is required to change an employee’s roster?',
 ]
 

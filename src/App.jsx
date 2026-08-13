@@ -80,6 +80,7 @@ const MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace"
 const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
 const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
+const REVIEW_PAGE_SIZE = 25
 const ROSTER_BADGE_MAX_SHIFTS = 80
 const CONFIRMATION_EMAIL = 'sage.abdallah@isoftanz.com.au'
 // Demo payslip dispatch: employees carry no email addresses in this data
@@ -684,6 +685,27 @@ function StatCard({ icon: Icon, label, value, caption, accent }) {
         {value}
       </div>
       <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 8 }}>{caption}</div>
+    </div>
+  )
+}
+
+function PaginationControls({ page, pageSize, total, onPage }) {
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  if (pages <= 1) return null
+  const first = page * pageSize + 1
+  const last = Math.min(total, first + pageSize - 1)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', margin: '18px 4px 4px' }}>
+      <span className="mono" style={{ fontSize: 12, color: COLORS.muted }}>{first}-{last} of {total}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button className="btn" disabled={page === 0} onClick={() => onPage(page - 1)} aria-label="Previous page">
+          <ArrowLeft size={15} strokeWidth={1.9} /> Previous
+        </button>
+        <span className="mono" style={{ fontSize: 12, minWidth: 76, textAlign: 'center' }}>{page + 1} / {pages}</span>
+        <button className="btn" disabled={page >= pages - 1} onClick={() => onPage(page + 1)} aria-label="Next page">
+          Next <ArrowRight size={15} strokeWidth={1.9} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -1380,6 +1402,12 @@ function InterpretationStage({ parsedCache, onBack, onContinue }) {
 function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetError, onTimesheetFile, onBack, onContinue }) {
   // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
   const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
+  const [reviewPage, setReviewPage] = useState(0)
+  useEffect(() => setReviewPage(0), [timesheetData])
+  const visibleEmployees = timesheetData?.employees?.slice(
+    reviewPage * REVIEW_PAGE_SIZE,
+    (reviewPage + 1) * REVIEW_PAGE_SIZE,
+  ) || []
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
@@ -1462,9 +1490,24 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
             {timesheetData.meta.payPeriod && <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{timesheetData.meta.payPeriod}</span>}
             {timesheetData.meta.business && <span className="pill">{timesheetData.meta.business}</span>}
             <span className="pill"><Clock size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheetData.totalHours} hrs</span>
+            {timesheetData.sourceSummary && <span className="pill"><Database size={15} strokeWidth={1.7} color={COLORS.ink} />{timesheetData.sourceSummary.componentRows.toLocaleString()} source rows</span>}
+            {timesheetData.coverageInventory && <span className="pill"><Scale size={15} strokeWidth={1.7} color={COLORS.red} />{timesheetData.coverageInventory.length} source instruments</span>}
           </div>
 
-          {timesheetData.employees.map((employee) => (
+          {timesheetData.sourceOnly && (
+            <div style={{ marginBottom: 22 }}>
+              <Flag danger>
+                The complete source payroll is loaded for reconciliation. Award calculation and pay release remain blocked until employee employment types and the operative historical instrument versions are supplied.
+              </Flag>
+              {timesheetData.detailTruncated && (
+                <div style={{ marginTop: 10 }}>
+                  <Flag>All totals were processed. To keep this annual export responsive, the review shows up to 10 work periods per employee; the protected backend import retains every source component.</Flag>
+                </div>
+              )}
+            </div>
+          )}
+
+          {visibleEmployees.map((employee) => (
             <div className="emp-group" key={employee.employeeId || employee.employeeName}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
@@ -1481,7 +1524,7 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
                     <span className="th">Finish</span><span className="th">Break</span><span className="th">Hours</span><span className="th">Notes</span>
                   </div>
                   {employee.shifts.map((shift) => (
-                    <div className="ts-row" key={`${shift.date}-${shift.start}-${shift.finish}`}>
+                    <div className="ts-row" key={shift.sourceShiftId || `${shift.date}-${shift.start}-${shift.finish}`}>
                       <span className="mono" style={{ fontSize: 12.5 }}>{shift.date}</span>
                       <span style={{ fontSize: 13 }}>{shift.day}</span>
                       <span className="mono" style={{ fontSize: 12.5 }}>{shift.start}</span>
@@ -1495,6 +1538,12 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
               </div>
             </div>
           ))}
+          <PaginationControls
+            page={reviewPage}
+            pageSize={REVIEW_PAGE_SIZE}
+            total={timesheetData.employees.length}
+            onPage={setReviewPage}
+          />
         </>
       )}
 
@@ -1504,12 +1553,12 @@ function TimesheetStage({ parsedCache, timesheetFile, timesheetData, timesheetEr
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
             {timesheetData ? `${timesheetData.employees.length} employees` : parsingTimesheet ? 'Parsing…' : 'Awaiting upload'}
           </span>
-          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {timesheetData.shifts.length} shifts · {timesheetData.totalHours} hrs</span>}
+          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {(timesheetData.sourceSummary?.workPeriods || timesheetData.shifts.length).toLocaleString()} {timesheetData.sourceOnly ? 'work periods' : 'shifts'} · {timesheetData.totalHours} hrs</span>}
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
           <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to interpretation</button>
           <button className="btn-primary" disabled={!timesheetData} onClick={onContinue}>
-            Calculate pay <ArrowRight size={18} strokeWidth={2} />
+            {timesheetData?.sourceOnly ? 'Review source payroll' : 'Calculate pay'} <ArrowRight size={18} strokeWidth={2} />
           </button>
         </div>
       </div>
@@ -1544,6 +1593,58 @@ function payrunExplainRequest(row) {
     clauseRefs: [row.interpretation?.baseRateRef, ...items.map((item) => item.clause)].filter(Boolean),
     query: [row.employeeLevel, ...warnings, ...items.map((item) => item.type)].filter(Boolean).join(' — '),
   }
+}
+
+function SourceResultRow({ row, isOpen, onToggle }) {
+  return (
+    <div className="rowwrap fade-up">
+      <div
+        className="trow"
+        style={{ gridTemplateColumns: RESULTS_GRID }}
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onToggle() } }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.employeeName}</div>
+          <div style={{ fontSize: 12.5, color: COLORS.red, marginTop: 2 }}>Release blocked</div>
+        </div>
+        <span style={{ fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis' }} title={row.sourceAwardCodes.join(', ')}>{row.awardCode}</span>
+        <span style={{ fontSize: 13 }}>{row.employeeLevel}</span>
+        <span className="mono" style={{ fontSize: 13 }}>{row.sourceWorkPeriodCount}</span>
+        <span className="mono" style={{ fontSize: 13 }}>{row.sourceComponentCount.toLocaleString()}</span>
+        <span className="mono" style={{ fontSize: 13 }}>{row.totalHours}</span>
+        <span className="mono" style={{ fontSize: 14.5, fontWeight: 600 }}>{fmt(row.sourceGrossPay)}</span>
+        <ChevronDown
+          size={16}
+          strokeWidth={1.9}
+          color={COLORS.muted}
+          aria-hidden="true"
+          style={{ justifySelf: 'end', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.18s ease' }}
+        />
+      </div>
+      {isOpen && (
+        <div className="panel fade-up">
+          <div className="panel-inner">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 22 }}>
+              {row.validationErrors.map((error) => <Flag danger key={error}>{error}</Flag>)}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 18 }}>
+              <div><div className="panel-label">Source employee ID</div><div className="mono">{row.employeeId}</div></div>
+              <div><div className="panel-label">Work periods</div><div className="mono">{row.sourceWorkPeriodCount}</div></div>
+              <div><div className="panel-label">Component rows</div><div className="mono">{row.sourceComponentCount.toLocaleString()}</div></div>
+              <div><div className="panel-label">Recorded source gross</div><div className="mono">{fmt(row.sourceGrossPay)}</div></div>
+            </div>
+            <div style={{ fontSize: 13, color: COLORS.muted, lineHeight: 1.55, marginTop: 20 }}>
+              The source amount is retained exactly for reconciliation. It is not an award entitlement calculation and cannot be dispersed from this run.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ResultRow({ row, isOpen, onToggle, ragAvailable }) {
@@ -1968,15 +2069,20 @@ function InterpretationTable({ rows }) {
 }
 
 function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, onToggleRow, ragAvailable }) {
+  const [resultPage, setResultPage] = useState(0)
+  useEffect(() => setResultPage(0), [results])
+  const sourceOnly = Boolean(results.sourceOnly)
+  const visibleRows = results.rows.slice(resultPage * REVIEW_PAGE_SIZE, (resultPage + 1) * REVIEW_PAGE_SIZE)
   return (
     <div className="fade-up">
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: 32 }}>
         <div>
-          <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: COLORS.sage }}>
-            <BadgeCheck size={14} strokeWidth={1.9} /> Pay Run · calculation complete
+          <div className="eyebrow" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, color: sourceOnly ? COLORS.red : COLORS.sage }}>
+            {sourceOnly ? <AlertTriangle size={14} strokeWidth={1.9} /> : <BadgeCheck size={14} strokeWidth={1.9} />}
+            {sourceOnly ? 'Source payroll · release blocked' : 'Pay Run · calculation complete'}
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
-            {results.stats.employees} employees calculated
+            {results.stats.employees} {sourceOnly ? 'source employees loaded' : 'employees calculated'}
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
@@ -1990,23 +2096,29 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
       </div>
 
       <div className="stats-grid" style={{ marginBottom: 36 }}>
-        <StatCard icon={Clock} label="Total hours" value={`${results.stats.totalHours}`} caption="across the uploaded timesheet" accent={COLORS.ink} />
-        <StatCard icon={Banknote} label="Base pay" value={fmt(results.stats.totalBasePay)} caption="hours × matched base pay rate" accent={COLORS.sage} />
-        <StatCard icon={Layers} label="Extras" value={fmt(results.stats.totalExtras)} caption="allowances and penalties" accent={COLORS.ochre} />
-        <StatCard icon={AlertTriangle} label="Validation rows" value={`${results.stats.validationErrors}`} caption="employees needing manual review" accent={COLORS.red} />
+        <StatCard icon={Clock} label={sourceOnly ? 'Payable hours' : 'Total hours'} value={`${results.stats.totalHours}`} caption="across the uploaded payroll" accent={COLORS.ink} />
+        <StatCard icon={Banknote} label={sourceOnly ? 'Source gross' : 'Base pay'} value={fmt(sourceOnly ? results.stats.sourceGrossPay : results.stats.totalBasePay)} caption={sourceOnly ? 'recorded amount, not recalculated entitlement' : 'hours × matched base pay rate'} accent={COLORS.sage} />
+        <StatCard icon={Layers} label={sourceOnly ? 'Source rows' : 'Extras'} value={sourceOnly ? results.stats.sourceComponentRows.toLocaleString() : fmt(results.stats.totalExtras)} caption={sourceOnly ? `${results.stats.sourceWorkPeriods.toLocaleString()} grouped work periods` : 'allowances and penalties'} accent={COLORS.ochre} />
+        <StatCard icon={AlertTriangle} label={sourceOnly ? 'Instruments blocked' : 'Validation rows'} value={`${sourceOnly ? results.stats.sourceInstruments : results.stats.validationErrors}`} caption={sourceOnly ? 'historical rule evidence required' : 'employees needing manual review'} accent={COLORS.red} />
       </div>
+
+      {sourceOnly && (
+        <div style={{ marginBottom: 22 }}>
+          <Flag danger>All source rows are retained, but no entitlement has been recalculated. Pay release is disabled until the missing employment and historical instrument evidence is resolved.</Flag>
+        </div>
+      )}
 
       <div style={{ background: COLORS.card, border: `1px solid ${COLORS.line}`, borderRadius: 16, padding: '20px 4px 8px' }}>
         <div className="table-scroll">
           <div className="table-inner">
             <div className="thead" style={{ gridTemplateColumns: RESULTS_GRID }}>
               <span className="th">Employee Name</span>
-              <span className="th">Award Code</span>
-              <span className="th">Employee Level</span>
-              <span className="th">Job Role</span>
-              <span className="th">Base Pay</span>
-              <span className="th">Extras / Allowances</span>
-              <span className="th">Total Calculated Pay</span>
+              <span className="th">{sourceOnly ? 'Source instrument' : 'Award Code'}</span>
+              <span className="th">{sourceOnly ? 'Classification' : 'Employee Level'}</span>
+              <span className="th">{sourceOnly ? 'Work periods' : 'Job Role'}</span>
+              <span className="th">{sourceOnly ? 'Source rows' : 'Base Pay'}</span>
+              <span className="th">{sourceOnly ? 'Payable hours' : 'Extras / Allowances'}</span>
+              <span className="th">{sourceOnly ? 'Source gross' : 'Total Calculated Pay'}</span>
               <span className="th" aria-hidden="true" />
             </div>
             <div>
@@ -2015,32 +2127,42 @@ function ResultsStage({ results, onExport, onReset, onDisperse, expandedRowId, o
                   No employees matched this run. Check that the timesheet belongs to the uploaded document set.
                 </div>
               )}
-              {results.rows.map((row) => (
-                <ResultRow
-                  key={row.id}
-                  row={row}
-                  isOpen={expandedRowId === row.id}
-                  onToggle={() => onToggleRow(expandedRowId === row.id ? null : row.id)}
-                  ragAvailable={ragAvailable}
-                />
-              ))}
+              {visibleRows.map((row) => sourceOnly
+                ? (
+                  <SourceResultRow
+                    key={row.id}
+                    row={row}
+                    isOpen={expandedRowId === row.id}
+                    onToggle={() => onToggleRow(expandedRowId === row.id ? null : row.id)}
+                  />
+                )
+                : (
+                  <ResultRow
+                    key={row.id}
+                    row={row}
+                    isOpen={expandedRowId === row.id}
+                    onToggle={() => onToggleRow(expandedRowId === row.id ? null : row.id)}
+                    ragAvailable={ragAvailable}
+                  />
+                ))}
             </div>
           </div>
         </div>
       </div>
+      <PaginationControls page={resultPage} pageSize={REVIEW_PAGE_SIZE} total={results.rows.length} onPage={setResultPage} />
 
-      <InterpretationTable rows={results.rows} />
+      {!sourceOnly && <InterpretationTable rows={visibleRows} />}
 
       <div className="sticky-bar" style={{ marginTop: 22 }}>
         <div>
-          <span className="eyebrow">Ready to disperse</span>
+          <span className="eyebrow">{sourceOnly ? 'Release blocked' : 'Ready to disperse'}</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
             <span style={{ fontWeight: 600 }}>{results.stats.employees} employees</span>
-            <span style={{ color: COLORS.muted }}> · {fmt(results.stats.totalCalculatedPay)} total calculated pay</span>
+            <span style={{ color: COLORS.muted }}> · {sourceOnly ? `${fmt(results.stats.sourceGrossPay)} source gross retained` : `${fmt(results.stats.totalCalculatedPay)} total calculated pay`}</span>
           </div>
         </div>
-        <button className="btn-primary" onClick={onDisperse}>
-          Disperse pay <ArrowRight size={18} strokeWidth={2} />
+        <button className="btn-primary" disabled={sourceOnly} onClick={onDisperse}>
+          {sourceOnly ? 'Evidence required' : 'Disperse pay'} <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
     </div>

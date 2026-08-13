@@ -1,4 +1,5 @@
-import { readSpreadsheetRows } from './fileReaders.js'
+import { readSpreadsheetRows, readSpreadsheetSheet } from './fileReaders.js'
+import { detectIsoftPayrollSchema, importIsoftPayrollRows } from './importers/isoftPayroll.js'
 import {
   durationHours,
   formatDateKey,
@@ -94,6 +95,7 @@ function rowIsBlank(row = []) {
 }
 
 export function parseTimesheetRows(rows, sourceName = 'timesheet') {
+  if (detectIsoftPayrollSchema(rows)) return importIsoftPayrollRows(rows, sourceName)
   const meta = {}
   const headerIndex = rows.findIndex((row) => {
     const normalized = row.map((cell) => normalizeHeader(cell))
@@ -215,6 +217,41 @@ export function parseTimesheetRows(rows, sourceName = 'timesheet') {
 }
 
 export async function parseTimesheetFile(file) {
+  if (typeof Worker !== 'undefined' && file?.size >= 2 * 1024 * 1024) {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./workers/timesheetParserWorker.js', import.meta.url), { type: 'module' })
+      const finish = () => worker.terminate()
+      worker.onmessage = ({ data }) => {
+        finish()
+        if (data?.ok) resolve(data.result)
+        else reject(new Error(data?.error || 'Timesheet parsing failed.'))
+      }
+      worker.onerror = (event) => {
+        finish()
+        reject(new Error(event.message || 'Timesheet parsing worker failed.'))
+      }
+      worker.postMessage({ file })
+    })
+  }
+  return parseTimesheetFileDirect(file)
+}
+
+export async function parseTimesheetFileDirect(file) {
+  const sheet = await readSpreadsheetSheet(file)
+  const preview = []
+  for (const row of sheet.rows()) {
+    preview.push(row)
+    if (preview.length >= 20) break
+  }
+  if (detectIsoftPayrollSchema(preview)) {
+    const result = importIsoftPayrollRows(sheet.rows(), file.name, {
+      maximumDetailedWorkPeriods: sheet.rowCount > 100000 ? 50000 : Number.MAX_SAFE_INTEGER,
+      previewWorkPeriodsPerEmployee: 10,
+    })
+    sheet.release?.()
+    return result
+  }
+  sheet.release?.()
   const rows = await readSpreadsheetRows(file)
   return parseTimesheetRows(rows, file.name)
 }

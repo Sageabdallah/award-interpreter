@@ -325,6 +325,74 @@ function buildUnmatchedRow(employee) {
   }
 }
 
+function sourceOnlyResults(timesheetData) {
+  const sharedGaps = timesheetData.releaseBlockingGaps || []
+  const rows = timesheetData.employees.map((employee) => {
+    const sourceAwardCodes = employee.sourceAwardCodes || [...new Set(employee.shifts.map((shift) => shift.sourceAwardCode).filter(Boolean))]
+    const sourceGrossPay = round2(employee.sourceGrossAmount
+      ?? employee.shifts.reduce((sum, shift) => sum + (Number(shift.sourceGrossAmount) || 0), 0))
+    return {
+      id: employee.employeeId || normalizeName(employee.employeeName),
+      employeeId: employee.employeeId || '',
+      employeeName: employee.employeeName,
+      awardCode: sourceAwardCodes.length === 1 ? sourceAwardCodes[0] : `${sourceAwardCodes.length} source instruments`,
+      employeeLevel: employee.jobRole || 'Source classification unavailable',
+      jobRole: employee.jobRole || 'Source classification unavailable',
+      basePay: 0,
+      ordinaryPay: 0,
+      extrasAllowances: { total: 0, items: [] },
+      totalCalculatedPay: 0,
+      sourceGrossPay,
+      sourceAwardCodes,
+      sourceComponentCount: employee.sourceComponentCount || 0,
+      sourceWorkPeriodCount: employee.workPeriodCount || employee.shifts.length,
+      effectiveHourlyRate: employee.totalHours > 0 ? round2(sourceGrossPay / employee.totalHours) : 0,
+      validationErrors: sharedGaps,
+      releaseBlockingGaps: sharedGaps,
+      complianceNotes: ['Source payroll amounts are retained for reconciliation; they have not been reinterpreted as award entitlements.'],
+      overrideReason: '',
+      totalHours: employee.totalHours,
+      employmentType: '',
+      shifts: employee.shifts,
+      calculationStatus: 'source-only-blocked',
+      interpretation: {
+        status: 'source-only-blocked',
+        issues: sharedGaps,
+        awardCode: '',
+        awardTitle: '',
+        employeeLevel: employee.jobRole || '',
+        levelCode: '',
+        jobRole: employee.jobRole || '',
+        baseRateRef: '',
+        references: {},
+        clauseIndex: {},
+        entitlements: [],
+        extras: [],
+      },
+    }
+  })
+  return {
+    sourceOnly: true,
+    releaseBlocked: true,
+    coverageInventory: timesheetData.coverageInventory || [],
+    releaseBlockingGaps: sharedGaps,
+    rows,
+    stats: {
+      employees: rows.length,
+      totalHours: timesheetData.totalHours,
+      totalBasePay: 0,
+      totalExtras: 0,
+      totalCalculatedPay: 0,
+      sourceGrossPay: round2(timesheetData.sourceSummary?.sourceGrossAmount
+        ?? rows.reduce((sum, row) => sum + row.sourceGrossPay, 0)),
+      sourceComponentRows: timesheetData.sourceSummary?.componentRows || 0,
+      sourceWorkPeriods: timesheetData.sourceSummary?.workPeriods || timesheetData.shifts.length,
+      sourceInstruments: timesheetData.coverageInventory?.length || 0,
+      validationErrors: rows.length,
+    },
+  }
+}
+
 function buildWorkSummary(employee, extrasItems, ordinaryPay, totalCalculatedPay) {
   const dayHours = (predicate) => round2(
     employee.shifts.filter(predicate).reduce((sum, shift) => sum + shift.hours, 0),
@@ -462,6 +530,7 @@ function securityResultRow(profile, employee, awardLevel) {
 }
 
 export function calculateTimesheetResults(parsedCache, timesheetData) {
+  if (timesheetData.sourceOnly) return sourceOnlyResults(timesheetData)
   const rows = timesheetData.employees.map((employee) => {
     const profile = employee.employeeId
       ? parsedCache.employeesById[employee.employeeId] || parsedCache.employeesByName[normalizeName(employee.employeeName)]
