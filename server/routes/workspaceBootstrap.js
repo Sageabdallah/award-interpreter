@@ -1,4 +1,10 @@
 import { createHash } from 'node:crypto'
+import {
+  buildSecurityDocumentPack,
+  isSecurityDocumentEvidenceRow,
+  latestCompleteFortnight,
+} from '../securityDocumentPack.js'
+import { importMssSecurityData } from '../../src/domain/importers/mssSecurity.js'
 
 const PREVIEW_PERIODS_PER_EMPLOYEE = 1
 
@@ -40,6 +46,27 @@ function normalizeHistoricalDate(value, payrollLastDate) {
   return year > lastYear + 1 && year - 100 >= 1900
     ? `${year - 100}-${match[2]}-${match[3]}`
     : String(value || '')
+}
+
+function excelSerial(dateKey) {
+  const time = Date.parse(`${dateKey}T00:00:00Z`)
+  return Number.isFinite(time) ? Math.round((time - Date.UTC(1899, 11, 30)) / 86400000) : undefined
+}
+
+function sourceMasterRow(row, payrollLastDate) {
+  return {
+    EmployeeId: row.employeeId,
+    EmployeeType: String(row.employmentType || '').replace(/[- ]/g, '').toLowerCase(),
+    JoiningDate: excelSerial(normalizeHistoricalDate(row.employmentStart, payrollLastDate)),
+    AwardCode: row.employeeMasterAwardCode,
+    Area: row.area,
+    PHLArea: row.publicHolidayArea,
+    EmpRank: row.employeeRank,
+    TimeRotation: row.timeRotation,
+    Is7DayWorker: row.sevenDayWorker ? 'yes' : 'no',
+    PayrollBatchCode: row.payrollBatchCode,
+    OverridePostAward: row.overridePostAward ? 'Y' : 'N',
+  }
 }
 
 function sanitizeShift(row, employeeId) {
@@ -84,6 +111,7 @@ function sanitizeShift(row, employeeId) {
 async function buildWorkspace(auditStore, record) {
   const manifest = record.data
   if (!Array.isArray(manifest.chunkRefs)) throw new Error('The latest payroll import has no verified chunk references.')
+  const summary = manifest.summary || {}
   const employeeRows = []
   for (const ref of chunkRefs(manifest, 'employees')) {
     const chunk = await verifiedChunk(auditStore, ref, 'employees')
@@ -94,18 +122,36 @@ async function buildWorkspace(auditStore, record) {
     publicId('MSS', row.employeeId),
   ]))
   const previewByEmployee = new Map(employeeRows.map((row) => [String(row.employeeId || ''), []]))
+  const documentPeriod = latestCompleteFortnight(summary.lastDate)
+  const securityDocumentRows = []
+  const securityComponentRows = []
 
   for (const ref of chunkRefs(manifest, 'work-periods')) {
     const chunk = await verifiedChunk(auditStore, ref, 'work-periods')
     for (const row of chunk.data.rows || []) {
       const rawEmployeeId = String(row.employeeId || '')
+      if (isSecurityDocumentEvidenceRow(row, documentPeriod)) securityDocumentRows.push(row)
       const preview = previewByEmployee.get(rawEmployeeId)
       if (!preview || preview.length >= PREVIEW_PERIODS_PER_EMPLOYEE) continue
       preview.push(sanitizeShift(row, publicIds.get(rawEmployeeId)))
     }
   }
 
-  const summary = manifest.summary || {}
+  const periodStartSerial = excelSerial(documentPeriod?.start)
+  const periodEndSerial = excelSerial(documentPeriod?.end)
+  for (const ref of chunkRefs(manifest, 'components')) {
+    const chunk = await verifiedChunk(auditStore, ref, 'components')
+    for (const row of chunk.data.rows || []) {
+      const shiftDate = Number(row.ShiftDate)
+      if (!/security services industry award/i.test(String(row.AwardCode || ''))
+        || String(row.Area || '').trim() !== 'Sydney'
+        || !Number.isFinite(shiftDate)
+        || shiftDate < periodStartSerial
+        || shiftDate > periodEndSerial) continue
+      securityComponentRows.push(row)
+    }
+  }
+
   const employees = employeeRows.map((row) => {
     const rawEmployeeId = String(row.employeeId || '')
     const employeeId = publicIds.get(rawEmployeeId)
@@ -136,9 +182,30 @@ async function buildWorkspace(auditStore, record) {
   }).sort((left, right) => left.employeeId.localeCompare(right.employeeId))
   const pendingInstruments = (manifest.coverageInventory || [])
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence').length
+  const sourceDocumentData = securityComponentRows.length
+    ? importMssSecurityData({
+        employeeRows: employeeRows.map((row) => sourceMasterRow(row, summary.lastDate)),
+        payrollRows: securityComponentRows,
+        area: 'Sydney',
+        windowStartSerial: periodStartSerial,
+      })
+    : null
+  const sourceProfiles = sourceDocumentData && !sourceDocumentData.errors.length
+    ? sourceDocumentData.profiles
+    : null
+  const documentPack = buildSecurityDocumentPack({
+    employeeRows,
+    workPeriodRows: securityDocumentRows,
+    sourceProfiles,
+    sourceName: manifest.sourceName,
+    employeeMasterName: manifest.employeeMaster?.sourceName,
+    lastDate: summary.lastDate,
+    business: `${manifest.business || 'MSS Security'} source payroll export (Sydney)`,
+  })
 
   return {
     audit: { id: record.id, createdAt: record.createdAt, hash: record.hash },
+    documentPack,
     timesheetData: {
       schemaVersion: manifest.schemaVersion,
       sourceOnly: true,
@@ -192,14 +259,16 @@ export function latestMssWorkspaceRoute({ auditStore }) {
         promise: (async () => {
           const snapshots = await auditStore.list({ kind: 'payroll-workspace-snapshot', limit: 1 })
           const snapshot = snapshots.find((item) => item.data?.sourceAuditId === latest.id)
-          if (snapshot?.data?.workspace) return snapshot.data.workspace
+          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v2' && snapshot.data.workspace?.documentPack) {
+            return snapshot.data.workspace
+          }
 
           const workspace = await buildWorkspace(auditStore, latest)
           // The source ledger stays chunked. This compact, sanitised read model
           // avoids rescanning 257k work periods whenever a free instance wakes.
           await auditStore.save('payroll-workspace-snapshot', {
             sourceAuditId: latest.id,
-            schemaVersion: 'mss-workspace-snapshot/v1',
+            schemaVersion: 'mss-workspace-snapshot/v2',
             workspace,
           })
           return workspace

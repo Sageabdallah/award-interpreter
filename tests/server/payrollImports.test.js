@@ -115,6 +115,12 @@ describe('payroll import API', () => {
       sourceAwardCodes: ['(NSW) Security Services Industry Award'],
     })
     expect(workspace.body.workspace.timesheetData.employees[0].employeeId).toMatch(/^MSS-[A-F0-9]{10}$/)
+    expect(workspace.body.workspace.documentPack).toMatchObject({
+      backendManaged: true,
+      awardCode: 'MA000016',
+      agreement: { name: 'employee-agreement-security-nsw.txt', backendManaged: true },
+      compliance: { name: 'compliance-document-security-nsw.txt', backendManaged: true },
+    })
     expect(JSON.stringify(workspace.body)).not.toContain('30458')
     expect(auditStore.records.filter((record) => record.kind === 'payroll-workspace-snapshot')).toHaveLength(1)
 

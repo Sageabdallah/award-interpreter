@@ -62,7 +62,7 @@ import {
 } from './domain/workspaceCache.js'
 import { enrichSourcePayroll, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
 import { parseLeaveRequestFile } from './domain/leaveParser.js'
-import { buildParsedCache, buildParsedCacheFromTexts, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
+import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
@@ -162,6 +162,9 @@ function reducer(state, action) {
       return {
         ...state,
         industry: action.industry,
+        documents: Object.fromEntries(
+          Object.entries(state.documents).map(([key, file]) => [key, file?.backendManaged ? null : file]),
+        ),
         parsedCache: null,
         processingError: '',
         timesheetFile: null,
@@ -194,17 +197,20 @@ function reducer(state, action) {
         ...state,
         stage: 5,
         industry: 'security',
+        documents: action.documents || state.documents,
         parsedCache: action.cache,
         stepIndex: PARSE_STEPS.length,
         timesheetFile: {
           name: action.timesheetData.meta?.sourceName || 'Protected MSS payroll',
           size: action.timesheetData.meta?.sourceSize,
+          backendManaged: true,
         },
         sourceTimesheetData: action.timesheetData,
         timesheetData: action.timesheetData,
         employeeMasterFile: {
           name: action.employeeMasterData.sourceName || 'Employee.xlsx',
           size: action.employeeMasterData.sourceSize,
+          backendManaged: true,
         },
         employeeMasterData: action.employeeMasterData,
         employeeMasterError: '',
@@ -285,6 +291,7 @@ function reducer(state, action) {
           ...initialState,
           stage: 5,
           industry: state.industry,
+          documents: state.documents,
           parsedCache: state.parsedCache,
           stepIndex: PARSE_STEPS.length,
           timesheetFile: state.timesheetFile,
@@ -320,6 +327,25 @@ const fmtSize = (bytes) => {
 }
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function backendDocumentFile(document) {
+  if (!document?.text || !document?.name) return null
+  const file = new File([document.text], document.name, { type: document.type || 'text/plain' })
+  Object.defineProperties(file, {
+    backendManaged: { value: true },
+    description: { value: document.description || '' },
+    recordCount: { value: Number(document.recordCount) || 0 },
+  })
+  return file
+}
+
+function backendWorkspaceDocuments(documentPack) {
+  return {
+    award: null,
+    compliance: backendDocumentFile(documentPack?.compliance),
+    agreement: backendDocumentFile(documentPack?.agreement),
+  }
+}
 
 function countTimesheetMatches(parsedCache, timesheetData) {
   if (!parsedCache || !timesheetData) return 0
@@ -695,7 +721,7 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
               {file.name}
             </div>
             <div className="mono" style={{ fontSize: 11.5, color: COLORS.muted, marginTop: 2 }}>
-              {fmtSize(file.size)} · ready
+              {fmtSize(file.size)} · {file.backendManaged ? 'protected backend' : 'ready'}
             </div>
           </div>
           <button className="icon-x" onClick={onRemove} aria-label="Remove file">
@@ -941,7 +967,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
           index="02"
           icon={Scale}
           title="Compliance Document"
-          subtitle="Optional compliance annotations"
+          subtitle={documents.compliance?.backendManaged ? 'Auto-loaded from protected MSS evidence' : 'Optional compliance annotations'}
           accept=".pdf,.docx,.doc,.txt"
           formats="PDF · DOCX · TXT"
           file={documents.compliance}
@@ -952,7 +978,7 @@ function UploadStage({ documents, industry, onSetDocument, onSetIndustry, onCont
           index="03"
           icon={FileText}
           title="Employee Agreement"
-          subtitle="Optional — adds employee matching and the timesheet run"
+          subtitle={documents.agreement?.backendManaged ? 'Auto-loaded from protected MSS evidence' : 'Optional — adds employee matching and the timesheet run'}
           accept=".pdf,.docx,.doc,.txt"
           formats="PDF · DOCX · TXT"
           file={documents.agreement}
@@ -2773,7 +2799,7 @@ export default function App() {
   // validated against are still current. Without this, a slow parse resolving
   // after the user swapped documents resurrects state the reducer just reset.
   const parseSeqRef = useRef({ timesheet: 0, employeeMaster: 0, leave: 0 })
-  const backendWorkspaceRef = useRef(false)
+  const backendWorkspaceRef = useRef(null)
   const latestInputsRef = useRef({})
   latestInputsRef.current = {
     parsedCache: state.parsedCache,
@@ -2823,22 +2849,27 @@ export default function App() {
           shifts: backendTimesheetData.shifts || backendTimesheetData.employees.flatMap((employee) => employee.shifts || []),
         }
         const employeeMasterData = employeeMasterFromBackendWorkspace(timesheetData)
-        const cache = await buildParsedCacheFromTexts({}, {
-          cacheFingerprint: `backend-${payload.workspace.audit?.hash || timesheetData.meta?.backendAuditId || 'mss'}`,
+        const documents = backendWorkspaceDocuments(payload.workspace.documentPack)
+        const cache = await buildParsedCache(documents, {
+          cacheFingerprint: `backend-${payload.workspace.audit?.hash || timesheetData.meta?.backendAuditId || 'mss'}-${payload.workspace.documentPack?.fingerprint || 'documents'}`,
           preloadedAwards: loadAwardLibrary('security'),
           industry: 'security',
         })
         if (cancelled) return
-        backendWorkspaceRef.current = true
+        const restoredWorkspace = {
+          cache,
+          documents,
+          timesheetData,
+          employeeMasterData,
+          results: calculateTimesheetResults(cache, timesheetData),
+        }
+        backendWorkspaceRef.current = restoredWorkspace
         setEmployeeMasterCacheStatus('backend')
         saveEmployeeMasterCache(employeeMasterData).catch(() => {})
         saveInterpretationCache(cache, 'security').catch(() => {})
         dispatch({
           type: 'restoreBackendWorkspace',
-          cache,
-          timesheetData,
-          employeeMasterData,
-          results: calculateTimesheetResults(cache, timesheetData),
+          ...restoredWorkspace,
         })
       })
       .catch(() => {})
@@ -3024,6 +3055,12 @@ export default function App() {
 
   const handleSetIndustry = (industry) => {
     clearInterpretationCache().catch(() => {})
+    if (industry === 'security' && backendWorkspaceRef.current) {
+      dispatch({ type: 'restoreBackendWorkspace', ...backendWorkspaceRef.current })
+      saveInterpretationCache(backendWorkspaceRef.current.cache, 'security').catch(() => {})
+      setExpandedRowId(null)
+      return
+    }
     dispatch({ type: 'setIndustry', industry })
     setExpandedRowId(null)
   }
