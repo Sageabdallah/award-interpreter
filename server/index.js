@@ -10,21 +10,35 @@ import { createMailer } from './mailer.js'
 import { createOutlookConnector } from './outlookConnector.js'
 import { loadAwardLibraryFs } from './awardLibraryFs.js'
 import { embedQuery } from './rag/embedder.js'
-import { openVectorStore } from './rag/vectorStore.js'
+import { disabledVectorStore, openVectorStore } from './rag/vectorStore.js'
 
 validateProductionConfig(config)
-
-const store = await openVectorStore({
-  indexDir: config.ragIndexDir,
-  weaviateUrl: config.weaviateUrl,
-  weaviateApiKey: config.weaviateApiKey,
-})
-console.log(`vector store: ${store.backend}`)
 
 const library = loadAwardLibraryFs(config.awardLibraryDir, 'security')
 console.log(`award library: ${library.length} awards`)
 
-const aiAvailable = store.backend !== 'disabled' && Boolean(config.anthropicApiKey)
+// Open and verify persistence before loading the local embedding model. The
+// annual payroll audit is large, so audit verification and model warm-up must
+// not compete for the free service's bounded heap.
+const auditStore = await createAuditStore({
+  databaseUrl: config.databaseUrl,
+  databaseSsl: config.databaseSsl,
+  auditTable: config.auditTable,
+  filePath: config.auditLogFile,
+  hmacKey: config.auditHmacKey,
+})
+console.log(`pay-run audit: ${auditStore?.backend || 'disabled'}`)
+
+const store = config.aiRetrievalEnabled
+  ? await openVectorStore({
+      indexDir: config.ragIndexDir,
+      weaviateUrl: config.weaviateUrl,
+      weaviateApiKey: config.weaviateApiKey,
+    })
+  : disabledVectorStore('AI retrieval is disabled for this ERP deployment.')
+console.log(`vector store: ${store.backend}`)
+
+const aiAvailable = config.aiRetrievalEnabled && store.backend !== 'disabled' && Boolean(config.anthropicApiKey)
 if (aiAvailable) {
   console.log('warming embedder…')
   await embedQuery('warmup')
@@ -42,14 +56,6 @@ const outlook = createOutlookConnector(config, {
     console.log(`payslip mail: outlook connected as ${saved.account || 'unknown account'} — live, no restart needed`)
   },
 })
-const auditStore = await createAuditStore({
-  databaseUrl: config.databaseUrl,
-  databaseSsl: config.databaseSsl,
-  auditTable: config.auditTable,
-  filePath: config.auditLogFile,
-  hmacKey: config.auditHmacKey,
-})
-console.log(`pay-run audit: ${auditStore?.backend || 'disabled'}`)
 const mailHint = mailerRef.current.mode !== 'dry-run' ? ''
   : outlook.configured
     ? ' (no delivery yet — use Connect Outlook on the Pay Run page, or npm run mail:auth)'

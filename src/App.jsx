@@ -47,6 +47,11 @@ import { buildUnallocatedWorklist } from './engines/unallocatedShifts.js'
 import { INDUSTRY_LABELS, isIndustrySeeded, listIndustryAwards, loadAwardLibrary } from './domain/awardLibrary/index.js'
 import { appendAssignmentsToTimesheet, appendShiftsToTimesheet } from './domain/bulkShifts.js'
 import {
+  employeeMasterFromBackendWorkspace,
+  pseudonymizeEmployeeMaster,
+  pseudonymizeSourcePayroll,
+} from './domain/backendWorkspace.js'
+import {
   clearEmployeeMasterCache,
   clearInterpretationCache,
   clearWorkspaceCache,
@@ -57,7 +62,7 @@ import {
 } from './domain/workspaceCache.js'
 import { enrichSourcePayroll, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
 import { parseLeaveRequestFile } from './domain/leaveParser.js'
-import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
+import { buildParsedCache, buildParsedCacheFromTexts, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
@@ -182,6 +187,30 @@ function reducer(state, action) {
         parsedCache: action.cache,
         processingError: '',
         stepIndex: PARSE_STEPS.length,
+      }
+    case 'restoreBackendWorkspace':
+      if (state.timesheetData) return state
+      return {
+        ...state,
+        stage: 5,
+        industry: 'security',
+        parsedCache: action.cache,
+        stepIndex: PARSE_STEPS.length,
+        timesheetFile: {
+          name: action.timesheetData.meta?.sourceName || 'Protected MSS payroll',
+          size: action.timesheetData.meta?.sourceSize,
+        },
+        sourceTimesheetData: action.timesheetData,
+        timesheetData: action.timesheetData,
+        employeeMasterFile: {
+          name: action.employeeMasterData.sourceName || 'Employee.xlsx',
+          size: action.employeeMasterData.sourceSize,
+        },
+        employeeMasterData: action.employeeMasterData,
+        employeeMasterError: '',
+        timesheetError: '',
+        results: action.results,
+        ...leaveReset,
       }
     case 'setTimesheetStart':
       return { ...state, timesheetFile: action.file, sourceTimesheetData: null, timesheetData: null, timesheetError: '', results: null, ...leaveReset }
@@ -1607,7 +1636,9 @@ function TimesheetStage({
       {employeeMasterData && employeeMasterCacheStatus !== 'unavailable' && (
         <div style={{ marginBottom: 18 }}>
           <Flag success>
-            Employee setup is retained on this browser and will auto-apply to every replacement payroll. Only operational fields are stored; date of birth and gender are excluded.
+            {employeeMasterData.backendManaged
+              ? 'Employee reconciliation was restored from the protected backend and will auto-apply to replacement payrolls. Raw employee IDs, date of birth and gender are not returned by the workspace endpoint.'
+              : 'Employee setup is retained on this browser and will auto-apply to every replacement payroll. Only operational fields are stored; date of birth and gender are excluded.'}
           </Flag>
         </div>
       )}
@@ -2727,6 +2758,7 @@ export default function App() {
   // validated against are still current. Without this, a slow parse resolving
   // after the user swapped documents resurrects state the reducer just reset.
   const parseSeqRef = useRef({ timesheet: 0, employeeMaster: 0, leave: 0 })
+  const backendWorkspaceRef = useRef(false)
   const latestInputsRef = useRef({})
   latestInputsRef.current = {
     parsedCache: state.parsedCache,
@@ -2743,7 +2775,7 @@ export default function App() {
     let cancelled = false
     loadEmployeeMasterCache()
       .then((record) => {
-        if (cancelled) return
+        if (cancelled || backendWorkspaceRef.current) return
         if (!record?.data) {
           setEmployeeMasterCacheStatus('empty')
           return
@@ -2763,9 +2795,42 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
+    fetch('/api/workspaces/mss/latest')
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Workspace restore failed with HTTP ${response.status}.`)
+        return response.json()
+      })
+      .then(async (payload) => {
+        if (cancelled || !payload?.workspace?.timesheetData) return
+        const timesheetData = payload.workspace.timesheetData
+        const employeeMasterData = employeeMasterFromBackendWorkspace(timesheetData)
+        const cache = await buildParsedCacheFromTexts({}, {
+          cacheFingerprint: `backend-${payload.workspace.audit?.hash || timesheetData.meta?.backendAuditId || 'mss'}`,
+          preloadedAwards: loadAwardLibrary('security'),
+          industry: 'security',
+        })
+        if (cancelled) return
+        backendWorkspaceRef.current = true
+        setEmployeeMasterCacheStatus('backend')
+        saveEmployeeMasterCache(employeeMasterData).catch(() => {})
+        saveInterpretationCache(cache, 'security').catch(() => {})
+        dispatch({
+          type: 'restoreBackendWorkspace',
+          cache,
+          timesheetData,
+          employeeMasterData,
+          results: calculateTimesheetResults(cache, timesheetData),
+        })
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
     loadInterpretationCache()
       .then((record) => {
-        if (!cancelled && record?.parsedCache) {
+        if (!cancelled && !backendWorkspaceRef.current && record?.parsedCache) {
           dispatch({ type: 'restoreInterpretationCache', cache: record.parsedCache, industry: record.industry })
         }
       })
@@ -2950,7 +3015,11 @@ export default function App() {
     const cacheAtStart = state.parsedCache
     dispatch({ type: 'setTimesheetStart', file })
     try {
-      const sourceData = await parseTimesheetFile(file)
+      const parsedSourceData = await parseTimesheetFile(file)
+      if (seq !== parseSeqRef.current.timesheet || latestInputsRef.current.parsedCache !== cacheAtStart) return
+      const sourceData = latestInputsRef.current.employeeMasterData?.backendManaged
+        ? await pseudonymizeSourcePayroll(parsedSourceData)
+        : parsedSourceData
       if (seq !== parseSeqRef.current.timesheet || latestInputsRef.current.parsedCache !== cacheAtStart) return
       const data = enrichSourcePayroll(sourceData, latestInputsRef.current.employeeMasterData)
       dispatch({
@@ -2968,6 +3037,7 @@ export default function App() {
 
   const handleEmployeeMasterFile = async (file) => {
     const seq = ++parseSeqRef.current.employeeMaster
+    const useBackendIds = Boolean(latestInputsRef.current.employeeMasterData?.backendManaged || state.timesheetData?.backendLoaded)
     if (!file) {
       clearEmployeeMasterCache().catch(() => {})
       setEmployeeMasterCacheStatus('empty')
@@ -2977,7 +3047,9 @@ export default function App() {
 
     dispatch({ type: 'setEmployeeMasterStart', file })
     try {
-      const data = await parseEmployeeMasterFile(file)
+      const parsedData = await parseEmployeeMasterFile(file)
+      if (seq !== parseSeqRef.current.employeeMaster) return
+      const data = useBackendIds ? await pseudonymizeEmployeeMaster(parsedData) : parsedData
       if (seq !== parseSeqRef.current.employeeMaster) return
       try {
         await saveEmployeeMasterCache(data)

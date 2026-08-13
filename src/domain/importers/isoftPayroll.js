@@ -58,7 +58,12 @@ export function isoftDateKey(value = '') {
   const match = text.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/)
   if (!match) return ''
   const [, month, day, rawYear] = match
-  const year = rawYear.length === 2 ? `20${rawYear}` : rawYear
+  // Excel's m/d/yy display is used for both historic employee dates and
+  // recent payroll dates. Match its conventional 1950-2049 pivot instead of
+  // turning a 1997 joining date into the impossible year 2097.
+  const year = rawYear.length === 2
+    ? String(Number(rawYear) >= 50 ? 1900 + Number(rawYear) : 2000 + Number(rawYear))
+    : rawYear
   const candidate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
   return Number.isNaN(Date.parse(`${candidate}T00:00:00Z`)) ? '' : candidate
 }

@@ -51,8 +51,17 @@ describe('payroll import API', () => {
       employmentTypesSupplied: 1,
     }
     const chunks = [
-      { kind: 'employees', rows: payload.employees.map((employee) => ({ ...employee, employmentType: 'Full-time', employeeMasterMatched: true })) },
-      { kind: 'work-periods', rows: payload.workPeriods },
+      {
+        kind: 'employees',
+        rows: payload.employees.map((employee) => ({
+          ...employee,
+          employmentType: 'Full-time',
+          employeeMasterMatched: true,
+          employmentStart: '2097-04-12',
+          sourceAwardCodes: ['(NSW) Security Services Industry Award'],
+        })),
+      },
+      { kind: 'work-periods', rows: payload.workPeriods.map((period) => ({ ...period, dateKey: '2018-03-26' })) },
       { kind: 'components', rows: payload.components },
     ]
     const receipts = []
@@ -89,6 +98,23 @@ describe('payroll import API', () => {
     expect(manifest.data).not.toHaveProperty('components')
     expect(manifest.data.chunkRefs).toHaveLength(3)
     expect(manifest.data.employeeMaster).toMatchObject({ sourceName: 'Employee.xlsx', matchedEmployees: 1, coveragePercent: 100 })
+
+    const workspace = await request(app).get('/api/workspaces/mss/latest')
+    expect(workspace.status).toBe(200)
+    expect(workspace.body.workspace.timesheetData).toMatchObject({
+      backendLoaded: true,
+      sourceOnly: true,
+      employeeMaster: { matchedEmployees: 1, unmatchedEmployees: 0 },
+      sourceSummary: { componentRows: 1, workPeriods: 1 },
+    })
+    expect(workspace.body.workspace.timesheetData.employees[0]).toMatchObject({
+      employeeMasterMatched: true,
+      employmentType: 'Full-time',
+      employmentStart: '1997-04-12',
+      sourceAwardCodes: ['(NSW) Security Services Industry Award'],
+    })
+    expect(workspace.body.workspace.timesheetData.employees[0].employeeId).toMatch(/^MSS-[A-F0-9]{10}$/)
+    expect(JSON.stringify(workspace.body)).not.toContain('30458')
 
     const componentReceipt = receipts.find((receipt) => receipt.kind === 'components')
     const fetched = await request(app).get(`/api/payroll-imports/${payload.sourceFingerprint}/chunks/${componentReceipt.auditId}`)

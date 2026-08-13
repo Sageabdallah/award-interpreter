@@ -49,8 +49,8 @@ function recordDigest(record, hmacKey) {
   return digest(record.hashVersion >= 2 ? canonicalStringify(base) : JSON.stringify(base), hmacKey)
 }
 
-function verifyRecords(records, hmacKey) {
-  let expectedPreviousHash = ''
+function verifyRecords(records, hmacKey, initialPreviousHash = '') {
+  let expectedPreviousHash = initialPreviousHash
   for (const record of records) {
     if (record.previousHash !== expectedPreviousHash || recordDigest(record, hmacKey) !== record.hash) {
       throw new Error('Audit log integrity verification failed.')
@@ -58,6 +58,13 @@ function verifyRecords(records, hmacKey) {
     expectedPreviousHash = record.hash
   }
   return expectedPreviousHash
+}
+
+function verifyRecordContent(record, hmacKey) {
+  if (recordDigest(record, hmacKey) !== record.hash) {
+    throw new Error('Audit log integrity verification failed.')
+  }
+  return record
 }
 
 function boundedLimit(value, fallback = 50) {
@@ -75,6 +82,20 @@ function postgresRecord(row) {
     hash: row.hash,
     hashVersion: Number(row.hash_version) || 1,
   }
+}
+
+async function verifyPostgresChain(pool, table) {
+  let previousHash = ''
+  // Startup validates the complete chain topology without loading the large
+  // JSON payloads. Each payload digest is then verified when get/list reads
+  // that record. This preserves tamper detection and keeps startup memory
+  // independent of annual payroll size.
+  const result = await pool.query(`SELECT sequence, previous_hash, hash FROM ${table} ORDER BY sequence ASC`)
+  for (const row of result.rows) {
+    if (row.previous_hash !== previousHash) throw new Error('Audit log integrity verification failed.')
+    previousHash = row.hash
+  }
+  return previousHash
 }
 
 export async function createFileAuditStore({ filePath, hmacKey = '' }) {
@@ -157,8 +178,7 @@ export async function createPostgresAuditStore({
   await pool.query(`ALTER TABLE ${table} ALTER COLUMN hash_version SET DEFAULT 2`)
   await pool.query(`CREATE INDEX IF NOT EXISTS "${tableName}_kind_created_idx" ON ${table} (kind, created_at DESC)`)
 
-  const existing = await pool.query(`SELECT id, created_at, kind, previous_hash, data, hash, hash_version FROM ${table} ORDER BY sequence ASC`)
-  verifyRecords(existing.rows.map(postgresRecord), hmacKey)
+  await verifyPostgresChain(pool, table)
 
   return {
     backend: 'postgres-audit-chain',
@@ -195,7 +215,7 @@ export async function createPostgresAuditStore({
         `SELECT id, created_at, kind, previous_hash, data, hash, hash_version FROM ${table} WHERE id = $1`,
         [id],
       )
-      return result.rows[0] ? postgresRecord(result.rows[0]) : null
+      return result.rows[0] ? verifyRecordContent(postgresRecord(result.rows[0]), hmacKey) : null
     },
     async list({ kind = '', limit = 50 } = {}) {
       const values = []
@@ -205,7 +225,7 @@ export async function createPostgresAuditStore({
         `SELECT id, created_at, kind, previous_hash, data, hash, hash_version FROM ${table} ${where} ORDER BY sequence DESC LIMIT $${values.length}`,
         values,
       )
-      return result.rows.map(postgresRecord)
+      return result.rows.map((row) => verifyRecordContent(postgresRecord(row), hmacKey))
     },
     async close() {
       if (!suppliedPool) await pool.end()

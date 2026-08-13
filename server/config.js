@@ -17,6 +17,7 @@ function trustProxySetting(value) {
 
 export const config = {
   port: Number(process.env.PORT || 8787),
+  aiRetrievalEnabled: process.env.AI_RETRIEVAL_ENABLED !== 'false',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   modelId: process.env.MODEL_ID || 'claude-sonnet-4-6',
   // Fast, cheap model that streams the visible "reasoning" pass in the award

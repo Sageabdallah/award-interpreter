@@ -18,6 +18,7 @@ import {
   payrollImportChunkRoute,
   payrollImportsRoute,
 } from './routes/payrollImports.js'
+import { latestMssWorkspaceRoute } from './routes/workspaceBootstrap.js'
 import { apiSecurity, fixedWindowRateLimit, requireLiveMailToken, requireProductionToken } from './security.js'
 
 export function createApp({ anthropic, store, embedQuery, modelId, reasonerModelId = null, library, mailer = null, mailerRef = null, outlook = null, auditStore = null, security = {} }) {
@@ -67,6 +68,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
         releaseGate: Boolean(auditStore),
         durablePersistence: auditStore?.backend === 'postgres-audit-chain',
         sourcePayrollImports: Boolean(auditStore),
+        workspaceBootstrap: Boolean(auditStore),
       },
     })
   })
@@ -126,6 +128,10 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
   }
   if (mail.current) app.post('/api/disperse-pay', mailLimit, liveMailOperation, wrap(dispersePayRoute({ mailerRef: mail, auditStore })))
   if (auditStore) {
+    // Read-only and privacy-sanitised: the public application can restore the
+    // latest completed workspace without receiving raw employee IDs or source
+    // component rows. Mutating and raw-record APIs remain token protected.
+    app.get('/api/workspaces/mss/latest', wrap(latestMssWorkspaceRoute({ auditStore })))
     app.post('/api/pay-runs', protectedOperation, wrap(payRunsRoute({ auditStore })))
     app.get('/api/pay-runs', protectedOperation, wrap(listPayRunsRoute({ auditStore })))
     app.get('/api/pay-runs/:id', protectedOperation, wrap(getPayRunRoute({ auditStore })))

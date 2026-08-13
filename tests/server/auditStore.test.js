@@ -146,7 +146,7 @@ describe('append-only pay-run audit', () => {
   it('provides the same append, get, and list contract through PostgreSQL', async () => {
     const rows = []
     const query = async (sql, params = []) => {
-      if (/SELECT id, created_at.*ORDER BY sequence ASC/s.test(sql)) return { rows: [...rows] }
+      if (/SELECT sequence, previous_hash, hash.*ORDER BY sequence ASC/s.test(sql)) return { rows: rows.map(({ sequence, previous_hash, hash }) => ({ sequence, previous_hash, hash })) }
       if (/SELECT id, created_at.*WHERE id = \$1/s.test(sql)) return { rows: rows.filter((row) => row.id === params[0]) }
       if (/SELECT id, created_at.*ORDER BY sequence DESC LIMIT/s.test(sql)) {
         const kind = /WHERE kind/.test(sql) ? params[0] : ''
@@ -163,6 +163,7 @@ describe('append-only pay-run audit', () => {
             if (/SELECT hash.*ORDER BY sequence DESC/s.test(sql)) return { rows: rows.length ? [{ hash: rows.at(-1).hash }] : [] }
             if (/INSERT INTO/.test(sql)) {
               rows.push({
+                sequence: rows.length + 1,
                 id: params[0],
                 created_at: params[1],
                 kind: params[2],
@@ -182,11 +183,15 @@ describe('append-only pay-run audit', () => {
     const first = await store.save('pay-run', { run: 1 })
     await store.save('payslip-preview', { run: 1 })
     const third = await store.save('pay-run', { run: 2 })
+    await createPostgresAuditStore({ pool, hmacKey: 'test-integrity-key' })
 
     expect(store.backend).toBe('postgres-audit-chain')
     expect((await store.get(first.id)).data).toEqual({ run: 1 })
     expect((await store.list({ kind: 'pay-run', limit: 1 })).map((record) => record.id)).toEqual([third.id])
     expect(rows[1].previous_hash).toBe(rows[0].hash)
     expect(rows[2].previous_hash).toBe(rows[1].hash)
+
+    rows[2].data.run = 999
+    await expect(store.get(rows[2].id)).rejects.toThrow(/integrity verification failed/i)
   })
 })

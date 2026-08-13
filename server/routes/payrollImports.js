@@ -24,7 +24,9 @@ function cleanRecord(record, maximumFields = 64) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) return null
   return Object.fromEntries(Object.entries(record).slice(0, maximumFields).map(([key, value]) => [
     boundedText(key, 100),
-    typeof value === 'number' || typeof value === 'boolean' ? value : boundedText(value, 1000),
+    Array.isArray(value)
+      ? value.slice(0, 1000).map((item) => (typeof item === 'number' || typeof item === 'boolean' ? item : boundedText(item, 1000)))
+      : typeof value === 'number' || typeof value === 'boolean' ? value : boundedText(value, 1000),
   ]))
 }
 

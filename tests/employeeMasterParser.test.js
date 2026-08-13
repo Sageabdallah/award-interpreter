@@ -44,6 +44,18 @@ describe('iSOFT employee master parser', () => {
     expect(parsed.summary.privacyExcludedFields).toEqual(['Dateofbirth', 'Gender'])
   })
 
+  it('interprets historical two-digit joining years without moving them into the future', () => {
+    const parsed = parseEmployeeMasterRows([
+      EMPLOYEE_HEADERS,
+      ['2788', '', 'NSW', 'NSW Defence', 'Sydney', '12/4/97', '3/23/89', 'Fulltime', 'NSW Defence 2', 'Yes', '0', 'NSW2', 'Rotating', 'MA000016-NSW', '0', 'N', ''],
+    ], 'Employee.xlsx')
+
+    expect(parsed.profiles[0]).toMatchObject({
+      employmentStart: '1997-12-04',
+      inductionDate: '1989-03-23',
+    })
+  })
+
   it('enriches source payroll by employee ID without replacing source instruments', () => {
     const payroll = importIsoftPayrollRows([
       PAYROLL_HEADERS,
