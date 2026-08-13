@@ -190,7 +190,7 @@ async function buildWorkspace(auditStore, record) {
         windowStartSerial: periodStartSerial,
       })
     : null
-  const sourceProfiles = sourceDocumentData && !sourceDocumentData.errors.length
+  const sourceProfiles = sourceDocumentData?.profiles?.length
     ? sourceDocumentData.profiles
     : null
   const documentPack = buildSecurityDocumentPack({
@@ -259,7 +259,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
         promise: (async () => {
           const snapshots = await auditStore.list({ kind: 'payroll-workspace-snapshot', limit: 1 })
           const snapshot = snapshots.find((item) => item.data?.sourceAuditId === latest.id)
-          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v3' && snapshot.data.workspace?.documentPack) {
+          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v4' && snapshot.data.workspace?.documentPack) {
             return snapshot.data.workspace
           }
 
@@ -268,7 +268,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
           // avoids rescanning 257k work periods whenever a free instance wakes.
           await auditStore.save('payroll-workspace-snapshot', {
             sourceAuditId: latest.id,
-            schemaVersion: 'mss-workspace-snapshot/v3',
+            schemaVersion: 'mss-workspace-snapshot/v4',
             workspace,
           })
           return workspace
