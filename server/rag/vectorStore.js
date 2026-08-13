@@ -5,7 +5,8 @@
 // WEAVIATE_URL is configured; the flat local index is the zero-setup fallback
 // so everything keeps working offline or if the cluster is unreachable.
 // Both backends expose the same interface:
-//   { backend, meta, search({vector,k,awardCode,chunkType}), byClauseRef(code,ref),
+//   { backend, meta, search({vector,k,awardCode,chunkType}),
+//     searchText({query,k,awardCode,chunkType}), byClauseRef(code,ref),
 //     listAwards(), close() }
 // ---------------------------------------------------------------------------
 

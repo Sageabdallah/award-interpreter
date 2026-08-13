@@ -28,6 +28,15 @@ function capChars(chunks, maxChars = MAX_CONTEXT_CHARS) {
   return kept
 }
 
+async function search({ store, embedQuery }, options) {
+  if (embedQuery) {
+    const vector = await embedQuery(options.query)
+    return store.search({ ...options, vector })
+  }
+  if (store.searchText) return store.searchText(options)
+  return []
+}
+
 /**
  * Chunks for explaining one interpretation table row: exact chunks for every
  * clause the row cites, then top-k semantic hits within the same award.
@@ -40,8 +49,7 @@ export async function retrieveForRow({ store, embedQuery }, { awardCode, row }) 
   }
 
   const query = [row.categoryLabel, row.title, row.plainLanguage].filter(Boolean).join(' — ')
-  const vector = await embedQuery(query)
-  const semantic = await store.search({ vector, k: 3, awardCode })
+  const semantic = await search({ store, embedQuery }, { query, k: 3, awardCode })
 
   // Exact clause chunks first — they are the citation targets.
   return capChars(dedupeById([...exact, ...semantic]))
@@ -64,8 +72,11 @@ export async function retrieveForRisk({ store, embedQuery }, { awardCode, clause
     }
   }
 
-  const vector = await embedQuery(String(query).slice(0, 2000))
-  const semantic = await store.search({ vector, k: 4, awardCode: awardCode || null })
+  const semantic = await search({ store, embedQuery }, {
+    query: String(query).slice(0, 2000),
+    k: 4,
+    awardCode: awardCode || null,
+  })
 
   // Exact clause chunks first — they are the citation targets.
   return capChars(dedupeById([...exact, ...semantic]))
@@ -92,8 +103,7 @@ export async function retrieveForQuestion({ store, embedQuery }, { awardCode, qu
   }
 
   const query = [recentContext, question].filter(Boolean).join('\n').slice(-2000)
-  const vector = await embedQuery(query)
-  const semantic = await store.search({ vector, k: 8, awardCode: awardCode || null })
+  const semantic = await search({ store, embedQuery }, { query, k: 8, awardCode: awardCode || null })
 
   // Explicitly named clauses first — they are what the user asked about.
   return capChars(dedupeById([...exact, ...semantic]))
@@ -105,8 +115,11 @@ export async function retrieveForQuestion({ store, embedQuery }, { awardCode, qu
  * @param {object} deps  { store, embedQuery }
  */
 export async function retrieveClassifications({ store, embedQuery }, { text, k = 12 }) {
-  const vector = await embedQuery(text.slice(0, 4000))
-  const hits = await store.search({ vector, k, chunkType: 'classification_definition' })
+  const hits = await search({ store, embedQuery }, {
+    query: text.slice(0, 4000),
+    k,
+    chunkType: 'classification_definition',
+  })
   return capChars(dedupeById(hits), 30000)
 }
 

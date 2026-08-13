@@ -9,7 +9,6 @@ import { createAuditStore } from './auditStore.js'
 import { createMailer } from './mailer.js'
 import { createOutlookConnector } from './outlookConnector.js'
 import { loadAwardLibraryFs } from './awardLibraryFs.js'
-import { embedQuery } from './rag/embedder.js'
 import { disabledVectorStore, openVectorStore } from './rag/vectorStore.js'
 
 validateProductionConfig(config)
@@ -38,12 +37,25 @@ const store = config.aiRetrievalEnabled
   : disabledVectorStore('AI retrieval is disabled for this ERP deployment.')
 console.log(`vector store: ${store.backend}`)
 
-const aiAvailable = config.aiRetrievalEnabled && store.backend !== 'disabled' && Boolean(config.anthropicApiKey)
-if (aiAvailable) {
+let queryEmbedder = null
+if (config.aiRetrievalEnabled && config.localEmbeddingsEnabled) {
+  // Keep the transformer package out of the process entirely on small ERP
+  // instances. Weaviate BM25 remains available without a local model.
+  queryEmbedder = (await import('./rag/embedder.js')).embedQuery
+}
+
+const retrievalAvailable = Boolean(queryEmbedder || store.searchText)
+const aiAvailable = config.aiRetrievalEnabled
+  && store.backend !== 'disabled'
+  && retrievalAvailable
+  && Boolean(config.anthropicApiKey)
+if (aiAvailable && queryEmbedder) {
   console.log('warming embedder…')
-  await embedQuery('warmup')
+  await queryEmbedder('warmup')
+} else if (aiAvailable) {
+  console.log('AI retrieval: Weaviate BM25 (local embeddings disabled)')
 } else {
-  console.log('AI retrieval: disabled (configure ANTHROPIC_API_KEY and a vector index to enable)')
+  console.log('AI retrieval: disabled (configure ANTHROPIC_API_KEY and a searchable index to enable)')
 }
 
 const anthropic = aiAvailable ? createAnthropicClient({ apiKey: config.anthropicApiKey }) : null
@@ -64,7 +76,7 @@ console.log(`payslip mail: ${mailerRef.current.mode}${mailHint}`)
 const app = createApp({
   anthropic,
   store,
-  embedQuery: aiAvailable ? embedQuery : null,
+  embedQuery: aiAvailable ? queryEmbedder : null,
   modelId: config.modelId,
   reasonerModelId: config.reasonerModelId,
   library,

@@ -77,6 +77,41 @@ describe('POST /api/award-chat', () => {
     expect(anthropic.calls).toHaveLength(1)
   })
 
+  it('answers through text retrieval when local embeddings are disabled', async () => {
+    let receivedQuery = ''
+    const textStore = {
+      ...stubStore,
+      async searchText({ query }) {
+        receivedQuery = query
+        return NURSE_CHUNKS
+      },
+      async search() {
+        throw new Error('vector search must not run without an embedder')
+      },
+    }
+    const anthropic = fakeAnthropic([{
+      answer: 'Saturday work is paid at 150% of the ordinary hourly rate.',
+      citations: [{ clauseRef: 'cl. 21', quote: 'work on a Saturday will be paid 150% of the ordinary hourly rate' }],
+    }])
+    const app = createApp({
+      anthropic,
+      store: textStore,
+      embedQuery: null,
+      modelId: 'test',
+      library: stubLibrary,
+    })
+
+    const health = await request(app).get('/api/health')
+    const response = await request(app)
+      .post('/api/award-chat')
+      .send({ awardCode: 'MA000034', question: 'What is the Saturday penalty rate?' })
+
+    expect(health.body.aiAvailable).toBe(true)
+    expect(response.status).toBe(200)
+    expect(response.body.answer).toMatch(/150%/)
+    expect(receivedQuery).toContain('Saturday penalty rate')
+  })
+
   it('retries once with a correction, then drops citations that never ground', async () => {
     const fabricated = { clauseRef: 'cl. 21', quote: 'Saturday shifts attract a 200% weekend bonus rate' }
     const anthropic = fakeAnthropic([

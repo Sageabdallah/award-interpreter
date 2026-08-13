@@ -13,6 +13,19 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
+function lexicalTerms(value) {
+  return [...new Set(String(value || '').toLowerCase().match(/[a-z0-9]+/g) || [])]
+}
+
+function lexicalScore(chunk, terms) {
+  if (!terms.length) return 0
+  const title = `${chunk.clauseRef} ${chunk.clauseTitle} ${(chunk.headingPath || []).join(' ')}`.toLowerCase()
+  const body = String(chunk.text || '').toLowerCase()
+  return terms.reduce((score, term) => score
+    + (title.includes(term) ? 3 : 0)
+    + (body.includes(term) ? 1 : 0), 0)
+}
+
 export function writeFlatIndex(dir, { chunks, vectors, embedderId, dim }) {
   fs.mkdirSync(dir, { recursive: true })
   const flat = new Float32Array(chunks.length * dim)
@@ -61,6 +74,17 @@ export function openFlatStore(dir) {
       }
       scored.sort((a, b) => b.score - a.score)
       return scored.slice(0, k).map(({ chunk, score }) => ({ ...chunk, score }))
+    },
+
+    async searchText({ query, k = 5, awardCode = null, chunkType = null }) {
+      const terms = lexicalTerms(query)
+      return chunks
+        .filter((chunk) => (!awardCode || chunk.awardCode === awardCode)
+          && (!chunkType || chunk.chunkType === chunkType))
+        .map((chunk) => ({ ...chunk, score: lexicalScore(chunk, terms) }))
+        .filter((chunk) => chunk.score > 0)
+        .sort((left, right) => right.score - left.score)
+        .slice(0, k)
     },
 
     /** Exact lookup of every chunk under a top-level clause ref. */

@@ -34,7 +34,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
   const mailLimit = fixedWindowRateLimit({ ...limiterOptions, limit: security.mailRateLimit ?? 1000, windowMs: 3600000, name: 'mail dispatch' })
   const protectedOperation = requireProductionToken(security)
   const liveMailOperation = requireLiveMailToken({ production: security.production, mailerRef: mail })
-  const aiAvailable = Boolean(anthropic && embedQuery && store?.backend !== 'disabled')
+  const aiAvailable = Boolean(anthropic && (embedQuery || store?.searchText) && store?.backend !== 'disabled')
 
   // Health must be instant (the frontend feature-detects the server with it),
   // so the awards list comes from the in-memory library, never a store scan.

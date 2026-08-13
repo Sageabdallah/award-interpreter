@@ -40,7 +40,8 @@ function toChunk(object) {
     text: p.text,
     approxTokens: p.approxTokens,
     seedFingerprint: p.seedFingerprint,
-    score: object.metadata?.distance != null ? 1 - object.metadata.distance : undefined,
+    score: object.metadata?.score
+      ?? (object.metadata?.distance != null ? 1 - object.metadata.distance : undefined),
   }
 }
 
@@ -123,6 +124,16 @@ export async function openWeaviateStore({ url, apiKey }) {
         limit: k,
         filters: filtersFor({ awardCode, chunkType }),
         returnMetadata: ['distance'],
+      })
+      return result.objects.map(toChunk)
+    },
+
+    async searchText({ query, k = 5, awardCode = null, chunkType = null }) {
+      const result = await collection.query.bm25(String(query || ''), {
+        limit: k,
+        filters: filtersFor({ awardCode, chunkType }),
+        queryProperties: ['text', 'clauseTitle', 'headingPath'],
+        returnMetadata: ['score'],
       })
       return result.objects.map(toChunk)
     },
