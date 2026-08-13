@@ -5,6 +5,7 @@ import {
   latestCompleteFortnight,
 } from '../securityDocumentPack.js'
 import { importMssSecurityData } from '../../src/domain/importers/mssSecurity.js'
+import { isoftDateKey } from '../../src/domain/importers/isoftPayroll.js'
 
 const PREVIEW_PERIODS_PER_EMPLOYEE = 1
 
@@ -138,17 +139,16 @@ async function buildWorkspace(auditStore, record) {
   }
 
   const periodStartSerial = excelSerial(documentPeriod?.start)
-  const periodEndSerial = excelSerial(documentPeriod?.end)
   for (const ref of chunkRefs(manifest, 'components')) {
     const chunk = await verifiedChunk(auditStore, ref, 'components')
     for (const row of chunk.data.rows || []) {
-      const shiftDate = Number(row.ShiftDate)
+      const shiftDateKey = isoftDateKey(row.ShiftDate)
       if (!/security services industry award/i.test(String(row.AwardCode || ''))
         || String(row.Area || '').trim() !== 'Sydney'
-        || !Number.isFinite(shiftDate)
-        || shiftDate < periodStartSerial
-        || shiftDate > periodEndSerial) continue
-      securityComponentRows.push(row)
+        || !shiftDateKey
+        || shiftDateKey < documentPeriod.start
+        || shiftDateKey > documentPeriod.end) continue
+      securityComponentRows.push({ ...row, ShiftDate: excelSerial(shiftDateKey) })
     }
   }
 
@@ -259,7 +259,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
         promise: (async () => {
           const snapshots = await auditStore.list({ kind: 'payroll-workspace-snapshot', limit: 1 })
           const snapshot = snapshots.find((item) => item.data?.sourceAuditId === latest.id)
-          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v2' && snapshot.data.workspace?.documentPack) {
+          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v3' && snapshot.data.workspace?.documentPack) {
             return snapshot.data.workspace
           }
 
@@ -268,7 +268,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
           // avoids rescanning 257k work periods whenever a free instance wakes.
           await auditStore.save('payroll-workspace-snapshot', {
             sourceAuditId: latest.id,
-            schemaVersion: 'mss-workspace-snapshot/v2',
+            schemaVersion: 'mss-workspace-snapshot/v3',
             workspace,
           })
           return workspace
