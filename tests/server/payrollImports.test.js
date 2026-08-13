@@ -39,6 +39,50 @@ const payload = {
 }
 
 describe('payroll import API', () => {
+  it('persists large imports as verified bounded chunks and a compact manifest', async () => {
+    const auditStore = memoryAuditStore()
+    const app = appFor(auditStore)
+    const chunks = [
+      { kind: 'employees', rows: payload.employees },
+      { kind: 'work-periods', rows: payload.workPeriods },
+      { kind: 'components', rows: payload.components },
+    ]
+    const receipts = []
+    for (const chunk of chunks) {
+      const response = await request(app).post('/api/payroll-imports/chunks').send({
+        importId: payload.sourceFingerprint,
+        sourceFingerprint: payload.sourceFingerprint,
+        kind: chunk.kind,
+        index: 0,
+        total: 1,
+        rows: chunk.rows,
+      })
+      expect(response.status).toBe(201)
+      receipts.push({ kind: chunk.kind, index: 0, total: 1, auditId: response.body.chunk.audit.id, hash: response.body.chunk.audit.hash })
+    }
+
+    const completed = await request(app).post('/api/payroll-imports/complete').send({
+      schemaVersion: payload.schemaVersion,
+      sourceName: payload.sourceName,
+      sourceSize: payload.sourceSize,
+      sourceFingerprint: payload.sourceFingerprint,
+      sourceSummary: payload.sourceSummary,
+      coverageInventory: payload.coverageInventory,
+      chunks: receipts,
+    })
+    expect(completed.status).toBe(201)
+    expect(completed.body).toMatchObject({ summary: { componentRows: 1, workPeriods: 1, employees: 1 }, releaseGate: { status: 'blocked' } })
+    const manifest = auditStore.records.at(-1)
+    expect(manifest.kind).toBe('payroll-import')
+    expect(manifest.data).not.toHaveProperty('components')
+    expect(manifest.data.chunkRefs).toHaveLength(3)
+
+    const componentReceipt = receipts.find((receipt) => receipt.kind === 'components')
+    const fetched = await request(app).get(`/api/payroll-imports/${payload.sourceFingerprint}/chunks/${componentReceipt.auditId}`)
+    expect(fetched.status).toBe(200)
+    expect(fetched.body.chunk.rows).toEqual(payload.components)
+  })
+
   it('reconciles, persists, deduplicates, and returns summary-only records', async () => {
     const auditStore = memoryAuditStore()
     const app = appFor(auditStore)

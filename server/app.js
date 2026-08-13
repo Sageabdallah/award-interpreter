@@ -10,7 +10,14 @@ import { awardChatRoute } from './routes/awardChat.js'
 import { awardChatStreamRoute } from './routes/awardChatStream.js'
 import { interpretPayRunRoute } from './routes/interpretPayRun.js'
 import { getPayRunRoute, listPayRunsRoute, payRunsRoute } from './routes/payRuns.js'
-import { getPayrollImportRoute, listPayrollImportsRoute, payrollImportsRoute } from './routes/payrollImports.js'
+import {
+  completePayrollImportRoute,
+  getPayrollImportChunkRoute,
+  getPayrollImportRoute,
+  listPayrollImportsRoute,
+  payrollImportChunkRoute,
+  payrollImportsRoute,
+} from './routes/payrollImports.js'
 import { apiSecurity, fixedWindowRateLimit, requireLiveMailToken, requireProductionToken } from './security.js'
 
 export function createApp({ anthropic, store, embedQuery, modelId, reasonerModelId = null, library, mailer = null, mailerRef = null, outlook = null, auditStore = null, security = {} }) {
@@ -79,6 +86,18 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
       express.json({ limit: security.payrollImportPayloadLimit || '75mb' }),
       wrap(payrollImportsRoute({ auditStore })),
     )
+    app.post(
+      '/api/payroll-imports/chunks',
+      protectedOperation,
+      express.json({ limit: '5mb' }),
+      wrap(payrollImportChunkRoute({ auditStore })),
+    )
+    app.post(
+      '/api/payroll-imports/complete',
+      protectedOperation,
+      express.json({ limit: '5mb' }),
+      wrap(completePayrollImportRoute({ auditStore })),
+    )
   }
   app.use(express.json({ limit: '1mb' }))
 
@@ -112,6 +131,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
     app.get('/api/pay-runs/:id', protectedOperation, wrap(getPayRunRoute({ auditStore })))
     app.get('/api/payroll-imports', protectedOperation, wrap(listPayrollImportsRoute({ auditStore })))
     app.get('/api/payroll-imports/:id', protectedOperation, wrap(getPayrollImportRoute({ auditStore })))
+    app.get('/api/payroll-imports/:id/chunks/:chunkId', protectedOperation, wrap(getPayrollImportChunkRoute({ auditStore })))
   }
 
   if (outlook) {
