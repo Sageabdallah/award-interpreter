@@ -280,6 +280,21 @@ function reducer(state, action) {
     case 'addAdHocUnallocated':
       return { ...state, adHocUnallocated: [...state.adHocUnallocated, ...action.entries] }
     case 'reset':
+      if (action.preserveBackendWorkspace) {
+        return {
+          ...initialState,
+          stage: 5,
+          industry: state.industry,
+          parsedCache: state.parsedCache,
+          stepIndex: PARSE_STEPS.length,
+          timesheetFile: state.timesheetFile,
+          sourceTimesheetData: state.sourceTimesheetData,
+          timesheetData: state.timesheetData,
+          employeeMasterFile: state.employeeMasterFile,
+          employeeMasterData: state.employeeMasterData,
+          results: state.results,
+        }
+      }
       return action.preserveEmployeeMaster
         ? {
             ...initialState,
@@ -1697,7 +1712,7 @@ function TimesheetStage({
               </div>
               {timesheetData.detailTruncated && (
                 <div style={{ marginTop: 10 }}>
-                  <Flag info>To keep this annual export responsive, the screen previews up to 10 work periods per employee. This does not truncate the processed totals or source-row counts.</Flag>
+                  <Flag info>To keep this annual export responsive, the screen shows one representative work period per employee. This does not truncate the backend ledger, processed totals or source-row counts.</Flag>
                 </div>
               )}
               <details style={{ marginTop: 14, borderTop: `1px solid ${COLORS.line}`, paddingTop: 12 }}>
@@ -2802,7 +2817,11 @@ export default function App() {
       })
       .then(async (payload) => {
         if (cancelled || !payload?.workspace?.timesheetData) return
-        const timesheetData = payload.workspace.timesheetData
+        const backendTimesheetData = payload.workspace.timesheetData
+        const timesheetData = {
+          ...backendTimesheetData,
+          shifts: backendTimesheetData.shifts || backendTimesheetData.employees.flatMap((employee) => employee.shifts || []),
+        }
         const employeeMasterData = employeeMasterFromBackendWorkspace(timesheetData)
         const cache = await buildParsedCacheFromTexts({}, {
           cacheFingerprint: `backend-${payload.workspace.audit?.hash || timesheetData.meta?.backendAuditId || 'mss'}`,
@@ -2859,7 +2878,11 @@ export default function App() {
   const handleReset = () => {
     setExpandedRowId(null)
     setPage('dashboard')
-    dispatch({ type: 'reset', preserveEmployeeMaster: true })
+    dispatch({
+      type: 'reset',
+      preserveEmployeeMaster: true,
+      preserveBackendWorkspace: Boolean(state.timesheetData?.backendLoaded),
+    })
   }
 
   const handleSignOut = () => {

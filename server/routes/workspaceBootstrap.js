@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 
-const PREVIEW_PERIODS_PER_EMPLOYEE = 3
+const PREVIEW_PERIODS_PER_EMPLOYEE = 1
 
 function listValue(value) {
   if (Array.isArray(value)) return value.map(String).filter(Boolean)
@@ -134,7 +134,6 @@ async function buildWorkspace(auditStore, record) {
       sourceComponentCount: Number(row.sourceComponentCount) || 0,
     }
   }).sort((left, right) => left.employeeId.localeCompare(right.employeeId))
-  const shifts = employees.flatMap((employee) => employee.shifts)
   const pendingInstruments = (manifest.coverageInventory || [])
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence').length
 
@@ -155,12 +154,11 @@ async function buildWorkspace(auditStore, record) {
         sourceSchema: 'protected-backend-import',
         backendAuditId: record.id,
       },
-      shifts,
       employees,
       totalHours: Number(summary.payableHours) || 0,
       sourceSummary: {
         ...summary,
-        detailedWorkPeriods: shifts.length,
+        detailedWorkPeriods: employees.reduce((count, employee) => count + employee.shifts.length, 0),
       },
       coverageInventory: manifest.coverageInventory || [],
       employeeMaster: manifest.employeeMaster || null,
@@ -191,7 +189,21 @@ export function latestMssWorkspaceRoute({ auditStore }) {
     if (!pending || pending.auditId !== latest.id) {
       pending = {
         auditId: latest.id,
-        promise: buildWorkspace(auditStore, latest),
+        promise: (async () => {
+          const snapshots = await auditStore.list({ kind: 'payroll-workspace-snapshot', limit: 1 })
+          const snapshot = snapshots.find((item) => item.data?.sourceAuditId === latest.id)
+          if (snapshot?.data?.workspace) return snapshot.data.workspace
+
+          const workspace = await buildWorkspace(auditStore, latest)
+          // The source ledger stays chunked. This compact, sanitised read model
+          // avoids rescanning 257k work periods whenever a free instance wakes.
+          await auditStore.save('payroll-workspace-snapshot', {
+            sourceAuditId: latest.id,
+            schemaVersion: 'mss-workspace-snapshot/v1',
+            workspace,
+          })
+          return workspace
+        })(),
       }
     }
     const active = pending

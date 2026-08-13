@@ -107,6 +107,7 @@ describe('payroll import API', () => {
       employeeMaster: { matchedEmployees: 1, unmatchedEmployees: 0 },
       sourceSummary: { componentRows: 1, workPeriods: 1 },
     })
+    expect(workspace.body.workspace.timesheetData).not.toHaveProperty('shifts')
     expect(workspace.body.workspace.timesheetData.employees[0]).toMatchObject({
       employeeMasterMatched: true,
       employmentType: 'Full-time',
@@ -115,6 +116,11 @@ describe('payroll import API', () => {
     })
     expect(workspace.body.workspace.timesheetData.employees[0].employeeId).toMatch(/^MSS-[A-F0-9]{10}$/)
     expect(JSON.stringify(workspace.body)).not.toContain('30458')
+    expect(auditStore.records.filter((record) => record.kind === 'payroll-workspace-snapshot')).toHaveLength(1)
+
+    const restoredWorkspace = await request(app).get('/api/workspaces/mss/latest')
+    expect(restoredWorkspace.status).toBe(200)
+    expect(auditStore.records.filter((record) => record.kind === 'payroll-workspace-snapshot')).toHaveLength(1)
 
     const componentReceipt = receipts.find((receipt) => receipt.kind === 'components')
     const fetched = await request(app).get(`/api/payroll-imports/${payload.sourceFingerprint}/chunks/${componentReceipt.auditId}`)
