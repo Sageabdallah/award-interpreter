@@ -36,8 +36,10 @@ const layout = () => page.evaluate(() => ({
 }))
 
 try {
-  await page.goto(baseUrl, { waitUntil: 'networkidle' })
-  await page.getByRole('button', { name: 'Data & Documents', exact: true }).click()
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 })
+  const dataNav = page.getByRole('button', { name: 'Data & Documents', exact: true })
+  await dataNav.waitFor({ timeout: 60_000 })
+  await dataNav.click()
   await page.getByRole('button', { name: 'Security (NSW)', exact: true }).click()
   const documents = page.locator('input[type=file]')
   await documents.nth(1).setInputFiles(path.join(liveDir, 'compliance-document-security-nsw.txt'))
@@ -104,7 +106,7 @@ try {
   // interpretation and privacy-minimised Employee.xlsx setup should both be
   // restored, leaving only the replacement payroll file to upload.
   await page.setViewportSize({ width: 1728, height: 1117 })
-  await page.reload({ waitUntil: 'networkidle' })
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 })
   const timeEntryNav = page.getByRole('button', { name: 'Time Entry', exact: true })
   await timeEntryNav.waitFor({ timeout: 30_000 })
   await page.waitForFunction(() => {
