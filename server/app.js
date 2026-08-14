@@ -19,6 +19,7 @@ import {
   payrollImportsRoute,
 } from './routes/payrollImports.js'
 import { latestMssWorkspaceRoute } from './routes/workspaceBootstrap.js'
+import { payrollEmployeeDetailRoute } from './routes/payrollEmployeeDetail.js'
 import { apiSecurity, fixedWindowRateLimit, requireLiveMailToken, requireProductionToken } from './security.js'
 
 export function createApp({ anthropic, store, embedQuery, modelId, reasonerModelId = null, library, mailer = null, mailerRef = null, outlook = null, auditStore = null, security = {} }) {
@@ -132,6 +133,7 @@ export function createApp({ anthropic, store, embedQuery, modelId, reasonerModel
     // latest completed workspace without receiving raw employee IDs or source
     // component rows. Mutating and raw-record APIs remain token protected.
     app.get('/api/workspaces/mss/latest', wrap(latestMssWorkspaceRoute({ auditStore })))
+    app.get('/api/workspaces/mss/employees/:employeeId/payroll-detail', wrap(payrollEmployeeDetailRoute({ auditStore })))
     app.post('/api/pay-runs', protectedOperation, wrap(payRunsRoute({ auditStore })))
     app.get('/api/pay-runs', protectedOperation, wrap(listPayRunsRoute({ auditStore })))
     app.get('/api/pay-runs/:id', protectedOperation, wrap(getPayRunRoute({ auditStore })))

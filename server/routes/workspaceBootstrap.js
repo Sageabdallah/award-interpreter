@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import {
   buildSecurityDocumentPack,
   isSecurityDocumentEvidenceRow,
@@ -6,6 +5,7 @@ import {
 } from '../securityDocumentPack.js'
 import { importMssSecurityData } from '../../src/domain/importers/mssSecurity.js'
 import { isoftDateKey } from '../../src/domain/importers/isoftPayroll.js'
+import { publicPayrollId } from '../payrollPrivacy.js'
 
 const PREVIEW_PERIODS_PER_EMPLOYEE = 1
 
@@ -19,10 +19,6 @@ function dayName(dateKey) {
   return Number.isNaN(date.getTime())
     ? ''
     : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getUTCDay()]
-}
-
-function publicId(prefix, value) {
-  return `${prefix}-${createHash('sha256').update(`axi-workspace/v1/${value}`).digest('hex').slice(0, 10).toUpperCase()}`
 }
 
 function chunkRefs(manifest, kind) {
@@ -85,7 +81,7 @@ function sanitizeShift(row, employeeId) {
     breakMinutes: 0,
     hours: Number(row.hours) || 0,
     notes: row.sourceEntryKind === 'worked' ? '' : 'Source leave/payroll entry',
-    sourceShiftId: publicId('SHIFT', row.sourceShiftId || `${row.employeeId}:${dateKey}`),
+    sourceShiftId: publicPayrollId('SHIFT', row.sourceShiftId || `${row.employeeId}:${dateKey}`),
     sourceAwardCode: String(row.sourceAwardCode || ''),
     sourceClassificationRaw: String(row.sourceClassificationRaw || ''),
     sourceShiftDefinition: String(row.sourceShiftDefinition || ''),
@@ -120,7 +116,7 @@ async function buildWorkspace(auditStore, record) {
   }
   const publicIds = new Map(employeeRows.map((row) => [
     String(row.employeeId || ''),
-    publicId('MSS', row.employeeId),
+    publicPayrollId('MSS', row.employeeId),
   ]))
   const previewByEmployee = new Map(employeeRows.map((row) => [String(row.employeeId || ''), []]))
   const documentPeriod = latestCompleteFortnight(summary.lastDate)

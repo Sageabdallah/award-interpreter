@@ -33,8 +33,26 @@ const payload = {
     payableHours: 7.6, sourceGrossAmount: 178.3, workedPeriods: 1, leaveOrAdjustmentPeriods: 0,
   },
   coverageInventory: [{ sourceCode: '(NSW) Security Services Industry Award' }],
-  employees: [{ employeeId: '30458', totalHours: 7.6 }],
-  workPeriods: [{ employeeId: '30458', sourceShiftId: '10', hours: 7.6 }],
+  employees: [{
+    employeeId: '30458',
+    sourceClassification: 'Level 3 Officer',
+    totalHours: 7.6,
+    workPeriodCount: 1,
+    sourceComponentCount: 1,
+    sourceGrossAmount: 178.3,
+  }],
+  workPeriods: [{
+    employeeId: '30458',
+    sourceShiftId: '10',
+    hours: 7.6,
+    sourceEntryKind: 'worked',
+    sourceAwardCode: '(NSW) Security Services Industry Award',
+    sourceComponentCount: 1,
+    sourceOrdinaryHours: 7.6,
+    sourceOrdinaryAmount: 178.3,
+    sourceGrossAmount: 178.3,
+    sourceEarningCodes: ['ORD'],
+  }],
   components: [{ _sourceRowNumber: 2, EmployeeID: '30458', SplitStartDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', Hours: '7.6', Amount: '178.3' }],
 }
 
@@ -123,6 +141,36 @@ describe('payroll import API', () => {
     })
     expect(JSON.stringify(workspace.body)).not.toContain('30458')
     expect(auditStore.records.filter((record) => record.kind === 'payroll-workspace-snapshot')).toHaveLength(1)
+
+    const publicEmployeeId = workspace.body.workspace.timesheetData.employees[0].employeeId
+    const detail = await request(app).get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail`)
+    expect(detail.status).toBe(200)
+    expect(detail.body.payrollDetail).toMatchObject({
+      employee: { employeeId: publicEmployeeId, classification: 'Level 3 Officer', employmentType: 'Full-time' },
+      sourcePeriod: { firstDate: '2018-03-26', lastDate: '2018-03-26' },
+      annual: {
+        expected: { payableHours: 7.6, workPeriods: 1, componentRows: 1, sourceGrossAmount: 178.3 },
+        calculated: { payableHours: 7.6, workPeriods: 1, componentRows: 1, sourceGrossAmount: 178.3 },
+        differences: { payableHours: 0, workPeriods: 0, componentRows: 0, sourceGrossAmount: 0 },
+        reconciled: true,
+      },
+      weeks: [{
+        weekStart: '2018-03-26',
+        weekEnd: '2018-04-01',
+        payableHours: 7.6,
+        sourceGrossAmount: 178.3,
+        categories: { ordinary: 178.3 },
+        days: [{ date: '2018-03-26', payableHours: 7.6, sourceGrossAmount: 178.3 }],
+      }],
+    })
+    expect(JSON.stringify(detail.body)).not.toContain('30458')
+    expect(auditStore.records.filter((record) => record.kind === 'payroll-employee-detail')).toHaveLength(1)
+
+    const cachedDetail = await request(app).get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail`)
+    expect(cachedDetail.status).toBe(200)
+    expect(auditStore.records.filter((record) => record.kind === 'payroll-employee-detail')).toHaveLength(1)
+
+    expect((await request(app).get('/api/workspaces/mss/employees/not-an-id/payroll-detail')).status).toBe(400)
 
     const restoredWorkspace = await request(app).get('/api/workspaces/mss/latest')
     expect(restoredWorkspace.status).toBe(200)

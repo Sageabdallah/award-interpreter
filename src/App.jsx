@@ -402,6 +402,151 @@ function sourceEmployeeField(employee, key) {
   }
 }
 
+const SOURCE_CATEGORY_LABELS = [
+  ['ordinary', 'Ordinary'],
+  ['overtime', 'Overtime'],
+  ['penalties', 'Penalties'],
+  ['allowances', 'Allowances'],
+  ['leave', 'Leave'],
+  ['other', 'Other'],
+]
+
+function payrollDate(dateKey, options) {
+  const date = new Date(`${dateKey}T00:00:00Z`)
+  return Number.isNaN(date.getTime()) ? dateKey : new Intl.DateTimeFormat('en-AU', { timeZone: 'UTC', ...options }).format(date)
+}
+
+function addPayrollDays(dateKey, days) {
+  const date = new Date(`${dateKey}T00:00:00Z`)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function EmployeePayrollDetail({ detail }) {
+  const weeks = detail?.weeks || []
+  const [selectedWeekStart, setSelectedWeekStart] = useState(weeks.at(-1)?.weekStart || '')
+  useEffect(() => setSelectedWeekStart(weeks.at(-1)?.weekStart || ''), [detail?.employee?.employeeId])
+  const selectedWeek = weeks.find((week) => week.weekStart === selectedWeekStart) || weeks.at(-1)
+  const daysByDate = new Map((selectedWeek?.days || []).map((day) => [day.date, day]))
+  const calendarDays = selectedWeek
+    ? Array.from({ length: 7 }, (_, index) => {
+        const date = addPayrollDays(selectedWeek.weekStart, index)
+        return daysByDate.get(date) || { date, payableHours: 0, sourceGrossAmount: 0, workPeriods: 0, entryKinds: [] }
+      })
+    : []
+  const annual = detail.annual
+  const annualCategoryAmounts = SOURCE_CATEGORY_LABELS
+    .map(([key]) => annual.calculated.categories[key])
+    .filter((value) => Math.abs(value) > 0.004)
+
+  return (
+    <div className="source-payroll-detail">
+      <div className="source-detail-reconciliation">
+        <div>
+          <div className="th">
+            Annual Excel check · {annual.expected.workPeriods.toLocaleString()} work periods · {annual.expected.componentRows.toLocaleString()} component rows
+          </div>
+          <div className="source-detail-equation mono">
+            {annualCategoryAmounts.map((amount, index) => (
+              <React.Fragment key={`${amount}-${index}`}>
+                {index > 0 && <span>+</span>}
+                {fmt(amount)}
+              </React.Fragment>
+            ))}
+            <span>=</span>
+            {fmt(annual.expected.sourceGrossAmount)}
+          </div>
+        </div>
+        <div className={`source-reconcile-status${annual.reconciled ? ' reconciled' : ' mismatch'}`}>
+          {annual.reconciled
+            ? <CheckCircle2 size={17} strokeWidth={2} />
+            : <AlertTriangle size={17} strokeWidth={2} />}
+          <span>{annual.reconciled ? 'Reconciled to Excel' : 'Ledger difference found'}</span>
+        </div>
+      </div>
+
+      <div className="source-detail-metrics" aria-label="Annual payroll reconciliation">
+        <div><span className="panel-label">Recorded Excel source gross</span><strong className="mono">{fmt(annual.expected.sourceGrossAmount)}</strong></div>
+        <div><span className="panel-label">Detailed ledger sum</span><strong className="mono">{fmt(annual.calculated.sourceGrossAmount)}</strong></div>
+        <div><span className="panel-label">Difference</span><strong className="mono">{fmt(annual.differences.sourceGrossAmount)}</strong></div>
+        <div><span className="panel-label">Payable hours</span><strong className="mono">{annual.calculated.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
+        <div><span className="panel-label">Effective source gross</span><strong className="mono">{fmt(annual.calculated.effectiveGrossPerPayableHour)}/hr</strong></div>
+      </div>
+
+      <div className="source-category-strip" aria-label="Annual source gross categories">
+        {SOURCE_CATEGORY_LABELS.map(([key, label]) => (
+          <div key={key}>
+            <span>{label}</span>
+            <strong className="mono">{fmt(annual.calculated.categories[key])}</strong>
+          </div>
+        ))}
+      </div>
+
+      {selectedWeek ? (
+        <div className="source-week-detail">
+          <div className="source-week-toolbar">
+            <div>
+              <div className="th">Weekly source ledger</div>
+              <div className="source-week-range">
+                {payrollDate(selectedWeek.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}
+                {' to '}
+                {payrollDate(selectedWeek.weekEnd, { day: 'numeric', month: 'short', year: 'numeric' })}
+              </div>
+            </div>
+            <label className="source-week-select-label">
+              <span className="panel-label">Payroll week</span>
+              <select value={selectedWeek.weekStart} onChange={(event) => setSelectedWeekStart(event.target.value)} aria-label="Select payroll week">
+                {[...weeks].reverse().map((week) => (
+                  <option key={week.weekStart} value={week.weekStart}>
+                    {payrollDate(week.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })} · {fmt(week.sourceGrossAmount)} · {week.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} hrs
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="source-week-metrics">
+            <div><span>Recorded weekly gross</span><strong className="mono">{fmt(selectedWeek.sourceGrossAmount)}</strong></div>
+            <div><span>Payable hours</span><strong className="mono">{selectedWeek.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
+            <div><span>Worked hours</span><strong className="mono">{selectedWeek.workedHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
+            <div><span>Leave hours</span><strong className="mono">{selectedWeek.leaveHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
+            <div><span>Source gross / payable hr</span><strong className="mono">{fmt(selectedWeek.effectiveGrossPerPayableHour)}</strong></div>
+          </div>
+
+          <div className="source-calendar-scroll">
+            <div className="source-week-calendar" aria-label="Selected week calendar">
+              {calendarDays.map((day) => {
+                const active = day.workPeriods > 0
+                return (
+                  <div className={`source-calendar-day${active ? ' active' : ''}`} key={day.date}>
+                    <span className="source-calendar-weekday">{payrollDate(day.date, { weekday: 'short' })}</span>
+                    <span className="source-calendar-date">{payrollDate(day.date, { day: 'numeric', month: 'short' })}</span>
+                    <strong className="mono">{active ? `${day.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} hrs` : '-'}</strong>
+                    <span className="mono">{active ? fmt(day.sourceGrossAmount) : '-'}</span>
+                    <small>{active ? (day.entryKinds || []).join(' + ') : 'No entry'}</small>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="source-week-categories" aria-label="Selected week source gross categories">
+            {SOURCE_CATEGORY_LABELS.map(([key, label]) => (
+              <div key={key}>
+                <span>{label}</span>
+                <strong className="mono">{fmt(selectedWeek.categories[key])}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="source-detail-empty">No dated work periods were found for this employee.</div>
+      )}
+    </div>
+  )
+}
+
 const GLOBAL_CSS = `
   :root {
     --paper:${COLORS.paper}; --ink:${COLORS.ink}; --ochre:${COLORS.ochre};
@@ -669,7 +814,7 @@ const GLOBAL_CSS = `
     font: 13px var(--body); cursor: pointer; }
   .source-filter-reset { height: 38px; padding: 0 12px; white-space: nowrap; }
   .source-employee-head, .source-employee-row { display: grid; align-items: center; gap: 14px;
-    grid-template-columns: 1.25fr 1.2fr 0.8fr 0.55fr 0.65fr 0.85fr; }
+    grid-template-columns: 1.25fr 1.2fr 0.8fr 0.55fr 0.65fr 0.85fr 32px; }
   .source-employee-head { padding: 11px 18px; border-bottom: 1px solid var(--line-strong); }
   .source-sort-heading { min-width: 0; }
   .source-sort-button { width: 100%; min-width: 0; padding: 0; border: 0; background: transparent;
@@ -683,6 +828,65 @@ const GLOBAL_CSS = `
   .source-employee-row:last-child { border-bottom: none; }
   .source-employee-cell { min-width: 0; font-size: 12.5px; overflow: hidden;
     text-overflow: ellipsis; white-space: nowrap; }
+  .source-detail-toggle { width: 32px; height: 32px; padding: 0; border: 1px solid transparent;
+    border-radius: var(--r-sm); display: grid; place-items: center; background: transparent;
+    color: var(--muted); cursor: pointer; }
+  .source-detail-toggle:hover, .source-detail-toggle[aria-expanded="true"] { border-color: var(--line); background: var(--card); color: var(--ink); }
+  .source-detail-toggle:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
+  .source-payroll-detail { padding: 0 18px 20px; border-bottom: 1px solid var(--line-strong);
+    background: var(--surface-2); }
+  .source-detail-loading, .source-detail-error, .source-detail-empty { min-height: 92px; padding: 22px 4px;
+    display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; }
+  .source-detail-error { color: var(--red); }
+  .source-detail-reconciliation { display: flex; align-items: center; justify-content: space-between;
+    gap: 18px; padding: 20px 0 16px; }
+  .source-detail-equation { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+    margin-top: 7px; font-size: 13px; color: var(--muted); }
+  .source-detail-equation span { color: var(--ink); }
+  .source-reconcile-status { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center;
+    gap: 7px; border: 1px solid; border-radius: var(--r-sm); font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .source-reconcile-status.reconciled { color: var(--sage); border-color: rgba(47,125,87,0.28); background: rgba(47,125,87,0.08); }
+  .source-reconcile-status.mismatch { color: var(--red); border-color: rgba(176,18,31,0.28); background: rgba(176,18,31,0.07); }
+  .source-detail-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    border: 1px solid var(--line); background: var(--card); }
+  .source-detail-metrics > div { min-width: 0; padding: 13px 14px; }
+  .source-detail-metrics > div + div { border-left: 1px solid var(--line); }
+  .source-detail-metrics strong { display: block; margin-top: 6px; font-size: 13.5px; white-space: nowrap; }
+  .source-category-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
+  .source-category-strip > div, .source-week-categories > div { min-width: 0; padding: 9px 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--muted); }
+  .source-category-strip strong, .source-week-categories strong { color: var(--ink); font-size: 11.5px; white-space: nowrap; }
+  .source-category-strip > div + div, .source-week-categories > div + div { border-left: 1px solid var(--line); }
+  .source-week-detail { margin-top: 18px; border-top: 1px solid var(--line-strong); }
+  .source-week-toolbar { display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 16px; padding: 16px 0 13px; }
+  .source-week-range { margin-top: 5px; font-size: 13px; color: var(--muted); }
+  .source-week-select-label { width: min(430px, 100%); display: grid; grid-template-columns: auto minmax(0, 1fr);
+    align-items: center; gap: 10px; }
+  .source-week-select-label select { width: 100%; height: 38px; min-width: 0; padding: 0 34px 0 11px;
+    border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink);
+    font: 12px var(--body); cursor: pointer; }
+  .source-week-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    border: 1px solid var(--line); border-bottom: 0; background: var(--card); }
+  .source-week-metrics > div { min-width: 0; padding: 11px 12px; }
+  .source-week-metrics > div + div { border-left: 1px solid var(--line); }
+  .source-week-metrics span { display: block; color: var(--muted); font-size: 10.5px; }
+  .source-week-metrics strong { display: block; margin-top: 5px; font-size: 13px; white-space: nowrap; }
+  .source-calendar-scroll { width: 100%; overflow-x: auto; }
+  .source-week-calendar { min-width: 700px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    border: 1px solid var(--line); background: var(--card); }
+  .source-calendar-day { min-width: 0; min-height: 112px; padding: 10px; display: flex; flex-direction: column;
+    border-top: 3px solid transparent; color: var(--muted); }
+  .source-calendar-day + .source-calendar-day { border-left: 1px solid var(--line); }
+  .source-calendar-day.active { border-top-color: var(--sage); color: var(--ink); background: rgba(47,125,87,0.035); }
+  .source-calendar-weekday { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+  .source-calendar-date { margin-top: 2px; font-size: 11px; color: var(--muted); }
+  .source-calendar-day strong { margin-top: 12px; font-size: 12.5px; }
+  .source-calendar-day > .mono:not(strong) { margin-top: 3px; font-size: 11.5px; }
+  .source-calendar-day small { margin-top: auto; padding-top: 8px; font-size: 9.5px; text-transform: capitalize; color: var(--muted); }
+  .source-week-categories { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+    border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
@@ -704,7 +908,14 @@ const GLOBAL_CSS = `
     .source-summary-item:nth-child(4) { border-top: 1px solid var(--line); }
     .source-employee-controls { grid-template-columns: 1fr 1fr; }
     .source-filter-search { grid-column: 1 / -1; }
-    .source-employee-inner { min-width: 820px; }
+    .source-employee-inner { min-width: 900px; }
+    .source-detail-metrics, .source-week-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .source-detail-metrics > div:nth-child(4), .source-week-metrics > div:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
+    .source-detail-metrics > div:nth-child(5), .source-week-metrics > div:nth-child(5) { border-top: 1px solid var(--line); }
+    .source-category-strip, .source-week-categories { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .source-category-strip > div:nth-child(4), .source-week-categories > div:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
+    .source-category-strip > div:nth-child(5), .source-category-strip > div:nth-child(6),
+    .source-week-categories > div:nth-child(5), .source-week-categories > div:nth-child(6) { border-top: 1px solid var(--line); }
   }
 
   @media (max-width: 600px) {
@@ -713,6 +924,8 @@ const GLOBAL_CSS = `
     .source-employee-controls { grid-template-columns: 1fr; }
     .source-filter-search { grid-column: auto; }
     .source-filter-reset { justify-content: center; }
+    .source-detail-reconciliation, .source-week-toolbar { align-items: stretch; flex-direction: column; }
+    .source-week-select-label { grid-template-columns: 1fr; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1722,12 +1935,20 @@ function TimesheetStage({
   const [sourceClassification, setSourceClassification] = useState('all')
   const [sourceEmployment, setSourceEmployment] = useState('all')
   const [sourceSort, setSourceSort] = useState({ key: 'employee', direction: 'asc' })
+  const [expandedSourceEmployeeId, setExpandedSourceEmployeeId] = useState('')
+  const [sourcePayrollDetails, setSourcePayrollDetails] = useState({})
+  const [sourceDetailLoading, setSourceDetailLoading] = useState({})
+  const [sourceDetailErrors, setSourceDetailErrors] = useState({})
   useEffect(() => {
     setReviewPage(0)
     setSourceQuery('')
     setSourceClassification('all')
     setSourceEmployment('all')
     setSourceSort({ key: 'employee', direction: 'asc' })
+    setExpandedSourceEmployeeId('')
+    setSourcePayrollDetails({})
+    setSourceDetailLoading({})
+    setSourceDetailErrors({})
   }, [timesheetData])
   const reviewPageSize = sourceOnly ? SOURCE_REVIEW_PAGE_SIZE : REVIEW_PAGE_SIZE
   const sourceFilterOptions = useMemo(() => {
@@ -1787,12 +2008,36 @@ function TimesheetStage({
         : (column.numeric ? 'desc' : 'asc'),
     }))
     setReviewPage(0)
+    setExpandedSourceEmployeeId('')
   }
   const clearSourceFilters = () => {
     setSourceQuery('')
     setSourceClassification('all')
     setSourceEmployment('all')
     setReviewPage(0)
+    setExpandedSourceEmployeeId('')
+  }
+  const toggleSourceEmployeeDetail = async (employee) => {
+    const employeeId = employee.employeeId || ''
+    if (!employeeId) return
+    if (expandedSourceEmployeeId === employeeId) {
+      setExpandedSourceEmployeeId('')
+      return
+    }
+    setExpandedSourceEmployeeId(employeeId)
+    if (sourcePayrollDetails[employeeId] || sourceDetailLoading[employeeId]) return
+    setSourceDetailLoading((current) => ({ ...current, [employeeId]: true }))
+    setSourceDetailErrors((current) => ({ ...current, [employeeId]: '' }))
+    try {
+      const response = await fetch(`/api/workspaces/mss/employees/${encodeURIComponent(employeeId)}/payroll-detail`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.payrollDetail) throw new Error(payload.error || 'The detailed payroll ledger could not be loaded.')
+      setSourcePayrollDetails((current) => ({ ...current, [employeeId]: payload.payrollDetail }))
+    } catch (error) {
+      setSourceDetailErrors((current) => ({ ...current, [employeeId]: error.message }))
+    } finally {
+      setSourceDetailLoading((current) => ({ ...current, [employeeId]: false }))
+    }
   }
   return (
     <div className="fade-up">
@@ -2011,7 +2256,7 @@ function TimesheetStage({
                 <input
                   className="source-filter-input"
                   value={sourceQuery}
-                  onChange={(event) => { setSourceQuery(event.target.value); setReviewPage(0) }}
+                  onChange={(event) => { setSourceQuery(event.target.value); setReviewPage(0); setExpandedSourceEmployeeId('') }}
                   placeholder="Search employee or classification"
                   aria-label="Search employee or classification"
                 />
@@ -2019,7 +2264,7 @@ function TimesheetStage({
               <select
                 className="source-filter-select"
                 value={sourceClassification}
-                onChange={(event) => { setSourceClassification(event.target.value); setReviewPage(0) }}
+                onChange={(event) => { setSourceClassification(event.target.value); setReviewPage(0); setExpandedSourceEmployeeId('') }}
                 aria-label="Filter by classification"
               >
                 <option value="all">All classifications</option>
@@ -2030,7 +2275,7 @@ function TimesheetStage({
               <select
                 className="source-filter-select"
                 value={sourceEmployment}
-                onChange={(event) => { setSourceEmployment(event.target.value); setReviewPage(0) }}
+                onChange={(event) => { setSourceEmployment(event.target.value); setReviewPage(0); setExpandedSourceEmployeeId('') }}
                 aria-label="Filter by employment"
               >
                 <option value="all">All employment</option>
@@ -2066,20 +2311,54 @@ function TimesheetStage({
                       </span>
                     )
                   })}
+                  <span aria-hidden="true" />
                 </div>
-                {visibleEmployees.map((employee) => (
-                  <div className="source-employee-row" key={employee.employeeId || employee.employeeName}>
-                    <div className="source-employee-cell">
-                      <div style={{ fontWeight: 600 }}>{employee.employeeName}</div>
-                      <div className="mono" style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 2 }}>{employee.employeeId || 'NO-ID'}</div>
-                    </div>
-                    <span className="source-employee-cell">{employee.jobRole || employee.employeeRank || 'Unclassified'}</span>
-                    <span className="source-employee-cell">{employee.employmentType || 'Historical record'}</span>
-                    <span className="source-employee-cell mono">{(employee.workPeriodCount || employee.shifts.length).toLocaleString()}</span>
-                    <span className="source-employee-cell mono">{Number(employee.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })}</span>
-                    <span className="source-employee-cell mono" style={{ fontWeight: 600 }}>{fmt(employee.sourceGrossAmount)}</span>
-                  </div>
-                ))}
+                {visibleEmployees.map((employee) => {
+                  const employeeId = employee.employeeId || employee.employeeName
+                  const expanded = expandedSourceEmployeeId === employee.employeeId
+                  const loading = sourceDetailLoading[employee.employeeId]
+                  const detail = sourcePayrollDetails[employee.employeeId]
+                  const detailError = sourceDetailErrors[employee.employeeId]
+                  return (
+                    <React.Fragment key={employeeId}>
+                      <div className="source-employee-row">
+                        <div className="source-employee-cell">
+                          <div style={{ fontWeight: 600 }}>{employee.employeeName}</div>
+                          <div className="mono" style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 2 }}>{employee.employeeId || 'NO-ID'}</div>
+                        </div>
+                        <span className="source-employee-cell">{employee.jobRole || employee.employeeRank || 'Unclassified'}</span>
+                        <span className="source-employee-cell">{employee.employmentType || 'Historical record'}</span>
+                        <span className="source-employee-cell mono">{(employee.workPeriodCount || employee.shifts.length).toLocaleString()}</span>
+                        <span className="source-employee-cell mono">{Number(employee.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })}</span>
+                        <span className="source-employee-cell mono" style={{ fontWeight: 600 }}>{fmt(employee.sourceGrossAmount)}</span>
+                        <button
+                          className="source-detail-toggle"
+                          onClick={() => toggleSourceEmployeeDetail(employee)}
+                          aria-expanded={expanded}
+                          aria-label={`${expanded ? 'Close' : 'Open'} payroll detail for ${employee.employeeName}`}
+                          title={expanded ? 'Close payroll detail' : 'Open payroll detail'}
+                        >
+                          {loading && expanded
+                            ? <Loader2 className="spin" size={16} strokeWidth={1.9} />
+                            : expanded
+                              ? <ChevronUp size={16} strokeWidth={1.9} />
+                              : <ChevronDown size={16} strokeWidth={1.9} />}
+                        </button>
+                      </div>
+                      {expanded && loading && (
+                        <div className="source-payroll-detail source-detail-loading">
+                          <Loader2 className="spin" size={16} strokeWidth={1.9} /> Reading the protected Excel ledger...
+                        </div>
+                      )}
+                      {expanded && !loading && detailError && (
+                        <div className="source-payroll-detail source-detail-error">
+                          <AlertTriangle size={16} strokeWidth={1.9} /> {detailError}
+                        </div>
+                      )}
+                      {expanded && !loading && detail && <EmployeePayrollDetail detail={detail} />}
+                    </React.Fragment>
+                  )
+                })}
                 {visibleEmployees.length === 0 && (
                   <div style={{ padding: '28px 18px', textAlign: 'center', color: COLORS.muted, fontSize: 13 }}>
                     No employees match the selected filters.
@@ -2092,7 +2371,7 @@ function TimesheetStage({
             page={reviewPage}
             pageSize={reviewPageSize}
             total={reviewEmployees.length}
-            onPage={setReviewPage}
+            onPage={(page) => { setReviewPage(page); setExpandedSourceEmployeeId('') }}
           />
         </>
       ) : timesheetData ? (
