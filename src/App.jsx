@@ -96,6 +96,7 @@ const RESULTS_GRID = '1.55fr 1fr 1fr 1.35fr 0.95fr 1.1fr 1.2fr 24px'
 const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
 const REVIEW_PAGE_SIZE = 25
+const SOURCE_REVIEW_PAGE_SIZE = 12
 const ROSTER_BADGE_MAX_SHIFTS = 80
 const CONFIRMATION_EMAIL = 'sage.abdallah@isoftanz.com.au'
 // Demo payslip dispatch: employees carry no email addresses in this data
@@ -549,12 +550,12 @@ const GLOBAL_CSS = `
   .danger-flag { color: var(--red); background: var(--error-bg); border-color: var(--error-border); }
 
   .sticky-bar { position: sticky; bottom: 16px; z-index: 40;
-    background: rgba(255,255,255,0.94);
-    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    background: var(--card);
     border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 20px;
     box-shadow: var(--shadow-lg);
     display: flex; align-items: center; justify-content: space-between;
     gap: 16px; flex-wrap: wrap; }
+  .sticky-bar.source-action-bar { position: static; box-shadow: var(--shadow-md); }
 
   .filter-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
     border-radius: var(--r-sm); background: var(--card); padding: 8px 12px;
@@ -595,6 +596,53 @@ const GLOBAL_CSS = `
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
   .timesheet-upload-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .source-workspace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md);
+    overflow: hidden; margin-bottom: 20px; }
+  .source-record { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center; gap: 11px; padding: 14px 16px; }
+  .source-record + .source-record { border-left: 1px solid var(--line); }
+  .source-record-icon { width: 34px; height: 34px; border-radius: var(--r-sm);
+    display: grid; place-items: center; color: var(--sage); background: rgba(47,125,87,0.1); }
+  .source-record-title { font-size: 12px; font-weight: 600; color: var(--ink); }
+  .source-record-value { margin-top: 3px; font-size: 12px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-record-action { width: 30px; height: 30px; padding: 0; }
+  .source-review { background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r-md); overflow: hidden; margin-bottom: 16px; }
+  .source-review-head { display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 17px 20px; border-bottom: 1px solid var(--line); }
+  .source-review-title { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .source-review-title h2 { margin: 0; font-family: var(--serif); font-size: 18px;
+    line-height: 1.2; font-weight: 650; }
+  .source-ready { font-family: var(--mono); font-size: 10.5px; color: var(--sage);
+    white-space: nowrap; }
+  .source-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .source-summary-item { min-width: 0; padding: 15px 20px; }
+  .source-summary-item + .source-summary-item { border-left: 1px solid var(--line); }
+  .source-summary-value { margin-top: 6px; font-family: var(--mono); font-size: 16px;
+    font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .source-evidence { border-top: 1px solid var(--line); }
+  .source-evidence summary { cursor: pointer; list-style: none; display: flex;
+    align-items: center; gap: 10px; padding: 13px 20px; font-size: 13px; font-weight: 600; }
+  .source-evidence summary::-webkit-details-marker { display: none; }
+  .source-evidence summary .evidence-chevron { margin-left: auto; transition: transform 0.16s ease; }
+  .source-evidence[open] summary .evidence-chevron { transform: rotate(180deg); }
+  .source-evidence-list { padding: 0 20px 12px; }
+  .source-evidence-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto;
+    gap: 10px; align-items: start; padding: 9px 0; border-top: 1px solid var(--line); }
+  .source-employee-table { background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--r-md); overflow: hidden; }
+  .source-employee-toolbar { display: flex; align-items: baseline; justify-content: space-between;
+    gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+  .source-employee-head, .source-employee-row { display: grid; align-items: center; gap: 14px;
+    grid-template-columns: 1.25fr 1.2fr 0.8fr 0.55fr 0.65fr 0.85fr; }
+  .source-employee-head { padding: 11px 18px; border-bottom: 1px solid var(--line-strong); }
+  .source-employee-row { min-height: 50px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+  .source-employee-row:nth-child(even) { background: rgba(16,20,28,0.015); }
+  .source-employee-row:last-child { border-bottom: none; }
+  .source-employee-cell { min-width: 0; font-size: 12.5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
@@ -609,6 +657,12 @@ const GLOBAL_CSS = `
     .stats-grid { grid-template-columns: 1fr 1fr !important; }
     .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
     .table-inner { min-width: 860px; }
+    .source-workspace { grid-template-columns: 1fr; }
+    .source-record + .source-record { border-left: 0; border-top: 1px solid var(--line); }
+    .source-summary-grid { grid-template-columns: 1fr 1fr; }
+    .source-summary-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+    .source-summary-item:nth-child(4) { border-top: 1px solid var(--line); }
+    .source-employee-inner { min-width: 820px; }
   }
 
   @media (max-width: 600px) {
@@ -756,6 +810,43 @@ function UploadCard({ index, icon: Icon, title, subtitle, accept, formats, file,
           {fileError}
         </div>
       )}
+    </div>
+  )
+}
+
+function LoadedSourceRecord({ icon: Icon, title, file, accept, onFile }) {
+  const inputRef = useRef(null)
+  const handlePick = (event) => {
+    const chosen = event.target.files?.[0]
+    if (chosen) onFile(chosen)
+    event.target.value = ''
+  }
+  return (
+    <div className="source-record">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={handlePick}
+        style={{ display: 'none' }}
+        aria-label={`Choose replacement ${title.toLowerCase()} file`}
+      />
+      <span className="source-record-icon"><Icon size={17} strokeWidth={1.8} /></span>
+      <div style={{ minWidth: 0 }}>
+        <div className="source-record-title">{title}</div>
+        <div className="source-record-value">
+          {file?.name || 'Not loaded'}{file?.backendManaged ? ' · Protected backend' : file ? ' · Ready' : ''}
+        </div>
+      </div>
+      <button
+        type="button"
+        className="icon-x source-record-action"
+        onClick={() => inputRef.current?.click()}
+        aria-label={`Replace ${title.toLowerCase()}`}
+        title={`Replace ${title.toLowerCase()}`}
+      >
+        <UploadCloud size={15} strokeWidth={1.9} />
+      </button>
     </div>
   )
 }
@@ -1576,15 +1667,18 @@ function TimesheetStage({
   // File accepted but parse hasn't resolved either way yet (PDF/XLSX can take a moment).
   const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
   const parsingEmployeeMaster = Boolean(employeeMasterFile) && !employeeMasterData && !employeeMasterError
+  const sourceOnly = Boolean(timesheetData?.sourceOnly)
+  const sourceWorkspaceMode = sourceOnly || (parsingTimesheet && employeeMasterData?.backendManaged)
   const pendingInstruments = (timesheetData?.coverageInventory || [])
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
   const verifiedInstrumentCount = Math.max(0, (timesheetData?.coverageInventory?.length || 0) - pendingInstruments.length)
   const [reviewPage, setReviewPage] = useState(0)
   useEffect(() => setReviewPage(0), [timesheetData])
-  const visibleEmployees = timesheetData?.employees?.slice(
-    reviewPage * REVIEW_PAGE_SIZE,
-    (reviewPage + 1) * REVIEW_PAGE_SIZE,
-  ) || []
+  const reviewPageSize = sourceOnly ? SOURCE_REVIEW_PAGE_SIZE : REVIEW_PAGE_SIZE
+  const visibleEmployees = useMemo(() => timesheetData?.employees?.slice(
+    reviewPage * reviewPageSize,
+    (reviewPage + 1) * reviewPageSize,
+  ) || [], [reviewPage, reviewPageSize, timesheetData?.employees])
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
@@ -1592,75 +1686,100 @@ function TimesheetStage({
           <CalendarClock size={13} strokeWidth={1.8} /> Time Entry
         </div>
         <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
-          Upload and review the timesheet.
+          {sourceWorkspaceMode ? 'Security payroll review.' : 'Upload and review the timesheet.'}
         </h1>
         <p style={{ fontSize: 15.5, lineHeight: 1.6, color: 'rgba(26,27,30,0.72)', marginTop: 14 }}>
-          {timesheetData?.sourceOnly
-            ? 'The annual source payroll is loaded for reconciliation. Add the employee master to supply employment facts by employee ID while preserving every source instrument and total.'
+          {sourceWorkspaceMode
+            ? 'The protected MSS payroll, workforce data and interpreted rules are ready for review.'
             : 'The award, agreement and compliance cache is ready. Upload a pay-period timesheet, or load an annual source payroll with its employee master.'}
         </p>
       </div>
 
-      <div className="upload-grid timesheet-upload-grid" style={{ marginBottom: 24 }}>
-        <UploadCard
-          index="01"
-          icon={FileSpreadsheet}
-          title="Source payroll"
-          subtitle="Pay-period or annual timesheet export"
-          accept=".csv,.xlsx,.xls,.pdf"
-          formats="CSV · XLSX · XLS · PDF"
-          file={timesheetFile}
-          onFile={onTimesheetFile}
-          onRemove={() => onTimesheetFile(null)}
-        />
-        <UploadCard
-          index="02"
-          icon={Users}
-          title="Employee master"
-          subtitle="One-time workforce setup"
-          accept=".csv,.xlsx,.xls"
-          formats="CSV · XLSX · XLS"
-          file={employeeMasterFile}
-          onFile={onEmployeeMasterFile}
-          onRemove={() => onEmployeeMasterFile(null)}
-        />
-        <div className="ucard ready">
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div style={{
-                width: 46, height: 46, borderRadius: 12, background: 'rgba(47,125,87,0.12)',
-                border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
-              }}>
-                <BadgeCheck size={22} strokeWidth={1.6} />
-              </div>
-              <div>
-                <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600 }}>Cached interpretation state</div>
-                <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
-              </div>
+      {sourceWorkspaceMode ? (
+        <div className="source-workspace" aria-label="Loaded Security workspace sources">
+          <LoadedSourceRecord
+            icon={FileSpreadsheet}
+            title="Source payroll"
+            file={timesheetFile}
+            accept=".csv,.xlsx,.xls,.pdf"
+            onFile={onTimesheetFile}
+          />
+          <LoadedSourceRecord
+            icon={Users}
+            title="Employee master"
+            file={employeeMasterFile}
+            accept=".csv,.xlsx,.xls"
+            onFile={onEmployeeMasterFile}
+          />
+          <div className="source-record">
+            <span className="source-record-icon"><BadgeCheck size={17} strokeWidth={1.8} /></span>
+            <div style={{ minWidth: 0 }}>
+              <div className="source-record-title">Award rules</div>
+              <div className="source-record-value">Security documents · Cached</div>
             </div>
-            <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>03</span>
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <div className="chip">
-              <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>Fingerprint</span>
-              <span className="mono" style={{ fontSize: 11.5, color: COLORS.ink, marginLeft: 'auto' }}>{parsedCache.cacheFingerprint.slice(0, 12)}…</span>
-            </div>
-            <div className="chip">
-              <span style={{ fontSize: 13.5 }}>Overrides logged</span>
-              <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.overrides).length}</span>
-            </div>
-            <div className="chip">
-              <span style={{ fontSize: 13.5 }}>Compliance notes</span>
-              <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.complianceByAwardLevel).length}</span>
-            </div>
-          </div>
-          <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
-            {timesheetData?.sourceOnly
-              ? 'Source-ledger employees reconcile by ID against the employee master. This agreement cache does not reject payroll IDs that are outside its current profile set.'
-              : 'Pay-period timesheets use this cached structure. Rule documents are only re-parsed when the document set changes.'}
+            <CheckCircle2 size={16} color={COLORS.sage} strokeWidth={2} />
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="upload-grid timesheet-upload-grid" style={{ marginBottom: 24 }}>
+          <UploadCard
+            index="01"
+            icon={FileSpreadsheet}
+            title="Source payroll"
+            subtitle="Pay-period or annual timesheet export"
+            accept=".csv,.xlsx,.xls,.pdf"
+            formats="CSV · XLSX · XLS · PDF"
+            file={timesheetFile}
+            onFile={onTimesheetFile}
+            onRemove={() => onTimesheetFile(null)}
+          />
+          <UploadCard
+            index="02"
+            icon={Users}
+            title="Employee master"
+            subtitle="One-time workforce setup"
+            accept=".csv,.xlsx,.xls"
+            formats="CSV · XLSX · XLS"
+            file={employeeMasterFile}
+            onFile={onEmployeeMasterFile}
+            onRemove={() => onEmployeeMasterFile(null)}
+          />
+          <div className="ucard ready">
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 46, height: 46, borderRadius: 12, background: 'rgba(47,125,87,0.12)',
+                  border: '1px solid rgba(47,125,87,0.3)', display: 'grid', placeItems: 'center', color: COLORS.sage,
+                }}>
+                  <BadgeCheck size={22} strokeWidth={1.6} />
+                </div>
+                <div>
+                  <div style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 600 }}>Cached interpretation state</div>
+                  <div style={{ fontSize: 13, color: COLORS.muted, marginTop: 2 }}>Structured lookup data held in memory</div>
+                </div>
+              </div>
+              <span className="mono" style={{ fontSize: 26, color: 'rgba(20,22,28,0.18)', fontWeight: 500, lineHeight: 1 }}>03</span>
+            </div>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <div className="chip">
+                <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>Fingerprint</span>
+                <span className="mono" style={{ fontSize: 11.5, color: COLORS.ink, marginLeft: 'auto' }}>{parsedCache.cacheFingerprint.slice(0, 12)}…</span>
+              </div>
+              <div className="chip">
+                <span style={{ fontSize: 13.5 }}>Overrides logged</span>
+                <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.overrides).length}</span>
+              </div>
+              <div className="chip">
+                <span style={{ fontSize: 13.5 }}>Compliance notes</span>
+                <span className="mono" style={{ fontSize: 12, marginLeft: 'auto' }}>{Object.keys(parsedCache.complianceByAwardLevel).length}</span>
+              </div>
+            </div>
+            <div style={{ fontSize: 12.5, color: COLORS.muted, marginTop: 14, lineHeight: 1.5 }}>
+              Pay-period timesheets use this cached structure. Rule documents are only re-parsed when the document set changes.
+            </div>
+          </div>
+        </div>
+      )}
 
       {timesheetError && (
         <div style={{ marginBottom: 18 }}>
@@ -1674,7 +1793,7 @@ function TimesheetStage({
         </div>
       )}
 
-      {employeeMasterData && employeeMasterCacheStatus !== 'unavailable' && (
+      {employeeMasterData && employeeMasterCacheStatus !== 'unavailable' && !sourceWorkspaceMode && (
         <div style={{ marginBottom: 18 }}>
           <Flag success>
             {employeeMasterData.backendManaged
@@ -1698,58 +1817,51 @@ function TimesheetStage({
         </div>
       )}
 
-      {timesheetData && (
+      {timesheetData && sourceOnly ? (
         <>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
-            {timesheetData.meta.payPeriod && <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{timesheetData.meta.payPeriod}</span>}
-            {timesheetData.meta.business && <span className="pill">{timesheetData.meta.business}</span>}
-            <span className="pill"><Clock size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheetData.totalHours} hrs</span>
-            {timesheetData.sourceSummary && <span className="pill"><Database size={15} strokeWidth={1.7} color={COLORS.ink} />{timesheetData.sourceSummary.componentRows.toLocaleString()} source rows</span>}
-            {timesheetData.coverageInventory && (
-              <span className="pill">
-                <Scale size={15} strokeWidth={1.7} color={pendingInstruments.length ? COLORS.warn : COLORS.sage} />
-                {pendingInstruments.length} pending · {verifiedInstrumentCount} verified instrument{verifiedInstrumentCount === 1 ? '' : 's'}
-              </span>
-            )}
-          </div>
-
-          {timesheetData.sourceOnly && (
-            <div style={{ marginBottom: 22 }}>
-              <Flag success>
-                Source payroll loaded successfully. All {timesheetData.sourceSummary.componentRows.toLocaleString()} rows, {timesheetData.sourceSummary.workPeriods.toLocaleString()} work periods and {timesheetData.sourceSummary.sourceGrossAmount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD' })} source gross were processed.
-              </Flag>
-              <div style={{ marginTop: 10 }}>
-                {timesheetData.employeeMaster ? (
-                  timesheetData.employeeMaster.unmatchedEmployees > 0 ? (
-                    <Flag>
-                      Employee master matched {timesheetData.employeeMaster.matchedEmployees.toLocaleString()} of {timesheetData.employees.length.toLocaleString()} payroll employees ({timesheetData.employeeMaster.coveragePercent}%). The remaining {timesheetData.employeeMaster.unmatchedEmployees.toLocaleString()} historical IDs need a master-data record before employee-level award calculation.
-                    </Flag>
-                  ) : (
-                    <Flag success>Employee master matched all {timesheetData.employees.length.toLocaleString()} payroll employees.</Flag>
-                  )
-                ) : (
-                  <Flag info>Upload Employee.xlsx to add employment type, rank, location, rotation and employee award assignment by employee ID.</Flag>
-                )}
-              </div>
-              <div style={{ marginTop: 10 }}>
-                <Flag info>
-                  Award calculation remains held while the operative historical rules for {pendingInstruments.length} source instruments are verified. {verifiedInstrumentCount} instrument{verifiedInstrumentCount === 1 ? '' : 's'} {verifiedInstrumentCount === 1 ? 'is' : 'are'} already date-versioned and auto-matched.
-                </Flag>
-              </div>
-              {timesheetData.detailTruncated && (
-                <div style={{ marginTop: 10 }}>
-                  <Flag info>To keep this annual export responsive, the screen shows one representative work period per employee. This does not truncate the backend ledger, processed totals or source-row counts.</Flag>
+          <section className="source-review" aria-label="Source payroll summary">
+            <div className="source-review-head">
+              <div className="source-review-title">
+                <CheckCircle2 size={20} color={COLORS.sage} strokeWidth={2} />
+                <div style={{ minWidth: 0 }}>
+                  <h2>Source payroll loaded successfully.</h2>
+                  <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 3 }}>
+                    {timesheetData.sourceSummary.componentRows.toLocaleString()} source rows · {timesheetData.sourceSummary.firstDate} to {timesheetData.sourceSummary.lastDate}
+                  </div>
                 </div>
-              )}
-              <details style={{ marginTop: 14, borderTop: `1px solid ${COLORS.line}`, paddingTop: 12 }}>
-                <summary style={{ cursor: 'pointer', fontSize: 13.5, fontWeight: 600, color: COLORS.ink }}>
-                  Review the one-time instrument evidence queue ({pendingInstruments.length} pending)
+              </div>
+              <span className="source-ready">PROCESSED</span>
+            </div>
+            <div className="source-summary-grid">
+              <div className="source-summary-item">
+                <div className="th">Employees</div>
+                <div className="source-summary-value">{timesheetData.employees.length.toLocaleString()}</div>
+              </div>
+              <div className="source-summary-item">
+                <div className="th">Work periods</div>
+                <div className="source-summary-value">{timesheetData.sourceSummary.workPeriods.toLocaleString()}</div>
+              </div>
+              <div className="source-summary-item">
+                <div className="th">Payable hours</div>
+                <div className="source-summary-value">{Number(timesheetData.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })}</div>
+              </div>
+              <div className="source-summary-item">
+                <div className="th">Source gross</div>
+                <div className="source-summary-value">{fmt(timesheetData.sourceSummary.sourceGrossAmount)}</div>
+              </div>
+            </div>
+            {timesheetData.coverageInventory && (
+              <details className="source-evidence">
+                <summary>
+                  <Scale size={16} color={pendingInstruments.length ? COLORS.warn : COLORS.sage} strokeWidth={1.9} />
+                  Award evidence · {pendingInstruments.length} pending · {verifiedInstrumentCount} verified instrument{verifiedInstrumentCount === 1 ? '' : 's'}
+                  <ChevronDown className="evidence-chevron" size={16} strokeWidth={1.9} />
                 </summary>
-                <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+                <div className="source-evidence-list">
                   {(timesheetData.coverageInventory || []).map((instrument) => {
                     const verified = instrument.supportStatus === 'supported-date-range-needs-employee-evidence'
                     return (
-                      <div key={instrument.sourceCode} style={{ display: 'grid', gridTemplateColumns: '24px minmax(0, 1fr) auto', gap: 10, alignItems: 'start', padding: '9px 0', borderBottom: `1px solid ${COLORS.line}` }}>
+                      <div className="source-evidence-row" key={instrument.sourceCode}>
                         {verified
                           ? <CheckCircle2 size={16} color={COLORS.sage} strokeWidth={2} />
                           : <AlertTriangle size={16} color={COLORS.warn} strokeWidth={1.9} />}
@@ -1767,9 +1879,56 @@ function TimesheetStage({
                   })}
                 </div>
               </details>
-            </div>
-          )}
+            )}
+          </section>
 
+          <section className="source-employee-table" aria-label="Employee payroll preview">
+            <div className="source-employee-toolbar">
+              <strong style={{ fontSize: 14 }}>Employee preview</strong>
+              <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>
+                {reviewPage * reviewPageSize + 1}-{Math.min(timesheetData.employees.length, (reviewPage + 1) * reviewPageSize)} of {timesheetData.employees.length.toLocaleString()}
+              </span>
+            </div>
+            <div className="table-scroll">
+              <div className="source-employee-inner">
+                <div className="source-employee-head">
+                  <span className="th">Employee</span>
+                  <span className="th">Classification</span>
+                  <span className="th">Employment</span>
+                  <span className="th">Periods</span>
+                  <span className="th">Hours</span>
+                  <span className="th">Source gross</span>
+                </div>
+                {visibleEmployees.map((employee) => (
+                  <div className="source-employee-row" key={employee.employeeId || employee.employeeName}>
+                    <div className="source-employee-cell">
+                      <div style={{ fontWeight: 600 }}>{employee.employeeName}</div>
+                      <div className="mono" style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 2 }}>{employee.employeeId || 'NO-ID'}</div>
+                    </div>
+                    <span className="source-employee-cell">{employee.jobRole || employee.employeeRank || 'Unclassified'}</span>
+                    <span className="source-employee-cell">{employee.employmentType || 'Historical record'}</span>
+                    <span className="source-employee-cell mono">{(employee.workPeriodCount || employee.shifts.length).toLocaleString()}</span>
+                    <span className="source-employee-cell mono">{Number(employee.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })}</span>
+                    <span className="source-employee-cell mono" style={{ fontWeight: 600 }}>{fmt(employee.sourceGrossAmount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+          <PaginationControls
+            page={reviewPage}
+            pageSize={reviewPageSize}
+            total={timesheetData.employees.length}
+            onPage={setReviewPage}
+          />
+        </>
+      ) : timesheetData ? (
+        <>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
+            {timesheetData.meta.payPeriod && <span className="pill"><CalendarClock size={15} strokeWidth={1.7} color={COLORS.ochre} />{timesheetData.meta.payPeriod}</span>}
+            {timesheetData.meta.business && <span className="pill">{timesheetData.meta.business}</span>}
+            <span className="pill"><Clock size={15} strokeWidth={1.7} color={COLORS.sage} />{timesheetData.totalHours} hrs</span>
+          </div>
           {visibleEmployees.map((employee) => (
             <div className="emp-group" key={employee.employeeId || employee.employeeName}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 10px 12px', flexWrap: 'wrap' }}>
@@ -1803,22 +1962,17 @@ function TimesheetStage({
               </div>
             </div>
           ))}
-          <PaginationControls
-            page={reviewPage}
-            pageSize={REVIEW_PAGE_SIZE}
-            total={timesheetData.employees.length}
-            onPage={setReviewPage}
-          />
+          <PaginationControls page={reviewPage} pageSize={reviewPageSize} total={timesheetData.employees.length} onPage={setReviewPage} />
         </>
-      )}
+      ) : null}
 
-      <div className="sticky-bar" style={{ marginTop: 8 }}>
+      <div className={`sticky-bar${sourceOnly ? ' source-action-bar' : ''}`} style={{ marginTop: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <span className="eyebrow">Timesheet status</span>
           <span className="mono" style={{ fontSize: 20, fontWeight: 600 }}>
             {timesheetData ? `${timesheetData.employees.length} employees` : parsingTimesheet ? 'Parsing…' : 'Awaiting upload'}
           </span>
-          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {(timesheetData.sourceSummary?.workPeriods || timesheetData.shifts.length).toLocaleString()} {timesheetData.sourceOnly ? 'work periods' : 'shifts'} · {timesheetData.totalHours} hrs</span>}
+          {timesheetData && <span style={{ fontSize: 12.5, color: COLORS.muted }}>· {(timesheetData.sourceSummary?.workPeriods || timesheetData.shifts.length).toLocaleString()} {timesheetData.sourceOnly ? 'work periods' : 'shifts'} · {Number(timesheetData.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })} hrs</span>}
         </div>
         <div style={{ display: 'flex', gap: 11 }}>
           <button className="btn" onClick={onBack}><ArrowLeft size={15} strokeWidth={1.9} /> Back to interpretation</button>

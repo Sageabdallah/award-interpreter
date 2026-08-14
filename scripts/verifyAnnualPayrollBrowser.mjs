@@ -63,10 +63,10 @@ try {
     rows: /683,141 source rows/.test(body),
     periods: /257,065 work periods/.test(body),
     employees: /1,?619 employees/.test(body),
-    hours: /2534935\.27 hrs/.test(body),
+    hours: /2,534,935\.27/.test(body),
     instruments: /10 pending · 1 verified instrument/.test(body),
-    masterCoverage: /matched 1,343 of 1,619 payroll employees \(82\.95%\)/.test(body),
-    historicalGap: /remaining 276 historical IDs/.test(body),
+    historicalWarningHidden: !/matched 1,343 of 1,619 payroll employees|remaining 276 historical IDs/.test(body),
+    boundedEmployeePreview: await page.locator('.source-employee-row').count() === 12,
     noOldMismatch: !/1469 of 1619/.test(body),
     noDangerFlags: await page.locator('.danger-flag').count() === 0,
   }
@@ -84,12 +84,10 @@ try {
   await page.getByRole('button', { name: /Review source payroll/i }).click()
   await page.getByText('1619 source employees loaded', { exact: true }).waitFor({ timeout: 60_000 })
   await page.waitForTimeout(600)
-  const rowStatus = async (employeeLabel) => page.locator('.trow').filter({ hasText: employeeLabel }).first().innerText()
   const payRunChecks = {
     pendingInstruments: /Instruments pending\s+10.*1 verified/i.test(await normalizedBody()),
-    matchedAwardRow: /Employee \+ award matched/.test(await rowStatus('Employee 2788')),
-    missingEmployeeRow: /Employee data needed/.test(await rowStatus('Employee 2815')),
-    pendingInstrumentRow: /Employee matched · instrument needed/.test(await rowStatus('Employee 2824')),
+    boundedRows: await page.locator('.trow').count() === 25,
+    sourceGrossRetained: /\$94,655,150\.46/.test(await normalizedBody()),
     evidenceActionEnabled: await page.getByRole('button', { name: /Review evidence gaps/i }).isEnabled(),
     noReleaseBlockedRows: await page.getByText('Release blocked', { exact: true }).count() === 0,
   }
@@ -119,7 +117,8 @@ try {
   assert(await reloadUploads.count() === 2, 'Restored workspace did not open directly on the payroll inputs')
   await reloadUploads.nth(0).setInputFiles(payrollPath)
   await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 180_000 })
-  const automaticSetupRestored = /matched 1,343 of 1,619 payroll employees \(82\.95%\)/.test(await normalizedBody())
+  const automaticSetupRestored = await page.getByText('Employee.xlsx', { exact: true }).count() > 0
+    && await page.locator('.source-employee-row').filter({ hasText: /Full-time|Part-time|Casual/ }).count() > 0
   assert(automaticSetupRestored, 'Retained Employee.xlsx setup did not auto-apply after reload')
 
   const optionalHealthErrors = httpErrors.filter(({ url }) => /\/api\/health(?:\?|$)/.test(url))
