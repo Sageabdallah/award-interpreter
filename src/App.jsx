@@ -25,6 +25,7 @@ import {
   Loader2,
   Mail,
   RotateCcw,
+  Rows3,
   Scale,
   Search,
   Send,
@@ -124,6 +125,9 @@ const PARSE_STEPS = [
 
 const audFmt = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' })
 const fmt = (value) => audFmt.format(Number(value) || 0)
+const decimal = (value, maximumFractionDigits = 4) => value == null
+  ? '-'
+  : Number(value).toLocaleString('en-AU', { maximumFractionDigits })
 
 const initialState = {
   stage: 1,
@@ -425,7 +429,18 @@ function addPayrollDays(dateKey, days) {
 function EmployeePayrollDetail({ detail, employeeName = '' }) {
   const weeks = detail?.weeks || []
   const [selectedWeekStart, setSelectedWeekStart] = useState(weeks.at(-1)?.weekStart || '')
+  const [openSourceWeekStart, setOpenSourceWeekStart] = useState('')
+  const [sourceRowsByWeek, setSourceRowsByWeek] = useState({})
+  const [sourceRowsLoading, setSourceRowsLoading] = useState('')
+  const [sourceRowsError, setSourceRowsError] = useState({})
+  const [expandedSourceRow, setExpandedSourceRow] = useState(null)
   useEffect(() => setSelectedWeekStart(weeks.at(-1)?.weekStart || ''), [detail?.employee?.employeeId])
+  useEffect(() => {
+    setOpenSourceWeekStart('')
+    setSourceRowsByWeek({})
+    setSourceRowsError({})
+    setExpandedSourceRow(null)
+  }, [detail?.employee?.employeeId])
   const selectedWeek = weeks.find((week) => week.weekStart === selectedWeekStart) || weeks.at(-1)
   const daysByDate = new Map((selectedWeek?.days || []).map((day) => [day.date, day]))
   const calendarDays = selectedWeek
@@ -454,6 +469,33 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
       ? `${fmt(weeklyDisplayRounding)} across rounded weekly totals`
       : '',
   ].filter(Boolean)
+  const sourceRows = selectedWeek ? sourceRowsByWeek[selectedWeek.weekStart] : null
+  const sourceRowsOpen = selectedWeek && openSourceWeekStart === selectedWeek.weekStart
+
+  const toggleSourceRows = async () => {
+    if (!selectedWeek) return
+    const weekStart = selectedWeek.weekStart
+    if (sourceRowsOpen) {
+      setOpenSourceWeekStart('')
+      setExpandedSourceRow(null)
+      return
+    }
+    setOpenSourceWeekStart(weekStart)
+    setExpandedSourceRow(null)
+    if (sourceRowsByWeek[weekStart] || sourceRowsLoading === weekStart) return
+    setSourceRowsLoading(weekStart)
+    setSourceRowsError((current) => ({ ...current, [weekStart]: '' }))
+    try {
+      const response = await fetch(`/api/workspaces/mss/employees/${encodeURIComponent(detail.employee.employeeId)}/payroll-detail/source-rows?weekStart=${encodeURIComponent(weekStart)}`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.sourceRows) throw new Error(payload.error || 'The Excel source rows could not be loaded.')
+      setSourceRowsByWeek((current) => ({ ...current, [weekStart]: payload.sourceRows }))
+    } catch (error) {
+      setSourceRowsError((current) => ({ ...current, [weekStart]: error.message }))
+    } finally {
+      setSourceRowsLoading((current) => current === weekStart ? '' : current)
+    }
+  }
 
   return (
     <div className="source-payroll-detail">
@@ -551,7 +593,15 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
           </div>
 
           <div className="source-week-breakdown" aria-label="Selected week source gross components">
-            <div className="th">This week&apos;s pay components</div>
+            <div className="source-week-breakdown-heading">
+              <div className="th">This week&apos;s pay components</div>
+              <button className="btn source-rows-button" onClick={toggleSourceRows} aria-expanded={Boolean(sourceRowsOpen)}>
+                {sourceRowsLoading === selectedWeek.weekStart
+                  ? <Loader2 className="spin" size={14} strokeWidth={2} />
+                  : <Rows3 size={14} strokeWidth={1.9} />}
+                {sourceRowsOpen ? 'Hide Excel rows' : 'Show Excel rows'}
+              </button>
+            </div>
             {weeklyCategories.map((category) => (
               <div className="source-week-breakdown-row" key={category.key}>
                 <div><strong>{category.label}</strong><span>{category.description}</span></div>
@@ -559,6 +609,85 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
               </div>
             ))}
           </div>
+
+          {sourceRowsOpen && (
+            <div className="source-row-ledger" aria-label="Excel source rows for selected week">
+              {sourceRowsLoading === selectedWeek.weekStart && (
+                <div className="source-row-state"><Loader2 className="spin" size={15} strokeWidth={2} /> Reading verified Excel rows...</div>
+              )}
+              {!sourceRowsLoading && sourceRowsError[selectedWeek.weekStart] && (
+                <div className="source-row-state error"><AlertTriangle size={15} strokeWidth={1.9} /> {sourceRowsError[selectedWeek.weekStart]}</div>
+              )}
+              {sourceRows && (
+                <>
+                  <div className={`source-row-check${sourceRows.reconciled ? '' : ' mismatch'}`}>
+                    {sourceRows.reconciled ? <CheckCircle2 size={16} strokeWidth={2} /> : <AlertTriangle size={16} strokeWidth={1.9} />}
+                    <span>
+                      SUM of {sourceRows.totals.componentRows} Excel Amount cells = <strong>{fmt(sourceRows.totals.sourceGrossAmount)}</strong>
+                      {' · '}weekly gross = <strong>{fmt(sourceRows.expected.sourceGrossAmount)}</strong>
+                      {' · '}difference = <strong>{fmt(sourceRows.differences.sourceGrossAmount)}</strong>
+                    </span>
+                  </div>
+                  <div className="source-row-meta">
+                    <span>{sourceRows.sourceName}</span>
+                    <span>{sourceRows.verifiedChunks.length} verified audit chunk{sourceRows.verifiedChunks.length === 1 ? '' : 's'}</span>
+                    <span className="mono">{sourceRows.verifiedChunks.map((chunk) => chunk.hash.slice(0, 10)).join(' · ')}</span>
+                  </div>
+                  <div className="source-row-scroll">
+                    <div className="source-row-table" role="table" aria-label="Excel pay lines">
+                      <div className="source-row-head" role="row">
+                        <span>Excel row</span><span>Date</span><span>Earning</span><span>Hours</span><span>Rate</span><span>Amount</span><span />
+                      </div>
+                      {sourceRows.rows.map((row) => {
+                        const expanded = expandedSourceRow === row.sourceRowNumber
+                        return (
+                          <React.Fragment key={row.sourceRowNumber}>
+                            <div className="source-row-line" role="row">
+                              <span className="mono">{row.sourceRowNumber}</span>
+                              <span>{payrollDate(row.date, { day: 'numeric', month: 'short' })}</span>
+                              <span><strong>{row.earningCode || row.category}</strong><small>{row.earningType || row.category}</small></span>
+                              <span className="mono">{decimal(row.hours)}</span>
+                              <span className="mono">{row.rate == null ? '-' : fmt(row.rate)}</span>
+                              <strong className="mono">{fmt(row.amount)}</strong>
+                              <button
+                                className="source-row-toggle"
+                                onClick={() => setExpandedSourceRow(expanded ? null : row.sourceRowNumber)}
+                                aria-expanded={expanded}
+                                aria-label={`${expanded ? 'Hide' : 'More about'} Excel row ${row.sourceRowNumber}`}
+                                title={expanded ? 'Hide row detail' : 'More row detail'}
+                              >
+                                {expanded ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
+                              </button>
+                            </div>
+                            {expanded && (
+                              <div className="source-row-expanded">
+                                <div>
+                                  <span>Amount check</span>
+                                  <strong className="mono">
+                                    {row.amountMethod === 'hours-times-rate'
+                                      ? `${decimal(row.hours)} hrs × ${fmt(row.rate)} = ${fmt(row.amount)}`
+                                      : `Excel Amount cell = ${fmt(row.amount)}`}
+                                  </strong>
+                                </div>
+                                <div><span>Rate metadata</span><strong>{row.rateType || 'Not supplied'}{row.baseRate != null ? ` · base ${fmt(row.baseRate)}` : ''}</strong></div>
+                                <div><span>Classification</span><strong>{row.classification || 'Not supplied'}</strong></div>
+                                <div><span>Instrument</span><strong>{row.awardCode || 'Not supplied'}</strong></div>
+                                <div><span>Shift reference</span><strong className="mono">{row.shiftReference}</strong></div>
+                                <div><span>Verified source</span><strong>{sourceRows.sourceName} · row {row.sourceRowNumber}</strong></div>
+                              </div>
+                            )}
+                          </React.Fragment>
+                        )
+                      })}
+                      <div className="source-row-total">
+                        <strong>SUM of Amount column</strong><strong className="mono">{fmt(sourceRows.totals.sourceGrossAmount)}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       ) : (
         <div className="source-detail-empty">No dated work periods were found for this employee.</div>
@@ -910,8 +1039,38 @@ const GLOBAL_CSS = `
   .source-calendar-day > .mono:not(strong) { margin-top: 3px; font-size: 11.5px; }
   .source-calendar-day small { margin-top: auto; padding-top: 8px; font-size: 9px; line-height: 1.25; color: var(--muted); }
   .source-week-breakdown { padding: 13px; border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
-  .source-week-breakdown > .th { padding-bottom: 8px; }
+  .source-week-breakdown-heading { min-height: 34px; padding-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .source-rows-button { min-height: 30px; padding: 6px 9px; font-size: 11.5px; }
   .source-week-breakdown-row { padding: 8px 0; }
+  .source-row-ledger { border: 1px solid var(--line); border-top: 0; background: var(--card); }
+  .source-row-state { min-height: 70px; padding: 18px; display: flex; align-items: center; justify-content: center;
+    gap: 8px; color: var(--muted); font-size: 12px; }
+  .source-row-state.error { color: var(--red); }
+  .source-row-check { min-height: 42px; padding: 9px 12px; display: flex; align-items: center; gap: 8px;
+    color: var(--sage); background: rgba(47,125,87,0.08); border-bottom: 1px solid rgba(47,125,87,0.24); font-size: 11.5px; }
+  .source-row-check.mismatch { color: var(--red); background: rgba(176,18,31,0.07); border-bottom-color: rgba(176,18,31,0.24); }
+  .source-row-meta { min-height: 34px; padding: 8px 12px; display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10.5px; }
+  .source-row-scroll { width: 100%; max-height: 460px; overflow: auto; }
+  .source-row-table { min-width: 780px; }
+  .source-row-head, .source-row-line { display: grid; grid-template-columns: 78px 92px minmax(150px, 1.4fr) 80px 92px 104px 32px;
+    align-items: center; gap: 10px; padding: 8px 12px; }
+  .source-row-head { position: sticky; top: 0; z-index: 2; border-bottom: 1px solid var(--line-strong);
+    background: var(--surface-2); color: var(--muted); font: 9.5px var(--mono); text-transform: uppercase; }
+  .source-row-line { min-height: 48px; border-bottom: 1px solid var(--line); font-size: 11.5px; }
+  .source-row-line > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .source-row-line > span:nth-child(3) { display: flex; flex-direction: column; }
+  .source-row-line small { margin-top: 2px; color: var(--muted); font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; }
+  .source-row-toggle { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 1px solid var(--line);
+    border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer; }
+  .source-row-toggle:hover, .source-row-toggle[aria-expanded="true"] { color: var(--ink); background: var(--surface-2); }
+  .source-row-expanded { padding: 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px;
+    border-bottom: 1px solid var(--line-strong); background: var(--surface-2); }
+  .source-row-expanded > div { min-width: 0; }
+  .source-row-expanded span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 9.5px; text-transform: uppercase; }
+  .source-row-expanded strong { display: block; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+  .source-row-total { min-height: 44px; padding: 10px 54px 10px 12px; display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; border-top: 1px solid var(--line-strong); background: var(--surface-2); font-size: 12px; }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
@@ -940,6 +1099,7 @@ const GLOBAL_CSS = `
     .source-week-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .source-week-metrics > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
     .source-week-metrics > div:nth-child(4) { border-top: 1px solid var(--line); }
+    .source-row-expanded { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 600px) {
@@ -950,6 +1110,8 @@ const GLOBAL_CSS = `
     .source-filter-reset { justify-content: center; }
     .source-week-toolbar, .source-explanation-heading { align-items: stretch; flex-direction: column; }
     .source-week-select-label { grid-template-columns: 1fr; }
+    .source-week-breakdown-heading { align-items: flex-start; flex-direction: column; }
+    .source-row-expanded { grid-template-columns: 1fr; }
     .source-identity-check { grid-template-columns: 20px minmax(0, 1fr); align-items: start; }
     .source-identity-check > div { display: block; }
     .source-identity-check > div span { display: block; margin-top: 3px; white-space: normal; }

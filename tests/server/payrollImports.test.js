@@ -28,7 +28,7 @@ const payload = {
   sourceSize: 100,
   sourceFingerprint: 'a'.repeat(64),
   sourceSummary: {
-    componentRows: 1, workPeriods: 1, employees: 1, instruments: 1,
+    componentRows: 3, workPeriods: 1, employees: 1, instruments: 1,
     firstDate: '2018-03-26', lastDate: '2018-03-26', componentHours: 7.6,
     payableHours: 7.6, sourceGrossAmount: 178.3, workedPeriods: 1, leaveOrAdjustmentPeriods: 0,
   },
@@ -38,7 +38,7 @@ const payload = {
     sourceClassification: 'Level 3 Officer',
     totalHours: 7.6,
     workPeriodCount: 1,
-    sourceComponentCount: 1,
+    sourceComponentCount: 3,
     sourceGrossAmount: 178.3,
   }],
   workPeriods: [{
@@ -47,13 +47,21 @@ const payload = {
     hours: 7.6,
     sourceEntryKind: 'worked',
     sourceAwardCode: '(NSW) Security Services Industry Award',
-    sourceComponentCount: 1,
-    sourceOrdinaryHours: 7.6,
-    sourceOrdinaryAmount: 178.3,
+    sourceComponentCount: 3,
+    sourceRowNumbers: [2, 3, 4],
+    sourceOrdinaryHours: 4,
+    sourceOvertimeHours: 2,
+    sourceOrdinaryAmount: 100,
+    sourceOvertimeAmount: 50,
+    sourceAllowanceAmount: 28.3,
     sourceGrossAmount: 178.3,
     sourceEarningCodes: ['ORD'],
   }],
-  components: [{ _sourceRowNumber: 2, EmployeeID: '30458', SplitStartDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', Hours: '7.6', Amount: '178.3' }],
+  components: [
+    { _sourceRowNumber: 2, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '4', Rate: '25', RateType: 'Hourly', Amount: '100', EarningCode: 'ORD', EarningType: 'Ordinary' },
+    { _sourceRowNumber: 3, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '2', Rate: '25', RateType: 'Hourly', Amount: '50', EarningCode: 'OT', EarningType: 'Overtime' },
+    { _sourceRowNumber: 4, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '1.6', Rate: '17.6875', RateType: 'Hourly', Amount: '28.3', EarningCode: 'ALLOW', EarningType: 'Allowance' },
+  ],
 }
 
 describe('payroll import API', () => {
@@ -80,7 +88,7 @@ describe('payroll import API', () => {
         })),
       },
       { kind: 'work-periods', rows: payload.workPeriods.map((period) => ({ ...period, dateKey: '2018-03-26' })) },
-      { kind: 'components', rows: payload.components },
+      ...payload.components.map((row, index) => ({ kind: 'components', index, total: payload.components.length, rows: [row] })),
     ]
     const receipts = []
     for (const chunk of chunks) {
@@ -88,12 +96,12 @@ describe('payroll import API', () => {
         importId: payload.sourceFingerprint,
         sourceFingerprint: payload.sourceFingerprint,
         kind: chunk.kind,
-        index: 0,
-        total: 1,
+        index: chunk.index ?? 0,
+        total: chunk.total ?? 1,
         rows: chunk.rows,
       })
       expect(response.status).toBe(201)
-      receipts.push({ kind: chunk.kind, index: 0, total: 1, auditId: response.body.chunk.audit.id, hash: response.body.chunk.audit.hash })
+      receipts.push({ kind: chunk.kind, index: chunk.index ?? 0, total: chunk.total ?? 1, auditId: response.body.chunk.audit.id, hash: response.body.chunk.audit.hash })
     }
 
     const completed = await request(app).post('/api/payroll-imports/complete').send({
@@ -108,22 +116,22 @@ describe('payroll import API', () => {
     })
     expect(completed.status).toBe(201)
     expect(completed.body).toMatchObject({
-      summary: { componentRows: 1, workPeriods: 1, employees: 1 },
+      summary: { componentRows: 3, workPeriods: 1, employees: 1 },
       releaseGate: { status: 'blocked', employeeMasterMatched: 1, employeeMasterUnmatched: 0, missingEmploymentTypes: false },
     })
     const manifest = auditStore.records.at(-1)
     expect(manifest.kind).toBe('payroll-import')
     expect(manifest.data).not.toHaveProperty('components')
-    expect(manifest.data.chunkRefs).toHaveLength(3)
+    expect(manifest.data.chunkRefs).toHaveLength(5)
     expect(manifest.data.employeeMaster).toMatchObject({ sourceName: 'Employee.xlsx', matchedEmployees: 1, coveragePercent: 100 })
 
     const workspace = await request(app).get('/api/workspaces/mss/latest')
-    expect(workspace.status).toBe(200)
+    expect(workspace.status, JSON.stringify(workspace.body)).toBe(200)
     expect(workspace.body.workspace.timesheetData).toMatchObject({
       backendLoaded: true,
       sourceOnly: true,
       employeeMaster: { matchedEmployees: 1, unmatchedEmployees: 0 },
-      sourceSummary: { componentRows: 1, workPeriods: 1 },
+      sourceSummary: { componentRows: 3, workPeriods: 1 },
     })
     expect(workspace.body.workspace.timesheetData).not.toHaveProperty('shifts')
     expect(workspace.body.workspace.timesheetData.employees[0]).toMatchObject({
@@ -149,8 +157,8 @@ describe('payroll import API', () => {
       employee: { employeeId: publicEmployeeId, classification: 'Level 3 Officer', employmentType: 'Full-time' },
       sourcePeriod: { firstDate: '2018-03-26', lastDate: '2018-03-26' },
       annual: {
-        expected: { payableHours: 7.6, workPeriods: 1, componentRows: 1, sourceGrossAmount: 178.3 },
-        calculated: { payableHours: 7.6, workPeriods: 1, componentRows: 1, sourceGrossAmount: 178.3 },
+        expected: { payableHours: 7.6, workPeriods: 1, componentRows: 3, sourceGrossAmount: 178.3 },
+        calculated: { payableHours: 7.6, workPeriods: 1, componentRows: 3, sourceGrossAmount: 178.3 },
         differences: { payableHours: 0, workPeriods: 0, componentRows: 0, sourceGrossAmount: 0 },
         reconciled: true,
       },
@@ -159,7 +167,7 @@ describe('payroll import API', () => {
         weekEnd: '2018-04-01',
         payableHours: 7.6,
         sourceGrossAmount: 178.3,
-        categories: { ordinary: 178.3 },
+        categories: { ordinary: 100, overtime: 50, allowances: 28.3 },
         days: [{ date: '2018-03-26', payableHours: 7.6, sourceGrossAmount: 178.3 }],
       }],
     })
@@ -167,6 +175,35 @@ describe('payroll import API', () => {
     expect(auditStore.records.filter((record) => record.kind === 'payroll-employee-detail')).toHaveLength(1)
     expect(auditStore.records.filter((record) => record.kind === 'payroll-work-period-directory')).toHaveLength(1)
     expect(JSON.stringify(auditStore.records.find((record) => record.kind === 'payroll-work-period-directory'))).not.toContain('30458')
+
+    const sourceRows = await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?weekStart=2018-03-26`)
+    expect(sourceRows.status).toBe(200)
+    const { rows: sourceComponentRows, ...sourceRowSummary } = sourceRows.body.sourceRows
+    expect(sourceRowSummary).toMatchObject({
+      sourceName: 'payroll test data.xlsx',
+      employeeId: publicEmployeeId,
+      weekStart: '2018-03-26',
+      expected: { componentRows: 3, sourceGrossAmount: 178.3 },
+      totals: { componentRows: 3, sourceGrossAmount: 178.3, categories: { ordinary: 100, overtime: 50, allowances: 28.3 } },
+      differences: { componentRows: 0, sourceGrossAmount: 0 },
+      reconciled: true,
+    })
+    expect(sourceComponentRows).toEqual(expect.arrayContaining([expect.objectContaining({
+        sourceRowNumber: 2,
+        date: '2018-03-26',
+        earningCode: 'ORD',
+        category: 'ordinary',
+        hours: 4,
+        rate: 25,
+        amount: 100,
+        amountMethod: 'hours-times-rate',
+      })]))
+    expect(sourceComponentRows).toHaveLength(3)
+    expect(sourceRows.body.sourceRows.verifiedChunks).toHaveLength(3)
+    expect(JSON.stringify(sourceRows.body)).not.toContain('30458')
+    expect((await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?weekStart=bad`)).status).toBe(400)
 
     const cachedDetail = await request(app).get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail`)
     expect(cachedDetail.status).toBe(200)
@@ -181,7 +218,7 @@ describe('payroll import API', () => {
     const componentReceipt = receipts.find((receipt) => receipt.kind === 'components')
     const fetched = await request(app).get(`/api/payroll-imports/${payload.sourceFingerprint}/chunks/${componentReceipt.auditId}`)
     expect(fetched.status).toBe(200)
-    expect(fetched.body.chunk.rows).toEqual(payload.components)
+    expect(fetched.body.chunk.rows).toEqual([payload.components[0]])
   })
 
   it('reconciles, persists, deduplicates, and returns summary-only records', async () => {
@@ -189,8 +226,8 @@ describe('payroll import API', () => {
     const app = appFor(auditStore)
     const created = await request(app).post('/api/payroll-imports').send(payload)
     expect(created.status).toBe(201)
-    expect(created.body).toMatchObject({ persisted: true, duplicate: false, summary: { componentRows: 1, sourceGrossAmount: 178.3 }, releaseGate: { status: 'blocked' } })
-    expect(auditStore.records[0].data.components).toHaveLength(1)
+    expect(created.body).toMatchObject({ persisted: true, duplicate: false, summary: { componentRows: 3, sourceGrossAmount: 178.3 }, releaseGate: { status: 'blocked' } })
+    expect(auditStore.records[0].data.components).toHaveLength(3)
 
     const duplicate = await request(app).post('/api/payroll-imports').send(payload)
     expect(duplicate.status).toBe(200)

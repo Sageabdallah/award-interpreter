@@ -110,6 +110,21 @@ try {
     noFalseMismatch: !/The detailed totals do not match Excel/.test(detailText),
   }
   assert(Object.values(payrollDetailChecks).every(Boolean), `Payroll detail checks failed: ${JSON.stringify(payrollDetailChecks)}`)
+
+  await page.getByRole('button', { name: 'Show Excel rows', exact: true }).click()
+  await page.locator('.source-row-check').waitFor({ timeout: 60_000 })
+  const sourceRowText = (await page.locator('.source-row-ledger').innerText()).replace(/\s+/g, ' ')
+  const sourceRowChecks = {
+    rowsLoaded: await page.locator('.source-row-line').count() > 0,
+    workbookNamed: /Nsw_Payroll 1\.xlsx/.test(sourceRowText),
+    sumExplained: /SUM of \d+ Excel Amount cells = \$681\.22/.test(sourceRowText),
+    weeklyGrossMatched: /weekly gross = \$681\.22/.test(sourceRowText),
+    zeroDifference: /difference = \$0\.00/.test(sourceRowText),
+    auditVerified: /verified audit chunk/i.test(sourceRowText),
+  }
+  assert(Object.values(sourceRowChecks).every(Boolean), `Source row checks failed: ${JSON.stringify(sourceRowChecks)}`)
+  await page.locator('.source-row-toggle').first().click()
+  await page.getByText('Verified source', { exact: true }).waitFor({ timeout: 10_000 })
   await page.screenshot({ path: path.join(outputDir, 'payroll-detail-rounding.png') })
   await page.getByRole('button', { name: `Close payroll detail for ${detailEmployeeReference}` }).click()
   await employeeSearch.fill('')
@@ -160,7 +175,7 @@ try {
   const unexpectedConsoleErrors = errors.filter((error) => !/^Failed to load resource: the server responded with a status of 502/.test(error))
   const optionalHealthFailures = failedRequests.filter((request) => request.includes('/api/health'))
   const unexpectedFailedRequests = failedRequests.filter((request) => !request.includes('/api/health'))
-  const result = { parseMs, checks, payRunChecks, payrollDetailChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
+  const result = { parseMs, checks, payRunChecks, payrollDetailChecks, sourceRowChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
   assert(unexpectedHttpErrors.length === 0, `HTTP errors: ${JSON.stringify(unexpectedHttpErrors)}`)
   assert(unexpectedConsoleErrors.length === 0, `Browser errors: ${unexpectedConsoleErrors.join(' | ')}`)
   assert(unexpectedFailedRequests.length === 0, `Failed requests: ${unexpectedFailedRequests.join(' | ')}`)
