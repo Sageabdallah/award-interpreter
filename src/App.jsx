@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ChevronsUpDown,
   Clock,
   Download,
   FileSpreadsheet,
@@ -97,6 +98,14 @@ const FLAT_INTERP_GRID = '1.35fr 0.85fr 2.3fr 0.95fr 0.75fr'
 const INTERP_ROW_CAP = 40
 const REVIEW_PAGE_SIZE = 25
 const SOURCE_REVIEW_PAGE_SIZE = 12
+const SOURCE_EMPLOYEE_COLUMNS = [
+  { key: 'employee', label: 'Employee', numeric: false },
+  { key: 'classification', label: 'Classification', numeric: false },
+  { key: 'employment', label: 'Employment', numeric: false },
+  { key: 'periods', label: 'Periods', numeric: true },
+  { key: 'hours', label: 'Hours', numeric: true },
+  { key: 'gross', label: 'Source gross', numeric: true },
+]
 const ROSTER_BADGE_MAX_SHIFTS = 80
 const CONFIRMATION_EMAIL = 'sage.abdallah@isoftanz.com.au'
 // Demo payslip dispatch: employees carry no email addresses in this data
@@ -381,6 +390,18 @@ function buildTimesheetMatchMessage(parsedCache, timesheetData) {
   return `${timesheetData.employees.length - matchedCount} of ${timesheetData.employees.length} timesheet employees could not be matched to the cached agreement profiles. Check that the uploaded timesheet belongs to the same document set.`
 }
 
+function sourceEmployeeField(employee, key) {
+  switch (key) {
+    case 'employee': return employee.employeeName || employee.employeeId || ''
+    case 'classification': return employee.jobRole || employee.employeeRank || 'Unclassified'
+    case 'employment': return employee.employmentType || 'Historical record'
+    case 'periods': return Number(employee.workPeriodCount || employee.shifts?.length || 0)
+    case 'hours': return Number(employee.totalHours || 0)
+    case 'gross': return Number(employee.sourceGrossAmount || 0)
+    default: return ''
+  }
+}
+
 const GLOBAL_CSS = `
   :root {
     --paper:${COLORS.paper}; --ink:${COLORS.ink}; --ochre:${COLORS.ochre};
@@ -635,9 +656,28 @@ const GLOBAL_CSS = `
     border-radius: var(--r-md); overflow: hidden; }
   .source-employee-toolbar { display: flex; align-items: baseline; justify-content: space-between;
     gap: 14px; padding: 15px 18px; border-bottom: 1px solid var(--line); }
+  .source-employee-controls { display: grid; grid-template-columns: minmax(220px, 1.45fr) minmax(160px, 0.8fr) minmax(160px, 0.8fr) auto;
+    align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .source-filter-search { min-width: 0; height: 38px; display: flex; align-items: center; gap: 8px;
+    padding: 0 11px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--muted); }
+  .source-filter-search:focus-within { border-color: rgba(225,27,34,0.5); }
+  .source-filter-input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
+    color: var(--ink); font: 13px var(--body); }
+  .source-filter-input::placeholder { color: var(--muted); }
+  .source-filter-select { width: 100%; min-width: 0; height: 38px; padding: 0 32px 0 11px;
+    border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink);
+    font: 13px var(--body); cursor: pointer; }
+  .source-filter-reset { height: 38px; padding: 0 12px; white-space: nowrap; }
   .source-employee-head, .source-employee-row { display: grid; align-items: center; gap: 14px;
     grid-template-columns: 1.25fr 1.2fr 0.8fr 0.55fr 0.65fr 0.85fr; }
   .source-employee-head { padding: 11px 18px; border-bottom: 1px solid var(--line-strong); }
+  .source-sort-heading { min-width: 0; }
+  .source-sort-button { width: 100%; min-width: 0; padding: 0; border: 0; background: transparent;
+    display: flex; align-items: center; justify-content: space-between; gap: 5px; color: var(--muted); cursor: pointer; text-align: left; }
+  .source-sort-button:hover, .source-sort-button.active { color: var(--ink); }
+  .source-sort-button:focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; border-radius: 2px; }
+  .source-sort-button .th { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; }
+  .source-sort-button svg { flex-shrink: 0; }
   .source-employee-row { min-height: 50px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
   .source-employee-row:nth-child(even) { background: rgba(16,20,28,0.015); }
   .source-employee-row:last-child { border-bottom: none; }
@@ -662,12 +702,17 @@ const GLOBAL_CSS = `
     .source-summary-grid { grid-template-columns: 1fr 1fr; }
     .source-summary-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
     .source-summary-item:nth-child(4) { border-top: 1px solid var(--line); }
+    .source-employee-controls { grid-template-columns: 1fr 1fr; }
+    .source-filter-search { grid-column: 1 / -1; }
     .source-employee-inner { min-width: 820px; }
   }
 
   @media (max-width: 600px) {
     .stats-grid { grid-template-columns: 1fr !important; }
     .sticky-bar { position: static; }
+    .source-employee-controls { grid-template-columns: 1fr; }
+    .source-filter-search { grid-column: auto; }
+    .source-filter-reset { justify-content: center; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1673,12 +1718,82 @@ function TimesheetStage({
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
   const verifiedInstrumentCount = Math.max(0, (timesheetData?.coverageInventory?.length || 0) - pendingInstruments.length)
   const [reviewPage, setReviewPage] = useState(0)
-  useEffect(() => setReviewPage(0), [timesheetData])
+  const [sourceQuery, setSourceQuery] = useState('')
+  const [sourceClassification, setSourceClassification] = useState('all')
+  const [sourceEmployment, setSourceEmployment] = useState('all')
+  const [sourceSort, setSourceSort] = useState({ key: 'employee', direction: 'asc' })
+  useEffect(() => {
+    setReviewPage(0)
+    setSourceQuery('')
+    setSourceClassification('all')
+    setSourceEmployment('all')
+    setSourceSort({ key: 'employee', direction: 'asc' })
+  }, [timesheetData])
   const reviewPageSize = sourceOnly ? SOURCE_REVIEW_PAGE_SIZE : REVIEW_PAGE_SIZE
-  const visibleEmployees = useMemo(() => timesheetData?.employees?.slice(
+  const sourceFilterOptions = useMemo(() => {
+    const employees = timesheetData?.employees || []
+    const classifications = [...new Set(employees.map((employee) => sourceEmployeeField(employee, 'classification')))]
+      .sort((a, b) => a.localeCompare(b, 'en-AU', { numeric: true, sensitivity: 'base' }))
+    const employmentTypes = [...new Set(employees.map((employee) => sourceEmployeeField(employee, 'employment')))]
+      .sort((a, b) => a.localeCompare(b, 'en-AU', { numeric: true, sensitivity: 'base' }))
+    return { classifications, employmentTypes }
+  }, [timesheetData?.employees])
+  const reviewEmployees = useMemo(() => {
+    const employees = timesheetData?.employees || []
+    if (!sourceOnly) return employees
+    const query = sourceQuery.trim().toLocaleLowerCase('en-AU')
+    const filtered = employees.filter((employee) => {
+      const classification = sourceEmployeeField(employee, 'classification')
+      const employment = sourceEmployeeField(employee, 'employment')
+      if (sourceClassification !== 'all' && classification !== sourceClassification) return false
+      if (sourceEmployment !== 'all' && employment !== sourceEmployment) return false
+      if (!query) return true
+      const searchable = [
+        employee.employeeName,
+        employee.employeeId,
+        classification,
+        employment,
+        employee.employeeRank,
+        employee.homeArea,
+        employee.stateCode,
+      ].filter(Boolean).join(' ').toLocaleLowerCase('en-AU')
+      return searchable.includes(query)
+    })
+    const direction = sourceSort.direction === 'asc' ? 1 : -1
+    return [...filtered].sort((left, right) => {
+      const leftValue = sourceEmployeeField(left, sourceSort.key)
+      const rightValue = sourceEmployeeField(right, sourceSort.key)
+      const primary = typeof leftValue === 'number'
+        ? leftValue - rightValue
+        : String(leftValue).localeCompare(String(rightValue), 'en-AU', { numeric: true, sensitivity: 'base' })
+      if (primary !== 0) return primary * direction
+      return String(left.employeeName || left.employeeId).localeCompare(
+        String(right.employeeName || right.employeeId),
+        'en-AU',
+        { numeric: true, sensitivity: 'base' },
+      )
+    })
+  }, [sourceClassification, sourceEmployment, sourceOnly, sourceQuery, sourceSort, timesheetData?.employees])
+  const visibleEmployees = useMemo(() => reviewEmployees.slice(
     reviewPage * reviewPageSize,
     (reviewPage + 1) * reviewPageSize,
-  ) || [], [reviewPage, reviewPageSize, timesheetData?.employees])
+  ), [reviewEmployees, reviewPage, reviewPageSize])
+  const sourceFiltersActive = Boolean(sourceQuery || sourceClassification !== 'all' || sourceEmployment !== 'all')
+  const handleSourceSort = (column) => {
+    setSourceSort((current) => ({
+      key: column.key,
+      direction: current.key === column.key
+        ? (current.direction === 'asc' ? 'desc' : 'asc')
+        : (column.numeric ? 'desc' : 'asc'),
+    }))
+    setReviewPage(0)
+  }
+  const clearSourceFilters = () => {
+    setSourceQuery('')
+    setSourceClassification('all')
+    setSourceEmployment('all')
+    setReviewPage(0)
+  }
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 26, maxWidth: 660 }}>
@@ -1886,18 +2001,71 @@ function TimesheetStage({
             <div className="source-employee-toolbar">
               <strong style={{ fontSize: 14 }}>Employee preview</strong>
               <span className="mono" style={{ fontSize: 11.5, color: COLORS.muted }}>
-                {reviewPage * reviewPageSize + 1}-{Math.min(timesheetData.employees.length, (reviewPage + 1) * reviewPageSize)} of {timesheetData.employees.length.toLocaleString()}
+                {reviewEmployees.length ? reviewPage * reviewPageSize + 1 : 0}-{Math.min(reviewEmployees.length, (reviewPage + 1) * reviewPageSize)} of {reviewEmployees.length.toLocaleString()}
+                {reviewEmployees.length !== timesheetData.employees.length ? ` matches · ${timesheetData.employees.length.toLocaleString()} total` : ''}
               </span>
+            </div>
+            <div className="source-employee-controls">
+              <label className="source-filter-search">
+                <Search size={15} strokeWidth={1.8} />
+                <input
+                  className="source-filter-input"
+                  value={sourceQuery}
+                  onChange={(event) => { setSourceQuery(event.target.value); setReviewPage(0) }}
+                  placeholder="Search employee or classification"
+                  aria-label="Search employee or classification"
+                />
+              </label>
+              <select
+                className="source-filter-select"
+                value={sourceClassification}
+                onChange={(event) => { setSourceClassification(event.target.value); setReviewPage(0) }}
+                aria-label="Filter by classification"
+              >
+                <option value="all">All classifications</option>
+                {sourceFilterOptions.classifications.map((classification) => (
+                  <option key={classification} value={classification}>{classification}</option>
+                ))}
+              </select>
+              <select
+                className="source-filter-select"
+                value={sourceEmployment}
+                onChange={(event) => { setSourceEmployment(event.target.value); setReviewPage(0) }}
+                aria-label="Filter by employment"
+              >
+                <option value="all">All employment</option>
+                {sourceFilterOptions.employmentTypes.map((employment) => (
+                  <option key={employment} value={employment}>{employment}</option>
+                ))}
+              </select>
+              <button className="btn source-filter-reset" disabled={!sourceFiltersActive} onClick={clearSourceFilters}>
+                <RotateCcw size={14} strokeWidth={1.9} /> Reset
+              </button>
             </div>
             <div className="table-scroll">
               <div className="source-employee-inner">
                 <div className="source-employee-head">
-                  <span className="th">Employee</span>
-                  <span className="th">Classification</span>
-                  <span className="th">Employment</span>
-                  <span className="th">Periods</span>
-                  <span className="th">Hours</span>
-                  <span className="th">Source gross</span>
+                  {SOURCE_EMPLOYEE_COLUMNS.map((column) => {
+                    const active = sourceSort.key === column.key
+                    const ariaSort = active ? (sourceSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'
+                    return (
+                      <span className="source-sort-heading" role="columnheader" aria-sort={ariaSort} key={column.key}>
+                        <button
+                          className={`source-sort-button${active ? ' active' : ''}`}
+                          onClick={() => handleSourceSort(column)}
+                          aria-label={`Sort by ${column.label}${active ? `, currently ${ariaSort}` : ''}`}
+                          title={`Sort by ${column.label}`}
+                        >
+                          <span className="th">{column.label}</span>
+                          {active
+                            ? sourceSort.direction === 'asc'
+                              ? <ChevronUp size={14} color={COLORS.ochre} strokeWidth={2.1} />
+                              : <ChevronDown size={14} color={COLORS.ochre} strokeWidth={2.1} />
+                            : <ChevronsUpDown size={13} strokeWidth={1.7} />}
+                        </button>
+                      </span>
+                    )
+                  })}
                 </div>
                 {visibleEmployees.map((employee) => (
                   <div className="source-employee-row" key={employee.employeeId || employee.employeeName}>
@@ -1912,13 +2080,18 @@ function TimesheetStage({
                     <span className="source-employee-cell mono" style={{ fontWeight: 600 }}>{fmt(employee.sourceGrossAmount)}</span>
                   </div>
                 ))}
+                {visibleEmployees.length === 0 && (
+                  <div style={{ padding: '28px 18px', textAlign: 'center', color: COLORS.muted, fontSize: 13 }}>
+                    No employees match the selected filters.
+                  </div>
+                )}
               </div>
             </div>
           </section>
           <PaginationControls
             page={reviewPage}
             pageSize={reviewPageSize}
-            total={timesheetData.employees.length}
+            total={reviewEmployees.length}
             onPage={setReviewPage}
           />
         </>
