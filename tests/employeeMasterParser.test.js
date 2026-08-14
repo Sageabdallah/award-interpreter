@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { enrichSourcePayroll, parseEmployeeMasterRows } from '../src/domain/employeeMasterParser.js'
+import { enrichSourcePayroll, mergeEmployeeMasterIdentity, parseEmployeeMasterRows } from '../src/domain/employeeMasterParser.js'
 import { importIsoftPayrollRows } from '../src/domain/importers/isoftPayroll.js'
 
 const PAYROLL_HEADERS = [
@@ -54,6 +54,41 @@ describe('iSOFT employee master parser', () => {
       employmentStart: '1997-12-04',
       inductionDate: '1989-03-23',
     })
+  })
+
+  it('joins a supplied real name to payroll by exact EmployeeID', () => {
+    const payroll = importIsoftPayrollRows([
+      PAYROLL_HEADERS,
+      payrollRow('25035'),
+    ], 'Nsw_Payroll 1.xlsx')
+    const master = parseEmployeeMasterRows([
+      ['EmployeeID', 'First Name', 'Surname'],
+      ['25035', 'Jordan', 'Nguyen'],
+    ], 'Employee names.xlsx')
+
+    const enriched = enrichSourcePayroll(payroll, master)
+
+    expect(master.summary.employeeNamesSupplied).toBe(1)
+    expect(master.summary.employmentTypesSupplied).toBe(0)
+    expect(enriched.employees[0].employeeName).toBe('Jordan Nguyen')
+    expect(enriched.employees[0].shifts[0].employeeName).toBe('Jordan Nguyen')
+  })
+
+  it('reapplies browser-cached names to a restored protected employee master', () => {
+    const backendMaster = parseEmployeeMasterRows([
+      EMPLOYEE_HEADERS,
+      ['MSS-ABC123', '', 'NSW', 'Sydney', 'Sydney', '4/15/14', '', 'Fulltime', 'Officer', 'Yes', '0', 'NSW2', 'Rotating', 'MA000016-NSW', '0', 'N', ''],
+    ], 'Employee.xlsx')
+    const identityMaster = parseEmployeeMasterRows([
+      [...EMPLOYEE_HEADERS, 'Employee Name'],
+      ['MSS-ABC123', '', 'NSW', 'Sydney', 'Sydney', '4/15/14', '', 'Fulltime', 'Officer', 'Yes', '0', 'NSW2', 'Rotating', 'MA000016-NSW', '0', 'N', '', 'Casey Morgan'],
+    ], 'Employee names.xlsx')
+
+    const merged = mergeEmployeeMasterIdentity(backendMaster, identityMaster)
+
+    expect(merged.profiles[0].employeeName).toBe('Casey Morgan')
+    expect(merged.identitySourceName).toBe('Employee names.xlsx')
+    expect(merged.summary.employeeNamesSupplied).toBe(1)
   })
 
   it('enriches source payroll by employee ID without replacing source instruments', () => {

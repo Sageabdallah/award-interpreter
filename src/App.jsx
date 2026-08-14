@@ -61,13 +61,14 @@ import {
   saveEmployeeMasterCache,
   saveInterpretationCache,
 } from './domain/workspaceCache.js'
-import { enrichSourcePayroll, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
+import { enrichSourcePayroll, mergeEmployeeMasterIdentity, parseEmployeeMasterFile } from './domain/employeeMasterParser.js'
 import { parseLeaveRequestFile } from './domain/leaveParser.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
 import { publicPayrollReference } from './domain/payrollPrivacy.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
+import { buildSourcePayBreakdown } from './domain/sourcePayBreakdown.js'
 import { parseTimesheetFile } from './domain/timesheetParser.js'
 import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
 import isoftWordmark from './assets/isoft-wordmark.png'
@@ -216,7 +217,7 @@ function reducer(state, action) {
           size: action.timesheetData.meta?.sourceSize,
           backendManaged: true,
         },
-        sourceTimesheetData: action.timesheetData,
+        sourceTimesheetData: action.sourceTimesheetData || action.timesheetData,
         timesheetData: action.timesheetData,
         employeeMasterFile: {
           name: action.employeeMasterData.sourceName || 'Employee.xlsx',
@@ -403,15 +404,6 @@ function sourceEmployeeField(employee, key) {
   }
 }
 
-const SOURCE_PAY_CATEGORIES = [
-  { key: 'ordinary', label: 'Ordinary', description: 'Ordinary-hour earnings recorded in Excel' },
-  { key: 'overtime', label: 'Overtime', description: 'Overtime earnings recorded in Excel' },
-  { key: 'penalties', label: 'Penalties', description: 'Shift, weekend and public-holiday penalty components' },
-  { key: 'allowances', label: 'Allowances', description: 'Separate allowance components' },
-  { key: 'leave', label: 'Paid leave', description: 'Paid leave and public-holiday leave components' },
-  { key: 'other', label: 'Other', description: 'Remaining payroll components' },
-]
-
 function sourceEmployeeRealName(employee) {
   const name = String(employee?.employeeName || '').trim()
   const generatedName = `Employee ${employee?.employeeId || ''}`
@@ -430,7 +422,7 @@ function addPayrollDays(dateKey, days) {
   return date.toISOString().slice(0, 10)
 }
 
-function EmployeePayrollDetail({ detail }) {
+function EmployeePayrollDetail({ detail, employeeName = '' }) {
   const weeks = detail?.weeks || []
   const [selectedWeekStart, setSelectedWeekStart] = useState(weeks.at(-1)?.weekStart || '')
   useEffect(() => setSelectedWeekStart(weeks.at(-1)?.weekStart || ''), [detail?.employee?.employeeId])
@@ -443,19 +435,25 @@ function EmployeePayrollDetail({ detail }) {
       })
     : []
   const annual = detail.annual
-  const annualCategories = SOURCE_PAY_CATEGORIES
-    .map((category) => ({ ...category, amount: annual.calculated.categories[category.key] }))
-    .filter((category) => Math.abs(category.amount) > 0.004)
-  const weeklyCategories = selectedWeek
-    ? SOURCE_PAY_CATEGORIES
-        .map((category) => ({ ...category, amount: selectedWeek.categories[category.key] }))
-        .filter((category) => Math.abs(category.amount) > 0.004)
-    : []
+  const annualBreakdown = buildSourcePayBreakdown(annual.calculated.categories, annual.expected.sourceGrossAmount)
+  const weeklyBreakdown = selectedWeek
+    ? buildSourcePayBreakdown(selectedWeek.categories, selectedWeek.sourceGrossAmount)
+    : { items: [], total: 0 }
+  const annualCategories = annualBreakdown.items
+  const weeklyCategories = weeklyBreakdown.items
   const weeklyGrossTotal = round2(weeks.reduce((sum, week) => sum + week.sourceGrossAmount, 0))
-  const categoryGrossTotal = round2(annualCategories.reduce((sum, category) => sum + category.amount, 0))
+  const weeklyDisplayRounding = round2(annual.expected.sourceGrossAmount - weeklyGrossTotal)
+  const categoryGrossTotal = annualBreakdown.total
   const fullyReconciled = annual.reconciled
-    && Math.abs(weeklyGrossTotal - annual.expected.sourceGrossAmount) <= 0.01
-    && Math.abs(categoryGrossTotal - annual.expected.sourceGrossAmount) <= 0.01
+    && annualBreakdown.reconciled
+  const displayRoundingNotes = [
+    Math.abs(annualBreakdown.roundingAdjustment) > 0.004
+      ? `${fmt(annualBreakdown.roundingAdjustment)} across displayed pay categories`
+      : '',
+    Math.abs(weeklyDisplayRounding) > 0.004
+      ? `${fmt(weeklyDisplayRounding)} across rounded weekly totals`
+      : '',
+  ].filter(Boolean)
 
   return (
     <div className="source-payroll-detail">
@@ -465,7 +463,9 @@ function EmployeePayrollDetail({ detail }) {
           <strong>Source employee match</strong>
           <span>{annual.calculated.workPeriods} of {annual.expected.workPeriods} work periods and {annual.calculated.componentRows} of {annual.expected.componentRows} pay lines matched this protected employee reference.</span>
         </div>
-        <span className="source-name-status">Name not included in supplied Excel files</span>
+        <span className={`source-name-status${employeeName ? ' matched' : ''}`}>
+          {employeeName ? 'Name matched by EmployeeID from the local employee master' : 'Name not included in supplied Excel files'}
+        </span>
       </div>
 
       <div className="source-total-explanation">
@@ -497,7 +497,7 @@ function EmployeePayrollDetail({ detail }) {
           {fullyReconciled ? <CheckCircle2 size={16} strokeWidth={2} /> : <AlertTriangle size={16} strokeWidth={2} />}
           <span>
             {fullyReconciled
-              ? `Category total and all ${weeks.length} weekly totals equal the Excel gross. Difference ${fmt(annual.differences.sourceGrossAmount)}.`
+              ? `The protected ledger equals the Excel gross.${displayRoundingNotes.length ? ` Display rounding: ${displayRoundingNotes.join(' and ')}.` : ''} Payroll difference ${fmt(annual.differences.sourceGrossAmount)}.`
               : `The detailed totals do not match Excel. Difference ${fmt(annual.differences.sourceGrossAmount)}.`}
           </span>
         </div>
@@ -864,6 +864,7 @@ const GLOBAL_CSS = `
   .source-identity-check strong { font-size: 12.5px; white-space: nowrap; }
   .source-identity-check > div span { min-width: 0; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .source-name-status { color: var(--warn); font-size: 11px; white-space: nowrap; }
+  .source-name-status.matched { color: var(--sage); }
   .source-total-explanation { padding-top: 18px; }
   .source-explanation-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
   .source-detail-period { margin-top: 5px; color: var(--muted); font-size: 12px; }
@@ -2142,7 +2143,7 @@ function TimesheetStage({
             index="02"
             icon={Users}
             title="Employee master"
-            subtitle="One-time workforce setup"
+            subtitle="Workforce setup or ID/name export"
             accept=".csv,.xlsx,.xls"
             formats="CSV · XLSX · XLS"
             file={employeeMasterFile}
@@ -2404,7 +2405,7 @@ function TimesheetStage({
                           <AlertTriangle size={16} strokeWidth={1.9} /> {detailError}
                         </div>
                       )}
-                      {expanded && !loading && detail && <EmployeePayrollDetail detail={detail} />}
+                      {expanded && !loading && detail && <EmployeePayrollDetail detail={detail} employeeName={realEmployeeName} />}
                     </React.Fragment>
                   )
                 })}
@@ -3499,11 +3500,14 @@ export default function App() {
       .then(async (payload) => {
         if (cancelled || !payload?.workspace?.timesheetData) return
         const backendTimesheetData = payload.workspace.timesheetData
-        const timesheetData = {
+        const sourceTimesheetData = {
           ...backendTimesheetData,
           shifts: backendTimesheetData.shifts || backendTimesheetData.employees.flatMap((employee) => employee.shifts || []),
         }
-        const employeeMasterData = employeeMasterFromBackendWorkspace(timesheetData)
+        const cachedEmployeeMaster = await loadEmployeeMasterCache().catch(() => null)
+        const backendEmployeeMaster = employeeMasterFromBackendWorkspace(sourceTimesheetData)
+        const employeeMasterData = mergeEmployeeMasterIdentity(backendEmployeeMaster, cachedEmployeeMaster?.data)
+        const timesheetData = enrichSourcePayroll(sourceTimesheetData, employeeMasterData)
         const documents = backendWorkspaceDocuments(payload.workspace.documentPack)
         const cache = await buildParsedCache(documents, {
           cacheFingerprint: `backend-${payload.workspace.audit?.hash || timesheetData.meta?.backendAuditId || 'mss'}-${payload.workspace.documentPack?.fingerprint || 'documents'}`,
@@ -3514,6 +3518,7 @@ export default function App() {
         const restoredWorkspace = {
           cache,
           documents,
+          sourceTimesheetData,
           timesheetData,
           employeeMasterData,
           results: calculateTimesheetResults(cache, timesheetData),
@@ -3764,7 +3769,13 @@ export default function App() {
     try {
       const parsedData = await parseEmployeeMasterFile(file)
       if (seq !== parseSeqRef.current.employeeMaster) return
-      const data = useBackendIds ? await pseudonymizeEmployeeMaster(parsedData) : parsedData
+      const protectedData = useBackendIds ? await pseudonymizeEmployeeMaster(parsedData) : parsedData
+      const currentMaster = latestInputsRef.current.employeeMasterData
+      const identityOnly = protectedData.summary.employeeNamesSupplied > 0
+        && protectedData.summary.employmentTypesSupplied === 0
+      const data = currentMaster?.backendManaged && identityOnly
+        ? mergeEmployeeMasterIdentity(currentMaster, protectedData)
+        : protectedData
       if (seq !== parseSeqRef.current.employeeMaster) return
       try {
         await saveEmployeeMasterCache(data)

@@ -4,7 +4,7 @@ import { normalizeHeader } from './utils.js'
 
 export const ISOFT_EMPLOYEE_MASTER_SCHEMA_VERSION = 'isoft-employee-master/v1'
 
-const REQUIRED_HEADERS = ['employeeid', 'employeetype']
+const REQUIRED_HEADERS = ['employeeid']
 
 function clean(value = '') {
   const text = String(value ?? '').trim()
@@ -23,6 +23,14 @@ function parseBoolean(value = '') {
   if (/^(?:yes|true|y|1)$/i.test(clean(value))) return true
   if (/^(?:no|false|n|0)$/i.test(clean(value))) return false
   return undefined
+}
+
+function employeeNameFromRow(raw) {
+  const suppliedName = clean(raw.employeename || raw.fullname)
+  if (suppliedName) return suppliedName
+  const givenName = clean(raw.firstname || raw.givenname)
+  const familyName = clean(raw.surname || raw.lastname || raw.familyname)
+  return [givenName, familyName].filter(Boolean).join(' ')
 }
 
 function findHeaderIndex(rows = []) {
@@ -44,7 +52,7 @@ export function parseEmployeeMasterRows(rows, sourceName = 'employee master') {
   const materializedRows = Array.isArray(rows) ? rows : [...rows]
   const headerIndex = findHeaderIndex(materializedRows)
   if (headerIndex === -1) {
-    throw new Error(`Could not locate EmployeeId and EmployeeType columns in ${sourceName}.`)
+    throw new Error(`Could not locate an EmployeeId column in ${sourceName}.`)
   }
 
   const headers = materializedRows[headerIndex].map((header) => normalizeHeader(header))
@@ -63,6 +71,7 @@ export function parseEmployeeMasterRows(rows, sourceName = 'employee master') {
     // are never copied into the application model.
     const profile = {
       employeeId,
+      employeeName: employeeNameFromRow(raw),
       employmentType: normalizeEmploymentType(raw.employeetype),
       employeeRank: clean(raw.emprank),
       stateCode: clean(raw.statecode),
@@ -87,6 +96,8 @@ export function parseEmployeeMasterRows(rows, sourceName = 'employee master') {
     counts[key] = (counts[key] || 0) + 1
     return counts
   }, {})
+  const employeeNamesSupplied = profiles.filter((profile) => profile.employeeName).length
+  const employmentTypesSupplied = profiles.filter((profile) => profile.employmentType).length
 
   return {
     schemaVersion: ISOFT_EMPLOYEE_MASTER_SCHEMA_VERSION,
@@ -98,6 +109,8 @@ export function parseEmployeeMasterRows(rows, sourceName = 'employee master') {
       uniqueEmployees: profiles.length,
       duplicateRecords,
       employmentTypes,
+      employeeNamesSupplied,
+      employmentTypesSupplied,
       privacyExcludedFields: ['Dateofbirth', 'Gender'],
     },
   }
@@ -123,19 +136,20 @@ export function enrichSourcePayroll(timesheetData, employeeMasterData) {
     if (!profile) return { ...record, employeeMasterMatched: false }
     return {
       ...record,
+      employeeName: profile.employeeName || record.employeeName,
       employmentType: profile.employmentType || record.employmentType || '',
-      employeeRank: profile.employeeRank,
-      stateCode: profile.stateCode,
-      homeArea: profile.area,
-      publicHolidayArea: profile.publicHolidayArea,
-      employmentStart: profile.employmentStart,
-      inductionDate: profile.inductionDate,
-      timeRotation: profile.timeRotation,
-      employeeMasterAwardCode: profile.awardCode,
-      payrollBatchCode: profile.payrollBatchCode,
-      sevenDayWorker: profile.sevenDayWorker,
-      trainee: profile.trainee,
-      overridePostAward: profile.overridePostAward,
+      employeeRank: profile.employeeRank || record.employeeRank,
+      stateCode: profile.stateCode || record.stateCode,
+      homeArea: profile.area || record.homeArea,
+      publicHolidayArea: profile.publicHolidayArea || record.publicHolidayArea,
+      employmentStart: profile.employmentStart || record.employmentStart,
+      inductionDate: profile.inductionDate || record.inductionDate,
+      timeRotation: profile.timeRotation || record.timeRotation,
+      employeeMasterAwardCode: profile.awardCode || record.employeeMasterAwardCode,
+      payrollBatchCode: profile.payrollBatchCode || record.payrollBatchCode,
+      sevenDayWorker: profile.sevenDayWorker ?? record.sevenDayWorker,
+      trainee: profile.trainee ?? record.trainee,
+      overridePostAward: profile.overridePostAward ?? record.overridePostAward,
       employeeMasterMatched: true,
     }
   }
@@ -178,5 +192,25 @@ export function enrichSourcePayroll(timesheetData, employeeMasterData) {
       privacyExcludedFields: employeeMasterData.summary.privacyExcludedFields,
     },
     releaseBlockingGaps,
+  }
+}
+
+export function mergeEmployeeMasterIdentity(employeeMasterData, identityData) {
+  if (!employeeMasterData?.profiles?.length || !identityData?.profilesById) return employeeMasterData
+  const profiles = employeeMasterData.profiles.map((profile) => {
+    const employeeName = clean(identityData.profilesById[profile.employeeId]?.employeeName)
+    return employeeName ? { ...profile, employeeName } : profile
+  })
+  const employeeNamesSupplied = profiles.filter((profile) => profile.employeeName).length
+  if (!employeeNamesSupplied) return employeeMasterData
+  return {
+    ...employeeMasterData,
+    identitySourceName: identityData.identitySourceName || identityData.sourceName,
+    profiles,
+    profilesById: Object.fromEntries(profiles.map((profile) => [profile.employeeId, profile])),
+    summary: {
+      ...employeeMasterData.summary,
+      employeeNamesSupplied,
+    },
   }
 }

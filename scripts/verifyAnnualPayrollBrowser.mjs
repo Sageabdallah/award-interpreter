@@ -37,26 +37,39 @@ const layout = () => page.evaluate(() => ({
 
 try {
   await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 60_000 })
-  const dataNav = page.getByRole('button', { name: 'Data & Documents', exact: true })
-  await dataNav.waitFor({ timeout: 60_000 })
-  await dataNav.click()
-  await page.getByRole('button', { name: 'Security (NSW)', exact: true }).click()
-  const documents = page.locator('input[type=file]')
-  await documents.nth(1).setInputFiles(path.join(liveDir, 'compliance-document-security-nsw.txt'))
-  await documents.nth(2).setInputFiles(path.join(liveDir, 'employee-agreement-security-nsw.txt'))
-  await page.getByRole('button', { name: 'Parse documents', exact: true }).click()
-  await page.getByRole('button', { name: /Continue to timesheet/i }).waitFor({ timeout: 60_000 })
-  await page.getByRole('button', { name: /Continue to timesheet/i }).click()
+  const timeEntryNav = page.getByRole('button', { name: 'Time Entry', exact: true })
+  await timeEntryNav.waitFor({ timeout: 60_000 })
+  const backendWorkspaceRestored = await page.waitForFunction(() => {
+    const button = [...document.querySelectorAll('button')]
+      .find((item) => item.textContent.trim() === 'Time Entry')
+    return button && !button.disabled
+  }, null, { timeout: 30_000 }).then(() => true).catch(() => false)
 
-  const uploads = page.locator('input[type=file]')
-  assert(await uploads.count() === 2, 'Expected source payroll and employee master upload inputs')
-  await uploads.nth(1).setInputFiles(employeePath)
-  await page.getByText('Reading employee master…', { exact: true }).waitFor({ state: 'hidden', timeout: 60_000 })
+  let parseMs = 0
+  if (backendWorkspaceRestored) {
+    await timeEntryNav.click()
+    await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 60_000 })
+  } else {
+    const dataNav = page.getByRole('button', { name: 'Data & Documents', exact: true })
+    await dataNav.click()
+    await page.getByRole('button', { name: 'Security (NSW)', exact: true }).click()
+    const documents = page.locator('input[type=file]')
+    await documents.nth(1).setInputFiles(path.join(liveDir, 'compliance-document-security-nsw.txt'))
+    await documents.nth(2).setInputFiles(path.join(liveDir, 'employee-agreement-security-nsw.txt'))
+    await page.getByRole('button', { name: 'Parse documents', exact: true }).click()
+    await page.getByRole('button', { name: /Continue to timesheet/i }).waitFor({ timeout: 60_000 })
+    await page.getByRole('button', { name: /Continue to timesheet/i }).click()
 
-  const startedAt = Date.now()
-  await uploads.nth(0).setInputFiles(payrollPath)
-  await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 180_000 })
-  const parseMs = Date.now() - startedAt
+    const uploads = page.locator('input[type=file]')
+    assert(await uploads.count() === 2, 'Expected source payroll and employee master upload inputs')
+    await uploads.nth(1).setInputFiles(employeePath)
+    await page.getByText('Reading employee master…', { exact: true }).waitFor({ state: 'hidden', timeout: 60_000 })
+
+    const startedAt = Date.now()
+    await uploads.nth(0).setInputFiles(payrollPath)
+    await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 180_000 })
+    parseMs = Date.now() - startedAt
+  }
   const body = await normalizedBody()
 
   const checks = {
@@ -80,6 +93,26 @@ try {
   await page.screenshot({ path: path.join(outputDir, 'time-entry-desktop.png') })
   const desktopLayout = await layout()
   assert(desktopLayout.documentWidth <= desktopLayout.viewport + 1, 'Desktop document has horizontal overflow')
+
+  const detailEmployeeReference = 'MSS-0AC7725C85'
+  const employeeSearch = page.getByLabel('Search name, source EmployeeID or classification')
+  await employeeSearch.fill(detailEmployeeReference)
+  const detailToggle = page.getByRole('button', { name: `Open payroll detail for ${detailEmployeeReference}` })
+  await detailToggle.waitFor({ timeout: 30_000 })
+  await detailToggle.click()
+  await page.getByText('How the Excel total is built', { exact: true }).waitFor({ timeout: 60_000 })
+  const detailText = (await page.locator('.source-payroll-detail').innerText()).replace(/\s+/g, ' ')
+  const payrollDetailChecks = {
+    roundingLine: /Rounding Balances four-decimal payroll components to the recorded cent total \$0\.01/.test(detailText),
+    recordedGross: /Recorded gross \$67,742\.74/.test(detailText),
+    reconciled: /The protected ledger equals the Excel gross\./.test(detailText),
+    zeroPayrollDifference: /Payroll difference \$0\.00/.test(detailText),
+    noFalseMismatch: !/The detailed totals do not match Excel/.test(detailText),
+  }
+  assert(Object.values(payrollDetailChecks).every(Boolean), `Payroll detail checks failed: ${JSON.stringify(payrollDetailChecks)}`)
+  await page.screenshot({ path: path.join(outputDir, 'payroll-detail-rounding.png') })
+  await page.getByRole('button', { name: `Close payroll detail for ${detailEmployeeReference}` }).click()
+  await employeeSearch.fill('')
 
   await page.getByRole('button', { name: /Review source payroll/i }).click()
   await page.getByText('1619 source employees loaded', { exact: true }).waitFor({ timeout: 60_000 })
@@ -105,7 +138,6 @@ try {
   // restored, leaving only the replacement payroll file to upload.
   await page.setViewportSize({ width: 1728, height: 1117 })
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 })
-  const timeEntryNav = page.getByRole('button', { name: 'Time Entry', exact: true })
   await timeEntryNav.waitFor({ timeout: 30_000 })
   await page.waitForFunction(() => {
     const button = [...document.querySelectorAll('button')].find((item) => item.textContent.trim() === 'Time Entry')
@@ -128,7 +160,7 @@ try {
   const unexpectedConsoleErrors = errors.filter((error) => !/^Failed to load resource: the server responded with a status of 502/.test(error))
   const optionalHealthFailures = failedRequests.filter((request) => request.includes('/api/health'))
   const unexpectedFailedRequests = failedRequests.filter((request) => !request.includes('/api/health'))
-  const result = { parseMs, checks, payRunChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
+  const result = { parseMs, checks, payRunChecks, payrollDetailChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
   assert(unexpectedHttpErrors.length === 0, `HTTP errors: ${JSON.stringify(unexpectedHttpErrors)}`)
   assert(unexpectedConsoleErrors.length === 0, `Browser errors: ${unexpectedConsoleErrors.join(' | ')}`)
   assert(unexpectedFailedRequests.length === 0, `Failed requests: ${unexpectedFailedRequests.join(' | ')}`)

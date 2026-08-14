@@ -62,6 +62,7 @@ export async function pseudonymizeEmployeeMaster(employeeMasterData) {
   }))
   return {
     ...employeeMasterData,
+    usesPublicEmployeeIds: true,
     profiles,
     profilesById: Object.fromEntries(profiles.map((profile) => [profile.employeeId, profile])),
   }
@@ -73,6 +74,7 @@ export function employeeMasterFromBackendWorkspace(timesheetData) {
     .map((employee) => ({
       employeeId: employee.employeeId,
       employmentType: employee.employmentType || '',
+      employeeName: '',
       employeeRank: employee.employeeRank || '',
       stateCode: employee.stateCode || '',
       area: employee.homeArea || '',
@@ -102,6 +104,8 @@ export function employeeMasterFromBackendWorkspace(timesheetData) {
         counts[key] = (counts[key] || 0) + 1
         return counts
       }, {}),
+      employeeNamesSupplied: 0,
+      employmentTypesSupplied: profiles.filter((profile) => profile.employmentType).length,
       privacyExcludedFields: ['Dateofbirth', 'Gender'],
     },
   }
