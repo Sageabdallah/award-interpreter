@@ -66,6 +66,7 @@ import { parseLeaveRequestFile } from './domain/leaveParser.js'
 import { buildParsedCache, computeCacheFingerprint, shouldReuseParsedCache } from './domain/cacheBuilder.js'
 import { buildInterpretationTableRows } from './domain/interpretationBuilder.js'
 import { calculateTimesheetResults } from './domain/payCalculator.js'
+import { publicPayrollReference } from './domain/payrollPrivacy.js'
 import { resultsToCsv } from './domain/resultAdapter.js'
 import { parseTimesheetFile } from './domain/timesheetParser.js'
 import { keyForAwardLevel, normalizeName, round2 } from './domain/utils.js'
@@ -402,14 +403,20 @@ function sourceEmployeeField(employee, key) {
   }
 }
 
-const SOURCE_CATEGORY_LABELS = [
-  ['ordinary', 'Ordinary'],
-  ['overtime', 'Overtime'],
-  ['penalties', 'Penalties'],
-  ['allowances', 'Allowances'],
-  ['leave', 'Leave'],
-  ['other', 'Other'],
+const SOURCE_PAY_CATEGORIES = [
+  { key: 'ordinary', label: 'Ordinary', description: 'Ordinary-hour earnings recorded in Excel' },
+  { key: 'overtime', label: 'Overtime', description: 'Overtime earnings recorded in Excel' },
+  { key: 'penalties', label: 'Penalties', description: 'Shift, weekend and public-holiday penalty components' },
+  { key: 'allowances', label: 'Allowances', description: 'Separate allowance components' },
+  { key: 'leave', label: 'Paid leave', description: 'Paid leave and public-holiday leave components' },
+  { key: 'other', label: 'Other', description: 'Remaining payroll components' },
 ]
+
+function sourceEmployeeRealName(employee) {
+  const name = String(employee?.employeeName || '').trim()
+  const generatedName = `Employee ${employee?.employeeId || ''}`
+  return name && name !== generatedName ? name : ''
+}
 
 function payrollDate(dateKey, options) {
   const date = new Date(`${dateKey}T00:00:00Z`)
@@ -436,59 +443,72 @@ function EmployeePayrollDetail({ detail }) {
       })
     : []
   const annual = detail.annual
-  const annualCategoryAmounts = SOURCE_CATEGORY_LABELS
-    .map(([key]) => annual.calculated.categories[key])
-    .filter((value) => Math.abs(value) > 0.004)
+  const annualCategories = SOURCE_PAY_CATEGORIES
+    .map((category) => ({ ...category, amount: annual.calculated.categories[category.key] }))
+    .filter((category) => Math.abs(category.amount) > 0.004)
+  const weeklyCategories = selectedWeek
+    ? SOURCE_PAY_CATEGORIES
+        .map((category) => ({ ...category, amount: selectedWeek.categories[category.key] }))
+        .filter((category) => Math.abs(category.amount) > 0.004)
+    : []
+  const weeklyGrossTotal = round2(weeks.reduce((sum, week) => sum + week.sourceGrossAmount, 0))
+  const categoryGrossTotal = round2(annualCategories.reduce((sum, category) => sum + category.amount, 0))
+  const fullyReconciled = annual.reconciled
+    && Math.abs(weeklyGrossTotal - annual.expected.sourceGrossAmount) <= 0.01
+    && Math.abs(categoryGrossTotal - annual.expected.sourceGrossAmount) <= 0.01
 
   return (
     <div className="source-payroll-detail">
-      <div className="source-detail-reconciliation">
+      <div className="source-identity-check">
+        <BadgeCheck size={18} strokeWidth={1.9} />
         <div>
-          <div className="th">
-            Annual Excel check · {annual.expected.workPeriods.toLocaleString()} work periods · {annual.expected.componentRows.toLocaleString()} component rows
-          </div>
-          <div className="source-detail-equation mono">
-            {annualCategoryAmounts.map((amount, index) => (
-              <React.Fragment key={`${amount}-${index}`}>
-                {index > 0 && <span>+</span>}
-                {fmt(amount)}
-              </React.Fragment>
-            ))}
-            <span>=</span>
-            {fmt(annual.expected.sourceGrossAmount)}
-          </div>
+          <strong>Source employee match</strong>
+          <span>{annual.calculated.workPeriods} of {annual.expected.workPeriods} work periods and {annual.calculated.componentRows} of {annual.expected.componentRows} pay lines matched this protected employee reference.</span>
         </div>
-        <div className={`source-reconcile-status${annual.reconciled ? ' reconciled' : ' mismatch'}`}>
-          {annual.reconciled
-            ? <CheckCircle2 size={17} strokeWidth={2} />
-            : <AlertTriangle size={17} strokeWidth={2} />}
-          <span>{annual.reconciled ? 'Reconciled to Excel' : 'Ledger difference found'}</span>
-        </div>
+        <span className="source-name-status">Name not included in supplied Excel files</span>
       </div>
 
-      <div className="source-detail-metrics" aria-label="Annual payroll reconciliation">
-        <div><span className="panel-label">Recorded Excel source gross</span><strong className="mono">{fmt(annual.expected.sourceGrossAmount)}</strong></div>
-        <div><span className="panel-label">Detailed ledger sum</span><strong className="mono">{fmt(annual.calculated.sourceGrossAmount)}</strong></div>
-        <div><span className="panel-label">Difference</span><strong className="mono">{fmt(annual.differences.sourceGrossAmount)}</strong></div>
-        <div><span className="panel-label">Payable hours</span><strong className="mono">{annual.calculated.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
-        <div><span className="panel-label">Effective source gross</span><strong className="mono">{fmt(annual.calculated.effectiveGrossPerPayableHour)}/hr</strong></div>
-      </div>
-
-      <div className="source-category-strip" aria-label="Annual source gross categories">
-        {SOURCE_CATEGORY_LABELS.map(([key, label]) => (
-          <div key={key}>
-            <span>{label}</span>
-            <strong className="mono">{fmt(annual.calculated.categories[key])}</strong>
+      <div className="source-total-explanation">
+        <div className="source-explanation-heading">
+          <div>
+            <div className="th">How the Excel total is built</div>
+            <div className="source-detail-period">
+              {payrollDate(detail.sourcePeriod.firstDate, { day: 'numeric', month: 'short', year: 'numeric' })}
+              {' to '}
+              {payrollDate(detail.sourcePeriod.lastDate, { day: 'numeric', month: 'short', year: 'numeric' })}
+              {' · '}{annual.calculated.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} payable hours
+            </div>
           </div>
-        ))}
+          <strong className="source-total-amount mono">{fmt(annual.expected.sourceGrossAmount)}</strong>
+        </div>
+        <div className="source-breakdown-list" aria-label="Annual source gross components">
+          {annualCategories.map((category) => (
+            <div className="source-breakdown-row" key={category.key}>
+              <div><strong>{category.label}</strong><span>{category.description}</span></div>
+              <span className="mono">{fmt(category.amount)}</span>
+            </div>
+          ))}
+          <div className="source-breakdown-total">
+            <strong>Recorded gross</strong>
+            <strong className="mono">{fmt(categoryGrossTotal)}</strong>
+          </div>
+        </div>
+        <div className={`source-cross-check${fullyReconciled ? '' : ' mismatch'}`}>
+          {fullyReconciled ? <CheckCircle2 size={16} strokeWidth={2} /> : <AlertTriangle size={16} strokeWidth={2} />}
+          <span>
+            {fullyReconciled
+              ? `Category total and all ${weeks.length} weekly totals equal the Excel gross. Difference ${fmt(annual.differences.sourceGrossAmount)}.`
+              : `The detailed totals do not match Excel. Difference ${fmt(annual.differences.sourceGrossAmount)}.`}
+          </span>
+        </div>
       </div>
 
       {selectedWeek ? (
         <div className="source-week-detail">
           <div className="source-week-toolbar">
             <div>
-              <div className="th">Weekly source ledger</div>
-              <div className="source-week-range">
+              <div className="th">What happened this week</div>
+              <div className="source-week-range" aria-live="polite">
                 {payrollDate(selectedWeek.weekStart, { day: 'numeric', month: 'short', year: 'numeric' })}
                 {' to '}
                 {payrollDate(selectedWeek.weekEnd, { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -507,11 +527,10 @@ function EmployeePayrollDetail({ detail }) {
           </div>
 
           <div className="source-week-metrics">
-            <div><span>Recorded weekly gross</span><strong className="mono">{fmt(selectedWeek.sourceGrossAmount)}</strong></div>
-            <div><span>Payable hours</span><strong className="mono">{selectedWeek.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
-            <div><span>Worked hours</span><strong className="mono">{selectedWeek.workedHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
-            <div><span>Leave hours</span><strong className="mono">{selectedWeek.leaveHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong></div>
-            <div><span>Source gross / payable hr</span><strong className="mono">{fmt(selectedWeek.effectiveGrossPerPayableHour)}</strong></div>
+            <div><span>Gross this week</span><strong className="mono">{fmt(selectedWeek.sourceGrossAmount)}</strong><small>Sum of this week&apos;s Excel pay lines</small></div>
+            <div><span>Payable hours</span><strong className="mono">{selectedWeek.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })}</strong><small>Worked hours plus paid leave</small></div>
+            <div><span>Hours split</span><strong className="mono">{selectedWeek.workedHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} worked · {selectedWeek.leaveHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} leave</strong><small>How payable hours were recorded</small></div>
+            <div><span>Average recorded gross</span><strong className="mono">{fmt(selectedWeek.effectiveGrossPerPayableHour)}/hr</strong><small>Gross ÷ payable hours, not the base rate</small></div>
           </div>
 
           <div className="source-calendar-scroll">
@@ -524,18 +543,19 @@ function EmployeePayrollDetail({ detail }) {
                     <span className="source-calendar-date">{payrollDate(day.date, { day: 'numeric', month: 'short' })}</span>
                     <strong className="mono">{active ? `${day.payableHours.toLocaleString('en-AU', { maximumFractionDigits: 2 })} hrs` : '-'}</strong>
                     <span className="mono">{active ? fmt(day.sourceGrossAmount) : '-'}</span>
-                    <small>{active ? (day.entryKinds || []).join(' + ') : 'No entry'}</small>
+                    <small>{active ? (day.earningCodes || day.entryKinds || []).slice(0, 2).join(' · ') : 'No entry'}</small>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          <div className="source-week-categories" aria-label="Selected week source gross categories">
-            {SOURCE_CATEGORY_LABELS.map(([key, label]) => (
-              <div key={key}>
-                <span>{label}</span>
-                <strong className="mono">{fmt(selectedWeek.categories[key])}</strong>
+          <div className="source-week-breakdown" aria-label="Selected week source gross components">
+            <div className="th">This week&apos;s pay components</div>
+            {weeklyCategories.map((category) => (
+              <div className="source-week-breakdown-row" key={category.key}>
+                <div><strong>{category.label}</strong><span>{category.description}</span></div>
+                <strong className="mono">{fmt(category.amount)}</strong>
               </div>
             ))}
           </div>
@@ -838,27 +858,29 @@ const GLOBAL_CSS = `
   .source-detail-loading, .source-detail-error, .source-detail-empty { min-height: 92px; padding: 22px 4px;
     display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; }
   .source-detail-error { color: var(--red); }
-  .source-detail-reconciliation { display: flex; align-items: center; justify-content: space-between;
-    gap: 18px; padding: 20px 0 16px; }
-  .source-detail-equation { display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    margin-top: 7px; font-size: 13px; color: var(--muted); }
-  .source-detail-equation span { color: var(--ink); }
-  .source-reconcile-status { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center;
-    gap: 7px; border: 1px solid; border-radius: var(--r-sm); font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .source-reconcile-status.reconciled { color: var(--sage); border-color: rgba(47,125,87,0.28); background: rgba(47,125,87,0.08); }
-  .source-reconcile-status.mismatch { color: var(--red); border-color: rgba(176,18,31,0.28); background: rgba(176,18,31,0.07); }
-  .source-detail-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-    border: 1px solid var(--line); background: var(--card); }
-  .source-detail-metrics > div { min-width: 0; padding: 13px 14px; }
-  .source-detail-metrics > div + div { border-left: 1px solid var(--line); }
-  .source-detail-metrics strong { display: block; margin-top: 6px; font-size: 13.5px; white-space: nowrap; }
-  .source-category-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
-    border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
-  .source-category-strip > div, .source-week-categories > div { min-width: 0; padding: 9px 12px;
-    display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--muted); }
-  .source-category-strip strong, .source-week-categories strong { color: var(--ink); font-size: 11.5px; white-space: nowrap; }
-  .source-category-strip > div + div, .source-week-categories > div + div { border-left: 1px solid var(--line); }
-  .source-week-detail { margin-top: 18px; border-top: 1px solid var(--line-strong); }
+  .source-identity-check { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto;
+    align-items: center; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); color: var(--sage); }
+  .source-identity-check > div { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+  .source-identity-check strong { font-size: 12.5px; white-space: nowrap; }
+  .source-identity-check > div span { min-width: 0; color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .source-name-status { color: var(--warn); font-size: 11px; white-space: nowrap; }
+  .source-total-explanation { padding-top: 18px; }
+  .source-explanation-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+  .source-detail-period { margin-top: 5px; color: var(--muted); font-size: 12px; }
+  .source-total-amount { font-size: 22px; white-space: nowrap; }
+  .source-breakdown-list { border: 1px solid var(--line); background: var(--card); }
+  .source-breakdown-row, .source-breakdown-total, .source-week-breakdown-row { min-width: 0; padding: 10px 13px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .source-breakdown-row + .source-breakdown-row, .source-week-breakdown-row { border-top: 1px solid var(--line); }
+  .source-breakdown-row > div, .source-week-breakdown-row > div { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+  .source-breakdown-row strong, .source-week-breakdown-row strong { font-size: 12px; white-space: nowrap; }
+  .source-breakdown-row > div span, .source-week-breakdown-row > div span { min-width: 0; color: var(--muted); font-size: 11.5px; }
+  .source-breakdown-row > .mono, .source-week-breakdown-row > .mono { flex-shrink: 0; font-size: 12.5px; }
+  .source-breakdown-total { border-top: 1px solid var(--line-strong); background: var(--surface-2); font-size: 13px; }
+  .source-cross-check { min-height: 38px; padding: 8px 12px; display: flex; align-items: center; gap: 8px;
+    border: 1px solid rgba(47,125,87,0.28); border-top: 0; color: var(--sage); background: rgba(47,125,87,0.08); font-size: 11.5px; }
+  .source-cross-check.mismatch { border-color: rgba(176,18,31,0.28); color: var(--red); background: rgba(176,18,31,0.07); }
+  .source-week-detail { margin-top: 20px; border-top: 1px solid var(--line-strong); }
   .source-week-toolbar { display: flex; align-items: flex-end; justify-content: space-between;
     gap: 16px; padding: 16px 0 13px; }
   .source-week-range { margin-top: 5px; font-size: 13px; color: var(--muted); }
@@ -867,12 +889,13 @@ const GLOBAL_CSS = `
   .source-week-select-label select { width: 100%; height: 38px; min-width: 0; padding: 0 34px 0 11px;
     border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink);
     font: 12px var(--body); cursor: pointer; }
-  .source-week-metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  .source-week-metrics { display: grid; grid-template-columns: 0.9fr 0.75fr 1.25fr 1.1fr;
     border: 1px solid var(--line); border-bottom: 0; background: var(--card); }
   .source-week-metrics > div { min-width: 0; padding: 11px 12px; }
   .source-week-metrics > div + div { border-left: 1px solid var(--line); }
   .source-week-metrics span { display: block; color: var(--muted); font-size: 10.5px; }
-  .source-week-metrics strong { display: block; margin-top: 5px; font-size: 13px; white-space: nowrap; }
+  .source-week-metrics strong { display: block; margin-top: 5px; font-size: 12.5px; white-space: nowrap; }
+  .source-week-metrics small { display: block; margin-top: 5px; color: var(--muted); font-size: 9.5px; line-height: 1.3; }
   .source-calendar-scroll { width: 100%; overflow-x: auto; }
   .source-week-calendar { min-width: 700px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
     border: 1px solid var(--line); background: var(--card); }
@@ -884,9 +907,10 @@ const GLOBAL_CSS = `
   .source-calendar-date { margin-top: 2px; font-size: 11px; color: var(--muted); }
   .source-calendar-day strong { margin-top: 12px; font-size: 12.5px; }
   .source-calendar-day > .mono:not(strong) { margin-top: 3px; font-size: 11.5px; }
-  .source-calendar-day small { margin-top: auto; padding-top: 8px; font-size: 9.5px; text-transform: capitalize; color: var(--muted); }
-  .source-week-categories { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
-    border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
+  .source-calendar-day small { margin-top: auto; padding-top: 8px; font-size: 9px; line-height: 1.25; color: var(--muted); }
+  .source-week-breakdown { padding: 13px; border: 1px solid var(--line); border-top: 0; background: rgba(255,255,255,0.52); }
+  .source-week-breakdown > .th { padding-bottom: 8px; }
+  .source-week-breakdown-row { padding: 8px 0; }
   .email-preview { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px;
     background: var(--paper); padding: 16px 18px; font-size: 13px; line-height: 1.6; }
 
@@ -908,14 +932,13 @@ const GLOBAL_CSS = `
     .source-summary-item:nth-child(4) { border-top: 1px solid var(--line); }
     .source-employee-controls { grid-template-columns: 1fr 1fr; }
     .source-filter-search { grid-column: 1 / -1; }
-    .source-employee-inner { min-width: 900px; }
-    .source-detail-metrics, .source-week-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .source-detail-metrics > div:nth-child(4), .source-week-metrics > div:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
-    .source-detail-metrics > div:nth-child(5), .source-week-metrics > div:nth-child(5) { border-top: 1px solid var(--line); }
-    .source-category-strip, .source-week-categories { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .source-category-strip > div:nth-child(4), .source-week-categories > div:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
-    .source-category-strip > div:nth-child(5), .source-category-strip > div:nth-child(6),
-    .source-week-categories > div:nth-child(5), .source-week-categories > div:nth-child(6) { border-top: 1px solid var(--line); }
+    .source-employee-inner { min-width: 0; }
+    .source-employee-head, .source-employee-row { min-width: 900px; }
+    .source-detail-toggle { position: sticky; right: 8px; border-color: var(--line); background: var(--card); box-shadow: var(--shadow-sm); }
+    .source-payroll-detail { width: 100%; min-width: 0; }
+    .source-week-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .source-week-metrics > div:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+    .source-week-metrics > div:nth-child(4) { border-top: 1px solid var(--line); }
   }
 
   @media (max-width: 600px) {
@@ -924,8 +947,14 @@ const GLOBAL_CSS = `
     .source-employee-controls { grid-template-columns: 1fr; }
     .source-filter-search { grid-column: auto; }
     .source-filter-reset { justify-content: center; }
-    .source-detail-reconciliation, .source-week-toolbar { align-items: stretch; flex-direction: column; }
+    .source-week-toolbar, .source-explanation-heading { align-items: stretch; flex-direction: column; }
     .source-week-select-label { grid-template-columns: 1fr; }
+    .source-identity-check { grid-template-columns: 20px minmax(0, 1fr); align-items: start; }
+    .source-identity-check > div { display: block; }
+    .source-identity-check > div span { display: block; margin-top: 3px; white-space: normal; }
+    .source-name-status { grid-column: 2; }
+    .source-breakdown-row > div, .source-week-breakdown-row > div { display: block; }
+    .source-breakdown-row > div span, .source-week-breakdown-row > div span { display: block; margin-top: 2px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -1932,6 +1961,7 @@ function TimesheetStage({
   const verifiedInstrumentCount = Math.max(0, (timesheetData?.coverageInventory?.length || 0) - pendingInstruments.length)
   const [reviewPage, setReviewPage] = useState(0)
   const [sourceQuery, setSourceQuery] = useState('')
+  const [sourceQueryReference, setSourceQueryReference] = useState('')
   const [sourceClassification, setSourceClassification] = useState('all')
   const [sourceEmployment, setSourceEmployment] = useState('all')
   const [sourceSort, setSourceSort] = useState({ key: 'employee', direction: 'asc' })
@@ -1942,6 +1972,7 @@ function TimesheetStage({
   useEffect(() => {
     setReviewPage(0)
     setSourceQuery('')
+    setSourceQueryReference('')
     setSourceClassification('all')
     setSourceEmployment('all')
     setSourceSort({ key: 'employee', direction: 'asc' })
@@ -1950,6 +1981,18 @@ function TimesheetStage({
     setSourceDetailLoading({})
     setSourceDetailErrors({})
   }, [timesheetData])
+  useEffect(() => {
+    let cancelled = false
+    const sourceEmployeeId = sourceQuery.trim()
+    if (!/^\d+$/.test(sourceEmployeeId)) {
+      setSourceQueryReference('')
+      return () => { cancelled = true }
+    }
+    publicPayrollReference(sourceEmployeeId).then((reference) => {
+      if (!cancelled) setSourceQueryReference(reference)
+    })
+    return () => { cancelled = true }
+  }, [sourceQuery])
   const reviewPageSize = sourceOnly ? SOURCE_REVIEW_PAGE_SIZE : REVIEW_PAGE_SIZE
   const sourceFilterOptions = useMemo(() => {
     const employees = timesheetData?.employees || []
@@ -1969,6 +2012,7 @@ function TimesheetStage({
       if (sourceClassification !== 'all' && classification !== sourceClassification) return false
       if (sourceEmployment !== 'all' && employment !== sourceEmployment) return false
       if (!query) return true
+      if (sourceQueryReference && employee.employeeId === sourceQueryReference) return true
       const searchable = [
         employee.employeeName,
         employee.employeeId,
@@ -1994,7 +2038,7 @@ function TimesheetStage({
         { numeric: true, sensitivity: 'base' },
       )
     })
-  }, [sourceClassification, sourceEmployment, sourceOnly, sourceQuery, sourceSort, timesheetData?.employees])
+  }, [sourceClassification, sourceEmployment, sourceOnly, sourceQuery, sourceQueryReference, sourceSort, timesheetData?.employees])
   const visibleEmployees = useMemo(() => reviewEmployees.slice(
     reviewPage * reviewPageSize,
     (reviewPage + 1) * reviewPageSize,
@@ -2012,6 +2056,7 @@ function TimesheetStage({
   }
   const clearSourceFilters = () => {
     setSourceQuery('')
+    setSourceQueryReference('')
     setSourceClassification('all')
     setSourceEmployment('all')
     setReviewPage(0)
@@ -2257,8 +2302,8 @@ function TimesheetStage({
                   className="source-filter-input"
                   value={sourceQuery}
                   onChange={(event) => { setSourceQuery(event.target.value); setReviewPage(0); setExpandedSourceEmployeeId('') }}
-                  placeholder="Search employee or classification"
-                  aria-label="Search employee or classification"
+                  placeholder="Search name, source EmployeeID or classification"
+                  aria-label="Search name, source EmployeeID or classification"
                 />
               </label>
               <select
@@ -2315,6 +2360,8 @@ function TimesheetStage({
                 </div>
                 {visibleEmployees.map((employee) => {
                   const employeeId = employee.employeeId || employee.employeeName
+                  const realEmployeeName = sourceEmployeeRealName(employee)
+                  const employeeLabel = realEmployeeName || employee.employeeId || 'Payroll record'
                   const expanded = expandedSourceEmployeeId === employee.employeeId
                   const loading = sourceDetailLoading[employee.employeeId]
                   const detail = sourcePayrollDetails[employee.employeeId]
@@ -2323,8 +2370,10 @@ function TimesheetStage({
                     <React.Fragment key={employeeId}>
                       <div className="source-employee-row">
                         <div className="source-employee-cell">
-                          <div style={{ fontWeight: 600 }}>{employee.employeeName}</div>
-                          <div className="mono" style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 2 }}>{employee.employeeId || 'NO-ID'}</div>
+                          <div style={{ fontWeight: 600 }}>{employeeLabel}</div>
+                          <div className={realEmployeeName ? 'mono' : ''} style={{ fontSize: 10.5, color: COLORS.muted, marginTop: 2 }}>
+                            {realEmployeeName ? employee.employeeId : 'Name not supplied in source files'}
+                          </div>
                         </div>
                         <span className="source-employee-cell">{employee.jobRole || employee.employeeRank || 'Unclassified'}</span>
                         <span className="source-employee-cell">{employee.employmentType || 'Historical record'}</span>
@@ -2335,7 +2384,7 @@ function TimesheetStage({
                           className="source-detail-toggle"
                           onClick={() => toggleSourceEmployeeDetail(employee)}
                           aria-expanded={expanded}
-                          aria-label={`${expanded ? 'Close' : 'Open'} payroll detail for ${employee.employeeName}`}
+                          aria-label={`${expanded ? 'Close' : 'Open'} payroll detail for ${employeeLabel}`}
                           title={expanded ? 'Close payroll detail' : 'Open payroll detail'}
                         >
                           {loading && expanded
