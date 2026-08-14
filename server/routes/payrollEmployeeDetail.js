@@ -371,6 +371,28 @@ function sanitizeComponentRow(row, chunkIndex) {
   }
 }
 
+function explainPercentageComponents(rows) {
+  const ordinaryRateByShift = new Map()
+  for (const row of rows) {
+    if (row.category === 'ordinary' && row.rate != null && row.amountMethod === 'hours-times-rate') {
+      ordinaryRateByShift.set(row.shiftReference, row.rate)
+    }
+  }
+  return rows.map((row) => {
+    const percentageRate = row.rateType === '2' || /\d+(?:\.\d+)?\s*%/.test(row.earningCode)
+    const baseRate = ordinaryRateByShift.get(row.shiftReference)
+    if (!percentageRate || row.hours == null || row.rate == null || baseRate == null) return row
+    const calculatedAmount = round(row.hours * baseRate * (row.rate / 100), 4)
+    if (Math.abs(calculatedAmount - row.amount) > 0.01) return row
+    return {
+      ...row,
+      baseRate,
+      amountMethod: 'hours-times-base-rate-times-percentage',
+      multipliedAmount: calculatedAmount,
+    }
+  })
+}
+
 function isoftComponentDate(row) {
   const value = row.SplitStartDate || row.ShiftDate
   const text = cleanText(value)
@@ -402,13 +424,14 @@ async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId
     }
   }
   rows.sort((left, right) => left.sourceRowNumber - right.sourceRowNumber)
+  const explainedRows = explainPercentageComponents(rows)
 
   const categoryAmounts = { ordinary: 0, overtime: 0, penalties: 0, allowances: 0, leave: 0, other: 0 }
-  for (const row of rows) categoryAmounts[row.category] += row.amount
-  const sourceGrossAtSourcePrecision = round(rows.reduce((sum, row) => sum + row.amount, 0), 4)
+  for (const row of explainedRows) categoryAmounts[row.category] += row.amount
+  const sourceGrossAtSourcePrecision = round(explainedRows.reduce((sum, row) => sum + row.amount, 0), 4)
   const totals = {
-    componentRows: rows.length,
-    componentHours: round(rows.reduce((sum, row) => sum + (row.hours || 0), 0), 4),
+    componentRows: explainedRows.length,
+    componentHours: round(explainedRows.reduce((sum, row) => sum + (row.hours || 0), 0), 4),
     sourceGrossAtSourcePrecision,
     sourceGrossAmount: round(sourceGrossAtSourcePrecision, 2),
     categories: Object.fromEntries(Object.entries(categoryAmounts).map(([key, value]) => [key, round(value, 4)])),
@@ -437,7 +460,7 @@ async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId
       auditId: chunk.id,
       hash: chunk.hash,
     })),
-    rows,
+    rows: explainedRows,
   }
 }
 

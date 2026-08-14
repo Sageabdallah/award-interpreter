@@ -50,17 +50,16 @@ const payload = {
     sourceComponentCount: 3,
     sourceRowNumbers: [2, 3, 4],
     sourceOrdinaryHours: 4,
-    sourceOvertimeHours: 2,
     sourceOrdinaryAmount: 100,
-    sourceOvertimeAmount: 50,
-    sourceAllowanceAmount: 28.3,
+    sourcePenaltyAmount: 10,
+    sourceAllowanceAmount: 68.3,
     sourceGrossAmount: 178.3,
     sourceEarningCodes: ['ORD'],
   }],
   components: [
     { _sourceRowNumber: 2, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '4', Rate: '25', RateType: 'Hourly', Amount: '100', EarningCode: 'ORD', EarningType: 'Ordinary' },
-    { _sourceRowNumber: 3, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '2', Rate: '25', RateType: 'Hourly', Amount: '50', EarningCode: 'OT', EarningType: 'Overtime' },
-    { _sourceRowNumber: 4, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '1.6', Rate: '17.6875', RateType: 'Hourly', Amount: '28.3', EarningCode: 'ALLOW', EarningType: 'Allowance' },
+    { _sourceRowNumber: 3, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '2', Rate: '20', RateType: '2', Amount: '10', EarningCode: '20% SHIFT', EarningType: 'Penalties' },
+    { _sourceRowNumber: 4, EmployeeID: '30458', ShiftID: '10', ShiftDate: '3/26/18', AwardCode: '(NSW) Security Services Industry Award', AwardClassificationCode: 'Level 3 Officer', Hours: '1.6', Rate: '42.6875', RateType: '1', Amount: '68.3', EarningCode: 'ALLOW', EarningType: 'Allowance' },
   ],
 }
 
@@ -167,7 +166,7 @@ describe('payroll import API', () => {
         weekEnd: '2018-04-01',
         payableHours: 7.6,
         sourceGrossAmount: 178.3,
-        categories: { ordinary: 100, overtime: 50, allowances: 28.3 },
+        categories: { ordinary: 100, penalties: 10, allowances: 68.3 },
         days: [{ date: '2018-03-26', payableHours: 7.6, sourceGrossAmount: 178.3 }],
       }],
     })
@@ -185,7 +184,7 @@ describe('payroll import API', () => {
       employeeId: publicEmployeeId,
       weekStart: '2018-03-26',
       expected: { componentRows: 3, sourceGrossAmount: 178.3 },
-      totals: { componentRows: 3, sourceGrossAmount: 178.3, categories: { ordinary: 100, overtime: 50, allowances: 28.3 } },
+      totals: { componentRows: 3, sourceGrossAmount: 178.3, categories: { ordinary: 100, penalties: 10, allowances: 68.3 } },
       differences: { componentRows: 0, sourceGrossAmount: 0 },
       reconciled: true,
     })
@@ -200,6 +199,14 @@ describe('payroll import API', () => {
         amountMethod: 'hours-times-rate',
       })]))
     expect(sourceComponentRows).toHaveLength(3)
+    expect(sourceComponentRows[1]).toMatchObject({
+      sourceRowNumber: 3,
+      rate: 20,
+      baseRate: 25,
+      amount: 10,
+      amountMethod: 'hours-times-base-rate-times-percentage',
+      multipliedAmount: 10,
+    })
     expect(sourceRows.body.sourceRows.verifiedChunks).toHaveLength(3)
     expect(JSON.stringify(sourceRows.body)).not.toContain('30458')
     expect((await request(app)

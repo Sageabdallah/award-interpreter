@@ -647,7 +647,7 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
                               <span>{payrollDate(row.date, { day: 'numeric', month: 'short' })}</span>
                               <span><strong>{row.earningCode || row.category}</strong><small>{row.earningType || row.category}</small></span>
                               <span className="mono">{decimal(row.hours)}</span>
-                              <span className="mono">{row.rate == null ? '-' : fmt(row.rate)}</span>
+                              <span className="mono">{row.rate == null ? '-' : row.amountMethod === 'hours-times-base-rate-times-percentage' ? `${decimal(row.rate)}%` : fmt(row.rate)}</span>
                               <strong className="mono">{fmt(row.amount)}</strong>
                               <button
                                 className="source-row-toggle"
@@ -666,10 +666,12 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
                                   <strong className="mono">
                                     {row.amountMethod === 'hours-times-rate'
                                       ? `${decimal(row.hours)} hrs × ${fmt(row.rate)} = ${fmt(row.amount)}`
-                                      : `Excel Amount cell = ${fmt(row.amount)}`}
+                                      : row.amountMethod === 'hours-times-base-rate-times-percentage'
+                                        ? `${decimal(row.hours)} hrs × ${fmt(row.baseRate)} base × ${decimal(row.rate)}% = ${fmt(row.amount)}`
+                                        : `Excel Amount cell = ${fmt(row.amount)}`}
                                   </strong>
                                 </div>
-                                <div><span>Rate metadata</span><strong>{row.rateType || 'Not supplied'}{row.baseRate != null ? ` · base ${fmt(row.baseRate)}` : ''}</strong></div>
+                                <div><span>Rate metadata</span><strong>{row.amountMethod === 'hours-times-base-rate-times-percentage' ? 'Percentage loading' : 'Direct rate'}{row.rateType ? ` · source type ${row.rateType}` : ''}</strong></div>
                                 <div><span>Classification</span><strong>{row.classification || 'Not supplied'}</strong></div>
                                 <div><span>Instrument</span><strong>{row.awardCode || 'Not supplied'}</strong></div>
                                 <div><span>Shift reference</span><strong className="mono">{row.shiftReference}</strong></div>
