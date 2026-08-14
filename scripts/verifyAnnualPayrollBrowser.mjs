@@ -117,8 +117,10 @@ try {
   assert(await reloadUploads.count() === 2, 'Restored workspace did not open directly on the payroll inputs')
   await reloadUploads.nth(0).setInputFiles(payrollPath)
   await page.getByText(/Source payroll loaded successfully\./).waitFor({ timeout: 180_000 })
-  const automaticSetupRestored = await page.getByText('Employee.xlsx', { exact: true }).count() > 0
-    && await page.locator('.source-employee-row').filter({ hasText: /Full-time|Part-time|Casual/ }).count() > 0
+  const automaticSetupRestored = await page.locator('.source-record')
+    .filter({ hasText: 'Employee master' })
+    .filter({ hasText: 'Employee.xlsx · Protected backend' })
+    .count() === 1
   assert(automaticSetupRestored, 'Retained Employee.xlsx setup did not auto-apply after reload')
 
   const optionalHealthErrors = httpErrors.filter(({ url }) => /\/api\/health(?:\?|$)/.test(url))
