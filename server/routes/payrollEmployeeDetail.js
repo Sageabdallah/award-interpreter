@@ -1,6 +1,7 @@
 import { publicPayrollId } from '../payrollPrivacy.js'
 
 const DETAIL_SCHEMA_VERSION = 'mss-payroll-employee-detail/v1'
+const DIRECTORY_SCHEMA_VERSION = 'mss-payroll-work-period-directory/v1'
 const PUBLIC_EMPLOYEE_ID = /^MSS-[A-F0-9]{10}$/
 const DETAIL_CACHE_LIMIT = 50
 
@@ -113,15 +114,19 @@ async function verifiedChunk(auditStore, ref, kind) {
   return record
 }
 
-async function findSourceEmployee(auditStore, manifest, requestedId) {
+async function sourceEmployeeIndex(auditStore, manifest, requestedId) {
+  const publicIdByRawId = new Map()
+  let match = null
   for (const ref of chunkRefs(manifest, 'employees')) {
     const chunk = await verifiedChunk(auditStore, ref, 'employees')
     for (const employee of chunk.data.rows || []) {
       const rawId = String(employee.employeeId || '')
-      if (publicPayrollId('MSS', rawId) === requestedId) return { rawId, employee }
+      const publicId = publicPayrollId('MSS', rawId)
+      publicIdByRawId.set(rawId, publicId)
+      if (publicId === requestedId) match = { rawId, employee }
     }
   }
-  return null
+  return { match, publicIdByRawId }
 }
 
 function dayRecord(dateKey) {
@@ -164,9 +169,21 @@ function finalizeWeek(week) {
   }
 }
 
-async function buildEmployeeDetail(auditStore, sourceRecord, requestedId) {
+function buildDirectory(sourceRecord, chunkIndexesByEmployee) {
+  return {
+    schemaVersion: DIRECTORY_SCHEMA_VERSION,
+    sourceAuditId: sourceRecord.id,
+    chunkIndexesByEmployee: Object.fromEntries(
+      [...chunkIndexesByEmployee.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([employeeId, indexes]) => [employeeId, [...indexes].sort((left, right) => left - right)]),
+    ),
+  }
+}
+
+async function buildEmployeeDetail(auditStore, sourceRecord, requestedId, directory = null) {
   const manifest = sourceRecord.data || {}
-  const match = await findSourceEmployee(auditStore, manifest, requestedId)
+  const { match, publicIdByRawId } = await sourceEmployeeIndex(auditStore, manifest, requestedId)
   if (!match) return null
 
   const totals = emptyTotals()
@@ -175,11 +192,25 @@ async function buildEmployeeDetail(auditStore, sourceRecord, requestedId) {
   const sourceInstruments = new Set()
   let firstDate = ''
   let lastDate = ''
+  const chunkIndexesByEmployee = directory ? null : new Map()
+  const workPeriodRefs = chunkRefs(manifest, 'work-periods')
+  const requestedChunkIndexes = directory?.chunkIndexesByEmployee?.[requestedId]
+  const selectedRefs = Array.isArray(requestedChunkIndexes)
+    ? workPeriodRefs.filter((ref) => requestedChunkIndexes.includes(ref.index))
+    : workPeriodRefs
 
-  for (const ref of chunkRefs(manifest, 'work-periods')) {
+  for (const ref of selectedRefs) {
     const chunk = await verifiedChunk(auditStore, ref, 'work-periods')
     for (const row of chunk.data.rows || []) {
-      if (String(row.employeeId || '') !== match.rawId) continue
+      const rawEmployeeId = String(row.employeeId || '')
+      if (chunkIndexesByEmployee) {
+        const publicEmployeeId = publicIdByRawId.get(rawEmployeeId)
+        if (publicEmployeeId) {
+          if (!chunkIndexesByEmployee.has(publicEmployeeId)) chunkIndexesByEmployee.set(publicEmployeeId, new Set())
+          chunkIndexesByEmployee.get(publicEmployeeId).add(ref.index)
+        }
+      }
+      if (rawEmployeeId !== match.rawId) continue
       const dateKey = isoDate(row.dateKey)
       if (!dateKey) continue
       const weekStart = weekStartFor(dateKey)
@@ -226,7 +257,7 @@ async function buildEmployeeDetail(auditStore, sourceRecord, requestedId) {
     && differences.componentRows === 0
     && Math.abs(differences.sourceGrossAmount) <= 0.01
 
-  return {
+  const detail = {
     schemaVersion: DETAIL_SCHEMA_VERSION,
     sourceAuditId: sourceRecord.id,
     sourceName: String(manifest.sourceName || ''),
@@ -242,10 +273,15 @@ async function buildEmployeeDetail(auditStore, sourceRecord, requestedId) {
     earningCodes: [...earningCodes].sort(),
     weeks: [...weeks.values()].sort((left, right) => left.weekStart.localeCompare(right.weekStart)).map(finalizeWeek),
   }
+  return {
+    detail,
+    directory: chunkIndexesByEmployee ? buildDirectory(sourceRecord, chunkIndexesByEmployee) : null,
+  }
 }
 
 export function payrollEmployeeDetailRoute({ auditStore }) {
   const memoryCache = new Map()
+  const directoryCache = new Map()
   const pending = new Map()
 
   function remember(key, detail) {
@@ -278,7 +314,19 @@ export function payrollEmployeeDetailRoute({ auditStore }) {
 
     if (!pending.has(cacheKey)) {
       pending.set(cacheKey, (async () => {
-        const detail = await buildEmployeeDetail(auditStore, latest, requestedId)
+        let directory = directoryCache.get(latest.id)
+        if (!directory) {
+          const savedDirectories = await auditStore.list({ kind: 'payroll-work-period-directory', limit: 10 })
+          directory = savedDirectories.find((record) => record.data?.schemaVersion === DIRECTORY_SCHEMA_VERSION
+            && record.data?.sourceAuditId === latest.id)?.data || null
+          if (directory) directoryCache.set(latest.id, directory)
+        }
+        const built = await buildEmployeeDetail(auditStore, latest, requestedId, directory)
+        const detail = built?.detail || null
+        if (built?.directory) {
+          await auditStore.save('payroll-work-period-directory', built.directory)
+          directoryCache.set(latest.id, built.directory)
+        }
         if (detail) await auditStore.save('payroll-employee-detail', detail)
         return detail
       })())

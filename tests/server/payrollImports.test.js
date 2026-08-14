@@ -165,6 +165,8 @@ describe('payroll import API', () => {
     })
     expect(JSON.stringify(detail.body)).not.toContain('30458')
     expect(auditStore.records.filter((record) => record.kind === 'payroll-employee-detail')).toHaveLength(1)
+    expect(auditStore.records.filter((record) => record.kind === 'payroll-work-period-directory')).toHaveLength(1)
+    expect(JSON.stringify(auditStore.records.find((record) => record.kind === 'payroll-work-period-directory'))).not.toContain('30458')
 
     const cachedDetail = await request(app).get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail`)
     expect(cachedDetail.status).toBe(200)
