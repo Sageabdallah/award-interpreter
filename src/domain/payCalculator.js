@@ -327,6 +327,7 @@ function buildUnmatchedRow(employee) {
 
 function sourceOnlyResults(timesheetData) {
   const sharedGaps = timesheetData.releaseBlockingGaps || []
+  const reconciliationVerified = timesheetData.reconciliationGate?.status === 'verified'
   const coverageByCode = new Map((timesheetData.coverageInventory || []).map((item) => [item.sourceCode, item]))
   const pendingInstruments = (timesheetData.coverageInventory || [])
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
@@ -372,9 +373,9 @@ function sourceOnlyResults(timesheetData) {
       totalHours: employee.totalHours,
       employmentType: employee.employmentType || '',
       shifts: employee.shifts,
-      calculationStatus: 'source-only-blocked',
+      calculationStatus: reconciliationVerified ? 'source-only-reconciled' : 'source-only-blocked',
       interpretation: {
-        status: 'source-only-blocked',
+        status: reconciliationVerified ? 'source-only-reconciled' : 'source-only-blocked',
         issues: rowGaps,
         awardCode: '',
         awardTitle: '',
@@ -392,6 +393,10 @@ function sourceOnlyResults(timesheetData) {
   return {
     sourceOnly: true,
     releaseBlocked: true,
+    reconciliationVerified,
+    reconciliationGate: timesheetData.reconciliationGate || null,
+    activeWorkspaceScope: timesheetData.activeWorkspaceScope || null,
+    workspaceScopes: timesheetData.workspaceScopes || [],
     employeeMaster: timesheetData.employeeMaster || null,
     coverageInventory: timesheetData.coverageInventory || [],
     releaseBlockingGaps: sharedGaps,

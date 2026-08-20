@@ -74,4 +74,29 @@ describe('iSOFT payroll importer', () => {
       verifiedSourceInstruments: 0,
     })
   })
+
+  it('reports a backend-certified source cohort as reconciled without enabling pay release', () => {
+    const parsed = importIsoftPayrollRows([
+      HEADERS,
+      row({ date: '3/26/24', hours: '7.6', rate: '23.46', amount: '178.296', category: 'Ordinary', code: 'ORDINARY' }),
+    ])
+    parsed.employees[0].employeeMasterMatched = true
+    parsed.employees[0].employmentType = 'Full-time'
+    parsed.employeeMaster = { matchedEmployees: 1, unmatchedEmployees: 0 }
+    parsed.reconciliationGate = { status: 'verified', objective: 'source-reconciliation' }
+    parsed.releaseBlockingGaps = []
+
+    const results = calculateTimesheetResults({}, parsed)
+
+    expect(results).toMatchObject({
+      sourceOnly: true,
+      releaseBlocked: true,
+      reconciliationVerified: true,
+      reconciliationGate: { objective: 'source-reconciliation' },
+    })
+    expect(results.rows[0]).toMatchObject({
+      calculationStatus: 'source-only-reconciled',
+      evidenceStatus: 'employee-and-instrument-matched',
+    })
+  })
 })

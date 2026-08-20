@@ -61,7 +61,7 @@ function describeExtras(row) {
 }
 
 export function resultsToCsv(rows) {
-  if (rows.some((row) => row.calculationStatus === 'source-only-blocked')) {
+  if (rows.some((row) => row.calculationStatus?.startsWith('source-only-'))) {
     const evidenceLabel = (row) => ({
       'employee-and-instrument-matched': 'Calculation held - employee and instrument matched',
       'employee-matched-instrument-pending': 'Calculation held - instrument evidence needed',
@@ -76,7 +76,9 @@ export function resultsToCsv(rows) {
       row.sourceComponentCount || 0,
       row.totalHours,
       row.sourceGrossPay,
-      evidenceLabel(row),
+      row.calculationStatus === 'source-only-reconciled'
+        ? 'Source reconciliation verified - entitlement not recalculated'
+        : evidenceLabel(row),
       row.validationErrors.join('; '),
     ])
     return [SOURCE_RESULT_COLUMN_ORDER, ...sourceBody]

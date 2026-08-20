@@ -8,6 +8,140 @@ import { isoftDateKey } from '../../src/domain/importers/isoftPayroll.js'
 import { publicPayrollId } from '../payrollPrivacy.js'
 
 const PREVIEW_PERIODS_PER_EMPLOYEE = 1
+const FULL_AUDIT_SCOPE_ID = 'full-annual-audit'
+const VERIFIED_SECURITY_SCOPE_ID = 'verified-security-cohort'
+const SECURITY_SOURCE_INSTRUMENT = '(NSW) Security Services Industry Award'
+const SECURITY_MASTER_AWARD_CODE = 'MA000016-NSW'
+
+function round(value, decimalPlaces = 2) {
+  const factor = 10 ** decimalPlaces
+  return Math.round((Number(value) + Number.EPSILON) * factor) / factor
+}
+
+function sumBy(rows, key) {
+  return rows.reduce((total, row) => total + (Number(row[key]) || 0), 0)
+}
+
+export function buildWorkspaceScopes({ employees, summary, coverageInventory, employeeMaster, releaseBlockingGaps }) {
+  const securityCoverage = coverageInventory.find((item) =>
+    item.normalizedInstrumentCode === 'MA000016'
+    && item.sourceCode === SECURITY_SOURCE_INSTRUMENT
+    && item.supportStatus === 'supported-date-range-needs-employee-evidence')
+  const securityEmployees = employees.filter((employee) =>
+    employee.employeeMasterMatched === true
+    && Boolean(employee.employmentType)
+    && employee.employeeMasterAwardCode === SECURITY_MASTER_AWARD_CODE
+    && employee.sourceAwardCodes?.length === 1
+    && employee.sourceAwardCodes[0] === SECURITY_SOURCE_INSTRUMENT)
+  const securitySummary = {
+    firstDate: securityCoverage?.firstShiftDate || summary.firstDate,
+    lastDate: securityCoverage?.lastShiftDate || summary.lastDate,
+    employees: securityEmployees.length,
+    instruments: securityCoverage ? 1 : 0,
+    workPeriods: sumBy(securityEmployees, 'workPeriodCount'),
+    payableHours: round(sumBy(securityEmployees, 'totalHours'), 4),
+    componentRows: sumBy(securityEmployees, 'sourceComponentCount'),
+    sourceGrossAmount: round(sumBy(securityEmployees, 'sourceGrossAmount')),
+    detailedWorkPeriods: securityEmployees.reduce((count, employee) => count + employee.shifts.length, 0),
+  }
+  const checks = [
+    {
+      id: 'employee-master-match',
+      label: 'Every selected payroll ID has an employee-master record.',
+      passed: securityEmployees.length > 0 && securityEmployees.every((employee) => employee.employeeMasterMatched),
+    },
+    {
+      id: 'employment-type-present',
+      label: 'Every selected employee has an employment type.',
+      passed: securityEmployees.length > 0 && securityEmployees.every((employee) => Boolean(employee.employmentType)),
+    },
+    {
+      id: 'employee-award-match',
+      label: 'Employee-master and payroll award mappings both resolve to MA000016 in NSW.',
+      passed: securityEmployees.length > 0 && securityEmployees.every((employee) =>
+        employee.employeeMasterAwardCode === SECURITY_MASTER_AWARD_CODE
+        && employee.sourceAwardCodes?.length === 1
+        && employee.sourceAwardCodes[0] === SECURITY_SOURCE_INSTRUMENT),
+    },
+    {
+      id: 'instrument-date-coverage',
+      label: 'The Security Services Industry Award source mapping covers the selected payroll dates.',
+      passed: Boolean(securityCoverage),
+    },
+    {
+      id: 'source-ledger-totals',
+      label: 'Every selected employee retains source rows, work periods, hours and gross totals.',
+      passed: securityEmployees.length > 0 && securityEmployees.every((employee) =>
+        employee.sourceComponentCount > 0
+        && employee.workPeriodCount > 0
+        && employee.totalHours > 0
+        && Number.isFinite(employee.sourceGrossAmount)),
+    },
+  ]
+  const reconciliationVerified = checks.every((check) => check.passed)
+  const fullAuditVerified = releaseBlockingGaps.length === 0
+    && employeeMaster?.unmatchedEmployees === 0
+    && coverageInventory.length > 0
+    && coverageInventory.every((item) => item.supportStatus === 'supported-date-range-needs-employee-evidence')
+  const scopedCoverage = securityCoverage ? [{
+    ...securityCoverage,
+    employeeCount: securityEmployees.length,
+    rowCount: securitySummary.componentRows,
+    sourceAmount: securitySummary.sourceGrossAmount,
+    classifications: [...new Set(securityEmployees.map((employee) => employee.jobRole).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, 'en-AU', { numeric: true }))
+      .join(','),
+  }] : []
+
+  return {
+    defaultScopeId: reconciliationVerified ? VERIFIED_SECURITY_SCOPE_ID : FULL_AUDIT_SCOPE_ID,
+    scopes: [
+      {
+        id: VERIFIED_SECURITY_SCOPE_ID,
+        label: 'Verified Security cohort',
+        shortLabel: 'Verified cohort',
+        description: 'Real NSW Security Award payroll records with complete employee and source-instrument matching.',
+        employeeIds: securityEmployees.map((employee) => employee.employeeId),
+        sourceSummary: securitySummary,
+        coverageInventory: scopedCoverage,
+        employeeMaster: {
+          ...(employeeMaster || {}),
+          availableSourceEmployees: employeeMaster?.sourceEmployees || 0,
+          sourceEmployees: securityEmployees.length,
+          matchedEmployees: securityEmployees.length,
+          unmatchedEmployees: 0,
+          employmentTypesSupplied: securityEmployees.length,
+          coveragePercent: securityEmployees.length ? 100 : 0,
+        },
+        releaseBlockingGaps: reconciliationVerified
+          ? []
+          : checks.filter((check) => !check.passed).map((check) => check.label),
+        reconciliationGate: {
+          objective: 'source-reconciliation',
+          status: reconciliationVerified ? 'verified' : 'blocked',
+          payReleaseStatus: 'not-evaluated',
+          checks,
+        },
+      },
+      {
+        id: FULL_AUDIT_SCOPE_ID,
+        label: 'Full annual audit',
+        shortLabel: 'Full annual audit',
+        description: 'All source instruments and historical payroll IDs, including unresolved evidence.',
+        sourceSummary: summary,
+        coverageInventory,
+        employeeMaster,
+        releaseBlockingGaps,
+        reconciliationGate: {
+          objective: 'source-reconciliation',
+          status: fullAuditVerified ? 'verified' : 'blocked',
+          payReleaseStatus: 'not-evaluated',
+          checks: [],
+        },
+      },
+    ],
+  }
+}
 
 function listValue(value) {
   if (Array.isArray(value)) return value.map(String).filter(Boolean)
@@ -198,6 +332,22 @@ async function buildWorkspace(auditStore, record) {
     lastDate: summary.lastDate,
     business: `${manifest.business || 'MSS Security'} source payroll export (Sydney)`,
   })
+  const releaseBlockingGaps = [
+    manifest.employeeMaster?.unmatchedEmployees > 0
+      ? `${manifest.employeeMaster.unmatchedEmployees} historical payroll IDs are absent from the supplied employee master.`
+      : '',
+    'Agreed ordinary-hours arrangements still require verification for the applicable payroll dates.',
+    pendingInstruments > 0
+      ? `${pendingInstruments} source instruments still require verified operative rules.`
+      : '',
+  ].filter(Boolean)
+  const workspaceScopes = buildWorkspaceScopes({
+    employees,
+    summary,
+    coverageInventory: manifest.coverageInventory || [],
+    employeeMaster: manifest.employeeMaster || null,
+    releaseBlockingGaps,
+  })
 
   return {
     audit: { id: record.id, createdAt: record.createdAt, hash: record.hash },
@@ -225,15 +375,9 @@ async function buildWorkspace(auditStore, record) {
       },
       coverageInventory: manifest.coverageInventory || [],
       employeeMaster: manifest.employeeMaster || null,
-      releaseBlockingGaps: [
-        manifest.employeeMaster?.unmatchedEmployees > 0
-          ? `${manifest.employeeMaster.unmatchedEmployees} historical payroll IDs are absent from the supplied employee master.`
-          : '',
-        'Agreed ordinary-hours arrangements still require verification for the applicable payroll dates.',
-        pendingInstruments > 0
-          ? `${pendingInstruments} source instruments still require verified operative rules.`
-          : '',
-      ].filter(Boolean),
+      releaseBlockingGaps,
+      workspaceScopes: workspaceScopes.scopes,
+      defaultWorkspaceScopeId: workspaceScopes.defaultScopeId,
       sourceDataNotes: [
         'The complete source ledger remains in the protected audit store; this response contains privacy-sanitised employee summaries and a bounded work-period preview.',
       ],
@@ -255,7 +399,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
         promise: (async () => {
           const snapshots = await auditStore.list({ kind: 'payroll-workspace-snapshot', limit: 1 })
           const snapshot = snapshots.find((item) => item.data?.sourceAuditId === latest.id)
-          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v4' && snapshot.data.workspace?.documentPack) {
+          if (snapshot?.data?.schemaVersion === 'mss-workspace-snapshot/v5' && snapshot.data.workspace?.documentPack) {
             return snapshot.data.workspace
           }
 
@@ -264,7 +408,7 @@ export function latestMssWorkspaceRoute({ auditStore }) {
           // avoids rescanning 257k work periods whenever a free instance wakes.
           await auditStore.save('payroll-workspace-snapshot', {
             sourceAuditId: latest.id,
-            schemaVersion: 'mss-workspace-snapshot/v4',
+            schemaVersion: 'mss-workspace-snapshot/v5',
             workspace,
           })
           return workspace

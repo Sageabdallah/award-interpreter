@@ -174,9 +174,10 @@ export function enrichSourcePayroll(timesheetData, employeeMasterData) {
       `${unmatchedEmployees.toLocaleString()} payroll employees are not present in the supplied employee master; ${missingEmploymentTypes.toLocaleString()} employment types remain unavailable.`,
     )
   }
-  releaseBlockingGaps.push(
-    'Agreed ordinary-hours arrangements still require verification for the applicable payroll dates.',
-  )
+  const ordinaryHoursGap = 'Agreed ordinary-hours arrangements still require verification for the applicable payroll dates.'
+  if (timesheetData.reconciliationGate?.status !== 'verified' && !releaseBlockingGaps.includes(ordinaryHoursGap)) {
+    releaseBlockingGaps.push(ordinaryHoursGap)
+  }
 
   return {
     ...timesheetData,

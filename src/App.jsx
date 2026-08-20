@@ -52,6 +52,7 @@ import {
   employeeMasterFromBackendWorkspace,
   pseudonymizeEmployeeMaster,
   pseudonymizeSourcePayroll,
+  selectBackendWorkspaceScope,
 } from './domain/backendWorkspace.js'
 import {
   clearEmployeeMasterCache,
@@ -229,6 +230,23 @@ function reducer(state, action) {
           backendManaged: true,
         },
         sourceTimesheetData: action.sourceTimesheetData || action.timesheetData,
+        timesheetData: action.timesheetData,
+        employeeMasterFile: {
+          name: action.employeeMasterData.sourceName || 'Employee.xlsx',
+          size: action.employeeMasterData.sourceSize,
+          backendManaged: true,
+        },
+        employeeMasterData: action.employeeMasterData,
+        employeeMasterError: '',
+        timesheetError: '',
+        results: action.results,
+        ...leaveReset,
+      }
+    case 'setBackendWorkspaceScope':
+      return {
+        ...state,
+        stage: 5,
+        sourceTimesheetData: action.sourceTimesheetData,
         timesheetData: action.timesheetData,
         employeeMasterFile: {
           name: action.employeeMasterData.sourceName || 'Employee.xlsx',
@@ -1011,6 +1029,18 @@ const GLOBAL_CSS = `
   .source-workspace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
     background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md);
     overflow: hidden; margin-bottom: 20px; }
+  .workspace-scope { display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    padding: 12px 14px; margin-bottom: 20px; border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .workspace-scope-copy { min-width: 0; }
+  .workspace-scope-copy p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .workspace-scope-tabs { flex: 0 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 3px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--card); }
+  .workspace-scope-tab { min-height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 6px 11px; border: 0; border-radius: 5px; background: transparent;
+    color: var(--muted); font: 600 12px var(--body); cursor: pointer; white-space: nowrap; }
+  .workspace-scope-tab:hover { color: var(--ink); background: var(--surface-2); }
+  .workspace-scope-tab.active { color: var(--sage); background: rgba(47,125,87,0.1); }
   .source-record { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
     align-items: center; gap: 11px; padding: 14px 16px; }
   .source-record + .source-record { border-left: 1px solid var(--line); }
@@ -1192,6 +1222,8 @@ const GLOBAL_CSS = `
     .table-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; }
     .table-inner { min-width: 860px; }
     .source-workspace { grid-template-columns: 1fr; }
+    .workspace-scope { align-items: stretch; flex-direction: column; }
+    .workspace-scope-tabs { width: 100%; }
     .source-record + .source-record { border-left: 0; border-top: 1px solid var(--line); }
     .source-summary-grid { grid-template-columns: 1fr 1fr; }
     .source-summary-item:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
@@ -1214,6 +1246,7 @@ const GLOBAL_CSS = `
     .source-employee-controls { grid-template-columns: 1fr; }
     .source-filter-search { grid-column: auto; }
     .source-filter-reset { justify-content: center; }
+    .workspace-scope-tabs { grid-template-columns: 1fr; }
     .source-week-toolbar, .source-explanation-heading { align-items: stretch; flex-direction: column; }
     .source-week-select-label { grid-template-columns: 1fr; }
     .source-week-breakdown-heading { align-items: flex-start; flex-direction: column; }
@@ -2206,6 +2239,39 @@ function InterpretationStage({ parsedCache, onBack, onContinue }) {
   )
 }
 
+function WorkspaceScopeControl({ scopes, activeScopeId, onChange }) {
+  if (!scopes || scopes.length < 2) return null
+  const activeScope = scopes.find((scope) => scope.id === activeScopeId) || scopes[0]
+  return (
+    <section className="workspace-scope" aria-label="Payroll review scope">
+      <div className="workspace-scope-copy">
+        <div className="eyebrow">Review scope</div>
+        <p>{activeScope.description}</p>
+      </div>
+      <div className="workspace-scope-tabs" role="tablist" aria-label="Payroll review scope">
+        {scopes.map((scope) => {
+          const active = scope.id === activeScope.id
+          return (
+            <button
+              className={`workspace-scope-tab${active ? ' active' : ''}`}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              key={scope.id}
+              onClick={() => onChange(scope.id)}
+            >
+              {scope.reconciliationGate?.status === 'verified'
+                ? <CheckCircle2 size={14} strokeWidth={2} />
+                : <Database size={14} strokeWidth={1.9} />}
+              {scope.shortLabel || scope.label}
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 // Stage 4 — the pay run itself: upload the timesheet against the cache built
 // in stages 2–3, preview the parsed shifts, then calculate.
 function TimesheetStage({
@@ -2219,6 +2285,7 @@ function TimesheetStage({
   employeeMasterCacheStatus,
   onTimesheetFile,
   onEmployeeMasterFile,
+  onWorkspaceScope,
   onBack,
   onContinue,
 }) {
@@ -2226,6 +2293,7 @@ function TimesheetStage({
   const parsingTimesheet = Boolean(timesheetFile) && !timesheetData && !timesheetError
   const parsingEmployeeMaster = Boolean(employeeMasterFile) && !employeeMasterData && !employeeMasterError
   const sourceOnly = Boolean(timesheetData?.sourceOnly)
+  const reconciliationVerified = timesheetData?.reconciliationGate?.status === 'verified'
   const sourceWorkspaceMode = sourceOnly || (parsingTimesheet && employeeMasterData?.backendManaged)
   const pendingInstruments = (timesheetData?.coverageInventory || [])
     .filter((item) => item.supportStatus !== 'supported-date-range-needs-employee-evidence')
@@ -2457,6 +2525,14 @@ function TimesheetStage({
         </div>
       )}
 
+      {sourceOnly && (
+        <WorkspaceScopeControl
+          scopes={timesheetData.workspaceScopes}
+          activeScopeId={timesheetData.activeWorkspaceScopeId}
+          onChange={onWorkspaceScope}
+        />
+      )}
+
       {timesheetError && (
         <div style={{ marginBottom: 18 }}>
           <Flag danger>{timesheetError}</Flag>
@@ -2500,13 +2576,13 @@ function TimesheetStage({
               <div className="source-review-title">
                 <CheckCircle2 size={20} color={COLORS.sage} strokeWidth={2} />
                 <div style={{ minWidth: 0 }}>
-                  <h2>Source payroll loaded successfully.</h2>
+                  <h2>{reconciliationVerified ? 'Security cohort reconciled.' : 'Source payroll loaded successfully.'}</h2>
                   <div style={{ fontSize: 12, color: COLORS.muted, marginTop: 3 }}>
                     {timesheetData.sourceSummary.componentRows.toLocaleString()} source rows · {timesheetData.sourceSummary.firstDate} to {timesheetData.sourceSummary.lastDate}
                   </div>
                 </div>
               </div>
-              <span className="source-ready">PROCESSED</span>
+              <span className="source-ready">{reconciliationVerified ? 'VERIFIED' : 'PROCESSED'}</span>
             </div>
             <div className="source-summary-grid">
               <div className="source-summary-item">
@@ -2787,11 +2863,13 @@ function payrunExplainRequest(row) {
 }
 
 function SourceResultRow({ row, isOpen, onToggle }) {
-  const evidence = {
+  const evidence = row.calculationStatus === 'source-only-reconciled'
+    ? { label: 'Source reconciliation verified', color: COLORS.sage }
+    : ({
     'employee-and-instrument-matched': { label: 'Employee + award matched', color: COLORS.sage },
     'employee-matched-instrument-pending': { label: 'Employee matched · instrument needed', color: COLORS.warn },
     'employee-pending': { label: 'Employee data needed', color: COLORS.warn },
-  }[row.evidenceStatus] || { label: 'Evidence review needed', color: COLORS.warn }
+    }[row.evidenceStatus] || { label: 'Evidence review needed', color: COLORS.warn })
   return (
     <div className="rowwrap fade-up">
       <div
@@ -3270,10 +3348,11 @@ function InterpretationTable({ rows }) {
   )
 }
 
-function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence, expandedRowId, onToggleRow, ragAvailable }) {
+function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence, onWorkspaceScope, expandedRowId, onToggleRow, ragAvailable }) {
   const [resultPage, setResultPage] = useState(0)
   useEffect(() => setResultPage(0), [results])
   const sourceOnly = Boolean(results.sourceOnly)
+  const reconciliationVerified = Boolean(results.reconciliationVerified)
   const visibleRows = results.rows.slice(resultPage * REVIEW_PAGE_SIZE, (resultPage + 1) * REVIEW_PAGE_SIZE)
   return (
     <div className="fade-up">
@@ -3284,7 +3363,7 @@ function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence
             {sourceOnly ? 'Source payroll · reconciliation mode' : 'Pay Run · calculation complete'}
           </div>
           <h1 className="display" style={{ fontSize: 'clamp(26px, 3.2vw, 36px)' }}>
-            {results.stats.employees} {sourceOnly ? 'source employees loaded' : 'employees calculated'}
+            {results.stats.employees} {reconciliationVerified ? 'Security employees reconciled' : sourceOnly ? 'source employees loaded' : 'employees calculated'}
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
@@ -3297,29 +3376,48 @@ function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence
         </div>
       </div>
 
+      {sourceOnly && (
+        <WorkspaceScopeControl
+          scopes={results.workspaceScopes}
+          activeScopeId={results.activeWorkspaceScope?.id}
+          onChange={onWorkspaceScope}
+        />
+      )}
+
       <div className="stats-grid" style={{ marginBottom: 36 }}>
-        <StatCard icon={Clock} label={sourceOnly ? 'Payable hours' : 'Total hours'} value={`${results.stats.totalHours}`} caption="across the uploaded payroll" accent={COLORS.ink} />
+        <StatCard icon={Clock} label={sourceOnly ? 'Payable hours' : 'Total hours'} value={Number(results.stats.totalHours).toLocaleString('en-AU', { maximumFractionDigits: 2 })} caption="across the uploaded payroll" accent={COLORS.ink} />
         <StatCard icon={Banknote} label={sourceOnly ? 'Source gross' : 'Base pay'} value={fmt(sourceOnly ? results.stats.sourceGrossPay : results.stats.totalBasePay)} caption={sourceOnly ? 'recorded amount, not recalculated entitlement' : 'hours × matched base pay rate'} accent={COLORS.sage} />
         <StatCard icon={Layers} label={sourceOnly ? 'Source rows' : 'Extras'} value={sourceOnly ? results.stats.sourceComponentRows.toLocaleString() : fmt(results.stats.totalExtras)} caption={sourceOnly ? `${results.stats.sourceWorkPeriods.toLocaleString()} grouped work periods` : 'allowances and penalties'} accent={COLORS.ochre} />
         <StatCard
           icon={Scale}
-          label={sourceOnly ? 'Instruments pending' : 'Validation rows'}
-          value={`${sourceOnly ? results.stats.pendingSourceInstruments : results.stats.validationErrors}`}
-          caption={sourceOnly ? `${results.stats.verifiedSourceInstruments} verified · historical evidence required` : 'employees needing manual review'}
-          accent={sourceOnly ? COLORS.warn : COLORS.red}
+          label={reconciliationVerified ? 'Instrument verified' : sourceOnly ? 'Instruments pending' : 'Validation rows'}
+          value={`${reconciliationVerified ? results.stats.verifiedSourceInstruments : sourceOnly ? results.stats.pendingSourceInstruments : results.stats.validationErrors}`}
+          caption={reconciliationVerified ? 'MA000016 source mapping' : sourceOnly ? `${results.stats.verifiedSourceInstruments} verified · historical evidence required` : 'employees needing manual review'}
+          accent={reconciliationVerified ? COLORS.sage : sourceOnly ? COLORS.warn : COLORS.red}
         />
       </div>
 
       {sourceOnly && (
         <div style={{ marginBottom: 22 }}>
           <Flag success>All source rows and recorded totals are retained for reconciliation.</Flag>
-          <div style={{ marginTop: 10 }}>
-            <Flag>No entitlement has been recalculated. Pay release remains held until employee gaps, ordinary-hours arrangements and historical instrument evidence are resolved.</Flag>
-          </div>
+          {reconciliationVerified ? (
+            <div style={{ marginTop: 10 }}>
+              <Flag success>Backend checks passed for employee records, employment type, MA000016-NSW mapping, payroll-date coverage and source totals.</Flag>
+            </div>
+          ) : (
+            <div style={{ marginTop: 10 }}>
+              <Flag>No entitlement has been recalculated. Pay release remains held until employee gaps, ordinary-hours arrangements and historical instrument evidence are resolved.</Flag>
+            </div>
+          )}
           {results.employeeMaster && (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10 }}>
-              <Flag success>{results.stats.employeeMasterMatched.toLocaleString()} employee records auto-matched.</Flag>
+              <Flag success>{results.stats.employeeMasterMatched.toLocaleString()} employee records matched.</Flag>
               {results.stats.employeeMasterUnmatched > 0 && <Flag>{results.stats.employeeMasterUnmatched.toLocaleString()} employee IDs need master-data records.</Flag>}
+            </div>
+          )}
+          {reconciliationVerified && (
+            <div style={{ marginTop: 10, color: COLORS.muted, fontSize: 12.5, lineHeight: 1.5 }}>
+              This scope verifies the real Excel source ledger and matching evidence. It does not present source gross as a recalculated award entitlement.
             </div>
           )}
         </div>
@@ -3372,14 +3470,14 @@ function ResultsStage({ results, onExport, onReset, onDisperse, onReviewEvidence
 
       <div className="sticky-bar" style={{ marginTop: 22 }}>
         <div>
-          <span className="eyebrow">{sourceOnly ? 'Calculation held' : 'Ready to disperse'}</span>
+          <span className="eyebrow">{reconciliationVerified ? 'Reconciliation verified' : sourceOnly ? 'Calculation held' : 'Ready to disperse'}</span>
           <div style={{ marginTop: 5, fontSize: 14.5 }}>
             <span style={{ fontWeight: 600 }}>{results.stats.employees} employees</span>
             <span style={{ color: COLORS.muted }}> · {sourceOnly ? `${fmt(results.stats.sourceGrossPay)} source gross retained` : `${fmt(results.stats.totalCalculatedPay)} total calculated pay`}</span>
           </div>
         </div>
-        <button className="btn-primary" onClick={sourceOnly ? onReviewEvidence : onDisperse}>
-          {sourceOnly ? 'Review evidence gaps' : 'Disperse pay'} <ArrowRight size={18} strokeWidth={2} />
+        <button className="btn-primary" onClick={reconciliationVerified ? () => onWorkspaceScope('full-annual-audit') : sourceOnly ? onReviewEvidence : onDisperse}>
+          {reconciliationVerified ? 'Open full annual audit' : sourceOnly ? 'Review evidence gaps' : 'Disperse pay'} <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
     </div>
@@ -3770,10 +3868,11 @@ export default function App() {
       .then(async (payload) => {
         if (cancelled || !payload?.workspace?.timesheetData) return
         const backendTimesheetData = payload.workspace.timesheetData
-        const sourceTimesheetData = {
+        const fullSourceTimesheetData = {
           ...backendTimesheetData,
           shifts: backendTimesheetData.shifts || backendTimesheetData.employees.flatMap((employee) => employee.shifts || []),
         }
+        const sourceTimesheetData = selectBackendWorkspaceScope(fullSourceTimesheetData)
         const cachedEmployeeMaster = await loadEmployeeMasterCache().catch(() => null)
         const backendEmployeeMaster = employeeMasterFromBackendWorkspace(sourceTimesheetData)
         const employeeMasterData = mergeEmployeeMasterIdentity(backendEmployeeMaster, cachedEmployeeMaster?.data)
@@ -3788,6 +3887,8 @@ export default function App() {
         const restoredWorkspace = {
           cache,
           documents,
+          fullSourceTimesheetData,
+          identityData: cachedEmployeeMaster?.data || null,
           sourceTimesheetData,
           timesheetData,
           employeeMasterData,
@@ -3992,6 +4093,20 @@ export default function App() {
       return
     }
     dispatch({ type: 'setIndustry', industry })
+    setExpandedRowId(null)
+  }
+
+  const handleWorkspaceScope = (scopeId) => {
+    const backendWorkspace = backendWorkspaceRef.current
+    if (!backendWorkspace?.fullSourceTimesheetData) return
+    const sourceTimesheetData = selectBackendWorkspaceScope(backendWorkspace.fullSourceTimesheetData, scopeId)
+    const backendEmployeeMaster = employeeMasterFromBackendWorkspace(sourceTimesheetData)
+    const employeeMasterData = mergeEmployeeMasterIdentity(backendEmployeeMaster, backendWorkspace.identityData)
+    const timesheetData = enrichSourcePayroll(sourceTimesheetData, employeeMasterData)
+    const results = calculateTimesheetResults(backendWorkspace.cache, timesheetData)
+    const scopedWorkspace = { sourceTimesheetData, timesheetData, employeeMasterData, results }
+    backendWorkspaceRef.current = { ...backendWorkspace, ...scopedWorkspace }
+    dispatch({ type: 'setBackendWorkspaceScope', ...scopedWorkspace })
     setExpandedRowId(null)
   }
 
@@ -4261,6 +4376,7 @@ export default function App() {
           employeeMasterCacheStatus={employeeMasterCacheStatus}
           onTimesheetFile={handleTimesheetFile}
           onEmployeeMasterFile={handleEmployeeMasterFile}
+          onWorkspaceScope={handleWorkspaceScope}
           onBack={() => navigate('award-interpretation')}
           onContinue={() => { handleCalculate(); navigate('pay-run') }}
         />
@@ -4287,6 +4403,7 @@ export default function App() {
             onReset={handleReset}
             onDisperse={() => dispatch({ type: 'setStage', stage: 6 })}
             onReviewEvidence={() => navigate('time-entry')}
+            onWorkspaceScope={handleWorkspaceScope}
             ragAvailable={health.available}
           />
         )

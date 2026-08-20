@@ -10,6 +10,32 @@ export async function publicWorkspaceId(prefix, value) {
   return `${prefix}-${(await sha256(`axi-workspace/v1/${value}`)).slice(0, 10).toUpperCase()}`
 }
 
+export function selectBackendWorkspaceScope(timesheetData, requestedScopeId) {
+  const scopes = timesheetData?.workspaceScopes || []
+  if (!timesheetData || !scopes.length) return timesheetData
+  const scopeId = requestedScopeId || timesheetData.defaultWorkspaceScopeId
+  const scope = scopes.find((item) => item.id === scopeId) || scopes[0]
+  const employeeIds = scope.employeeIds ? new Set(scope.employeeIds) : null
+  const employees = employeeIds
+    ? timesheetData.employees.filter((employee) => employeeIds.has(employee.employeeId))
+    : timesheetData.employees
+  const sourceSummary = employeeIds ? scope.sourceSummary : timesheetData.sourceSummary
+
+  return {
+    ...timesheetData,
+    activeWorkspaceScopeId: scope.id,
+    activeWorkspaceScope: scope,
+    employees,
+    shifts: employees.flatMap((employee) => employee.shifts || []),
+    totalHours: Number(sourceSummary?.payableHours) || 0,
+    sourceSummary,
+    coverageInventory: scope.coverageInventory || timesheetData.coverageInventory || [],
+    employeeMaster: scope.employeeMaster || timesheetData.employeeMaster || null,
+    releaseBlockingGaps: scope.releaseBlockingGaps || [],
+    reconciliationGate: scope.reconciliationGate || null,
+  }
+}
+
 async function employeeIdMap(employeeIds) {
   const unique = [...new Set(employeeIds.map(String).filter(Boolean))]
   return new Map(await Promise.all(unique.map(async (employeeId) => [
