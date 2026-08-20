@@ -40,7 +40,15 @@ function excelColumn(index) {
   return column
 }
 
-function componentCellReferences(row, sourceRowNumber) {
+function componentCellReferences(row, sourceRowNumber, sourceName) {
+  if (worksheetNameFor(sourceName) === 'Nsw_Payroll') {
+    return {
+      hours: `I${sourceRowNumber}`,
+      rate: `J${sourceRowNumber}`,
+      amount: `L${sourceRowNumber}`,
+      earningCode: `M${sourceRowNumber}`,
+    }
+  }
   const headers = Object.keys(row).filter((key) => key !== '_sourceRowNumber')
   const cellFor = (...names) => {
     const index = headers.findIndex((header) => names.includes(header))
@@ -366,7 +374,7 @@ async function componentChunksForSourceRows(auditStore, refs, sourceRowNumbers) 
   return [...selected.entries()].sort(([left], [right]) => left - right)
 }
 
-function sanitizeComponentRow(row, chunkIndex) {
+function sanitizeComponentRow(row, chunkIndex, sourceName) {
   const sourceRowNumber = Number(row._sourceRowNumber)
   const hours = optionalNumber(row.Hours)
   const rate = optionalNumber(row.Rate)
@@ -395,7 +403,7 @@ function sanitizeComponentRow(row, chunkIndex) {
     classification: cleanText(row.AwardClassificationCode, 300),
     shiftDefinition: cleanText(row.shiftTypecode || row.ShiftDefinition, 300),
     payIndicator: cleanText(row.PayIndicator, 200),
-    cellReferences: componentCellReferences(row, sourceRowNumber),
+    cellReferences: componentCellReferences(row, sourceRowNumber, sourceName),
   }
 }
 
@@ -445,7 +453,7 @@ async function loadEmployeeSourceRows(auditStore, sourceRecord, requestedId, sou
   for (const [position, chunk] of chunks) {
     for (const row of chunk.data.rows || []) {
       if (String(row.EmployeeID || '') !== match.rawId || !requestedRows.has(Number(row._sourceRowNumber))) continue
-      rows.push(sanitizeComponentRow(row, componentRefs[position].index))
+      rows.push(sanitizeComponentRow(row, componentRefs[position].index, sourceRecord.data?.sourceName))
     }
   }
   rows.sort((left, right) => left.sourceRowNumber - right.sourceRowNumber)

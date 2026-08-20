@@ -24,7 +24,7 @@ function appFor(auditStore, security = {}) {
 
 const payload = {
   schemaVersion: ISOFT_PAYROLL_SCHEMA_VERSION,
-  sourceName: 'payroll test data.xlsx',
+  sourceName: 'Nsw_Payroll 1.xlsx',
   sourceSize: 100,
   sourceFingerprint: 'a'.repeat(64),
   sourceSummary: {
@@ -180,7 +180,7 @@ describe('payroll import API', () => {
     expect(sourceRows.status).toBe(200)
     const { rows: sourceComponentRows, ...sourceRowSummary } = sourceRows.body.sourceRows
     expect(sourceRowSummary).toMatchObject({
-      sourceName: 'payroll test data.xlsx',
+      sourceName: 'Nsw_Payroll 1.xlsx',
       employeeId: publicEmployeeId,
       weekStart: '2018-03-26',
       expected: { componentRows: 3, sourceGrossAmount: 178.3 },
@@ -214,7 +214,7 @@ describe('payroll import API', () => {
       .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?category=ordinary`)
     expect(annualOrdinaryRows.status).toBe(200)
     expect(annualOrdinaryRows.body.sourceRows).toMatchObject({
-      sourceName: 'payroll test data.xlsx',
+      sourceName: 'Nsw_Payroll 1.xlsx',
       employeeId: publicEmployeeId,
       scope: { type: 'annual-category', category: 'ordinary', label: 'Ordinary' },
       expected: { componentRows: 1, sourceGrossAmount: 100 },
@@ -224,10 +224,10 @@ describe('payroll import API', () => {
       rows: [{ sourceRowNumber: 2, category: 'ordinary', amount: 100 }],
     })
     expect(annualOrdinaryRows.body.sourceRows.rows[0].cellReferences).toMatchObject({
-      hours: 'F2',
-      rate: 'G2',
-      amount: 'I2',
-      earningCode: 'J2',
+      hours: 'I2',
+      rate: 'J2',
+      amount: 'L2',
+      earningCode: 'M2',
     })
 
     const annualPenaltyRows = await request(app)
