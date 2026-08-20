@@ -209,8 +209,49 @@ describe('payroll import API', () => {
     })
     expect(sourceRows.body.sourceRows.verifiedChunks).toHaveLength(3)
     expect(JSON.stringify(sourceRows.body)).not.toContain('30458')
+
+    const annualOrdinaryRows = await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?category=ordinary`)
+    expect(annualOrdinaryRows.status).toBe(200)
+    expect(annualOrdinaryRows.body.sourceRows).toMatchObject({
+      sourceName: 'payroll test data.xlsx',
+      employeeId: publicEmployeeId,
+      scope: { type: 'annual-category', category: 'ordinary', label: 'Ordinary' },
+      expected: { componentRows: 1, sourceGrossAmount: 100 },
+      totals: { componentRows: 1, sourceGrossAtSourcePrecision: 100, sourceGrossAmount: 100 },
+      differences: { componentRows: 0, sourceGrossAmount: 0 },
+      reconciled: true,
+      rows: [{ sourceRowNumber: 2, category: 'ordinary', amount: 100 }],
+    })
+    expect(annualOrdinaryRows.body.sourceRows.rows[0].cellReferences).toMatchObject({
+      hours: 'F2',
+      rate: 'G2',
+      amount: 'I2',
+      earningCode: 'J2',
+    })
+
+    const annualPenaltyRows = await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?category=penalties`)
+    expect(annualPenaltyRows.status).toBe(200)
+    expect(annualPenaltyRows.body.sourceRows).toMatchObject({
+      scope: { type: 'annual-category', category: 'penalties' },
+      expected: { componentRows: 1, sourceGrossAmount: 10 },
+      totals: { componentRows: 1, sourceGrossAmount: 10 },
+      reconciled: true,
+      rows: [{
+        sourceRowNumber: 3,
+        baseRate: 25,
+        amount: 10,
+        amountMethod: 'hours-times-base-rate-times-percentage',
+      }],
+    })
+    expect(JSON.stringify(annualPenaltyRows.body)).not.toContain('30458')
     expect((await request(app)
       .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?weekStart=bad`)).status).toBe(400)
+    expect((await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows?category=rounding`)).status).toBe(400)
+    expect((await request(app)
+      .get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail/source-rows`)).status).toBe(400)
 
     const cachedDetail = await request(app).get(`/api/workspaces/mss/employees/${publicEmployeeId}/payroll-detail`)
     expect(cachedDetail.status).toBe(200)

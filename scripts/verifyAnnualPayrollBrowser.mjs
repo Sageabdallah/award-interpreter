@@ -117,16 +117,39 @@ try {
   const sourceRowChecks = {
     rowsLoaded: await page.locator('.source-row-line').count() > 0,
     workbookNamed: /Nsw_Payroll 1\.xlsx/.test(sourceRowText),
-    sumExplained: /SUM of \d+ Excel Amount cells = \$681\.22/.test(sourceRowText),
+    sumExplained: /SUM of \d+ Excel Amount cells = \$681\.2199.*\$681\.22 after cent rounding/.test(sourceRowText),
     weeklyGrossMatched: /weekly gross = \$681\.22/.test(sourceRowText),
     zeroDifference: /difference = \$0\.00/.test(sourceRowText),
     auditVerified: /verified audit chunk/i.test(sourceRowText),
+    worksheetNamed: /Worksheet Nsw_Payroll/.test(sourceRowText),
   }
   assert(Object.values(sourceRowChecks).every(Boolean), `Source row checks failed: ${JSON.stringify(sourceRowChecks)}`)
   await page.locator('.source-row-toggle').first().click()
   await page.getByText('Verified source', { exact: true }).waitFor({ timeout: 10_000 })
   await page.screenshot({ path: path.join(outputDir, 'payroll-detail-rounding.png') })
   await page.getByRole('button', { name: `Close payroll detail for ${detailEmployeeReference}` }).click()
+  await employeeSearch.fill('')
+
+  const annualEmployeeReference = 'MSS-0A3D8DD2AA'
+  await employeeSearch.fill(annualEmployeeReference)
+  await page.getByRole('button', { name: `Open payroll detail for ${annualEmployeeReference}` }).click()
+  await page.getByText('How the Excel total is built', { exact: true }).waitFor({ timeout: 60_000 })
+  await page.getByRole('button', { name: 'Show Excel rows for Ordinary' }).click()
+  const annualLedger = page.locator('.annual-source-row-ledger')
+  await annualLedger.locator('.source-row-check').waitFor({ timeout: 60_000 })
+  const annualSourceText = (await annualLedger.innerText()).replace(/\s+/g, ' ')
+  const annualSourceRowChecks = {
+    rowsLoaded: await annualLedger.locator('.source-row-line').count() > 0,
+    subtotalMatched: /Ordinary subtotal = \$21,677\.76/.test(annualSourceText),
+    zeroDifference: /difference = \$0\.00/.test(annualSourceText),
+    worksheetNamed: /Worksheet Nsw_Payroll/.test(annualSourceText),
+    amountCellsShown: /[A-Z]+\d+/.test(annualSourceText),
+  }
+  assert(Object.values(annualSourceRowChecks).every(Boolean), `Annual source-row checks failed: ${JSON.stringify(annualSourceRowChecks)}`)
+  await annualLedger.locator('.source-row-toggle').first().click()
+  await annualLedger.getByText('Excel cells', { exact: true }).waitFor({ timeout: 10_000 })
+  await page.screenshot({ path: path.join(outputDir, 'annual-category-source-rows.png') })
+  await page.getByRole('button', { name: `Close payroll detail for ${annualEmployeeReference}` }).click()
   await employeeSearch.fill('')
 
   await page.getByRole('button', { name: /Review source payroll/i }).click()
@@ -175,7 +198,7 @@ try {
   const unexpectedConsoleErrors = errors.filter((error) => !/^Failed to load resource: the server responded with a status of 502/.test(error))
   const optionalHealthFailures = failedRequests.filter((request) => request.includes('/api/health'))
   const unexpectedFailedRequests = failedRequests.filter((request) => !request.includes('/api/health'))
-  const result = { parseMs, checks, payRunChecks, payrollDetailChecks, sourceRowChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
+  const result = { parseMs, checks, payRunChecks, payrollDetailChecks, sourceRowChecks, annualSourceRowChecks, automaticSetupRestored, desktopLayout, mobileLayout, optionalHealthErrors, optionalHealthFailures, errors: unexpectedConsoleErrors, failedRequests: unexpectedFailedRequests }
   assert(unexpectedHttpErrors.length === 0, `HTTP errors: ${JSON.stringify(unexpectedHttpErrors)}`)
   assert(unexpectedConsoleErrors.length === 0, `Browser errors: ${unexpectedConsoleErrors.join(' | ')}`)
   assert(unexpectedFailedRequests.length === 0, `Failed requests: ${unexpectedFailedRequests.join(' | ')}`)

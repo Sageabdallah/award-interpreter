@@ -1,10 +1,11 @@
 import { publicPayrollId } from '../payrollPrivacy.js'
 
 const DETAIL_SCHEMA_VERSION = 'mss-payroll-employee-detail/v2'
-const SOURCE_ROWS_SCHEMA_VERSION = 'mss-payroll-employee-source-rows/v1'
+const SOURCE_ROWS_SCHEMA_VERSION = 'mss-payroll-employee-source-rows/v2'
 const DIRECTORY_SCHEMA_VERSION = 'mss-payroll-work-period-directory/v1'
 const PUBLIC_EMPLOYEE_ID = /^MSS-[A-F0-9]{10}$/
 const DETAIL_CACHE_LIMIT = 50
+const SOURCE_ROW_CATEGORIES = new Set(['ordinary', 'overtime', 'penalties', 'allowances', 'leave', 'other'])
 
 function number(value) {
   const parsed = Number(value)
@@ -29,6 +30,32 @@ function optionalNumber(value) {
 
 function cleanText(value, maximum = 500) {
   return String(value ?? '').trim().slice(0, maximum)
+}
+
+function excelColumn(index) {
+  let column = ''
+  for (let value = index + 1; value > 0; value = Math.floor((value - 1) / 26)) {
+    column = String.fromCharCode(65 + ((value - 1) % 26)) + column
+  }
+  return column
+}
+
+function componentCellReferences(row, sourceRowNumber) {
+  const headers = Object.keys(row).filter((key) => key !== '_sourceRowNumber')
+  const cellFor = (...names) => {
+    const index = headers.findIndex((header) => names.includes(header))
+    return index < 0 ? '' : `${excelColumn(index)}${sourceRowNumber}`
+  }
+  return {
+    hours: cellFor('Hours'),
+    rate: cellFor('Rate'),
+    amount: cellFor('Amount'),
+    earningCode: cellFor('earningCode', 'EarningCode'),
+  }
+}
+
+function worksheetNameFor(sourceName) {
+  return /^Nsw_Payroll(?:\s+\d+)?\.xlsx$/i.test(cleanText(sourceName)) ? 'Nsw_Payroll' : ''
 }
 
 function componentCategory(row) {
@@ -368,6 +395,7 @@ function sanitizeComponentRow(row, chunkIndex) {
     classification: cleanText(row.AwardClassificationCode, 300),
     shiftDefinition: cleanText(row.shiftTypecode || row.ShiftDefinition, 300),
     payIndicator: cleanText(row.PayIndicator, 200),
+    cellReferences: componentCellReferences(row, sourceRowNumber),
   }
 }
 
@@ -407,10 +435,7 @@ function isoftComponentDate(row) {
   return `${year}-${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`
 }
 
-async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId, detail, weekStart) {
-  const week = detail.weeks.find((entry) => entry.weekStart === weekStart)
-  if (!week) return null
-  const sourceRowNumbers = [...new Set(week.sourceRowNumbers || [])].sort((left, right) => left - right)
+async function loadEmployeeSourceRows(auditStore, sourceRecord, requestedId, sourceRowNumbers) {
   const { match } = await sourceEmployeeIndex(auditStore, sourceRecord.data || {}, requestedId)
   if (!match) return null
   const componentRefs = chunkRefs(sourceRecord.data || {}, 'components')
@@ -424,18 +449,41 @@ async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId
     }
   }
   rows.sort((left, right) => left.sourceRowNumber - right.sourceRowNumber)
-  const explainedRows = explainPercentageComponents(rows)
+  return {
+    rows: explainPercentageComponents(rows),
+    chunks,
+    componentRefs,
+  }
+}
 
+function sourceRowTotals(rows) {
   const categoryAmounts = { ordinary: 0, overtime: 0, penalties: 0, allowances: 0, leave: 0, other: 0 }
-  for (const row of explainedRows) categoryAmounts[row.category] += row.amount
-  const sourceGrossAtSourcePrecision = round(explainedRows.reduce((sum, row) => sum + row.amount, 0), 4)
-  const totals = {
-    componentRows: explainedRows.length,
-    componentHours: round(explainedRows.reduce((sum, row) => sum + (row.hours || 0), 0), 4),
+  for (const row of rows) categoryAmounts[row.category] += row.amount
+  const sourceGrossAtSourcePrecision = round(rows.reduce((sum, row) => sum + row.amount, 0), 4)
+  return {
+    componentRows: rows.length,
+    componentHours: round(rows.reduce((sum, row) => sum + (row.hours || 0), 0), 4),
     sourceGrossAtSourcePrecision,
     sourceGrossAmount: round(sourceGrossAtSourcePrecision, 2),
     categories: Object.fromEntries(Object.entries(categoryAmounts).map(([key, value]) => [key, round(value, 4)])),
   }
+}
+
+function verifiedChunkSummary(loaded) {
+  return loaded.chunks.map(([position, chunk]) => ({
+    index: loaded.componentRefs[position].index,
+    auditId: chunk.id,
+    hash: chunk.hash,
+  }))
+}
+
+async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId, detail, weekStart) {
+  const week = detail.weeks.find((entry) => entry.weekStart === weekStart)
+  if (!week) return null
+  const sourceRowNumbers = [...new Set(week.sourceRowNumbers || [])].sort((left, right) => left - right)
+  const loaded = await loadEmployeeSourceRows(auditStore, sourceRecord, requestedId, sourceRowNumbers)
+  if (!loaded) return null
+  const totals = sourceRowTotals(loaded.rows)
   const expected = {
     componentRows: week.componentRows,
     sourceGrossAmount: week.sourceGrossAmount,
@@ -448,19 +496,49 @@ async function buildEmployeeWeekSourceRows(auditStore, sourceRecord, requestedId
     schemaVersion: SOURCE_ROWS_SCHEMA_VERSION,
     sourceAuditId: sourceRecord.id,
     sourceName: detail.sourceName,
+    worksheetName: worksheetNameFor(detail.sourceName),
     employeeId: requestedId,
+    scope: { type: 'week', label: 'Weekly gross' },
     weekStart: week.weekStart,
     weekEnd: week.weekEnd,
     expected,
     totals,
     differences,
     reconciled: differences.componentRows === 0 && Math.abs(differences.sourceGrossAmount) <= 0.01,
-    verifiedChunks: chunks.map(([position, chunk]) => ({
-      index: componentRefs[position].index,
-      auditId: chunk.id,
-      hash: chunk.hash,
-    })),
-    rows: explainedRows,
+    verifiedChunks: verifiedChunkSummary(loaded),
+    rows: loaded.rows,
+  }
+}
+
+async function buildEmployeeCategorySourceRows(auditStore, sourceRecord, requestedId, detail, category) {
+  const sourceRowNumbers = [...new Set(detail.weeks.flatMap((week) => week.sourceRowNumbers || []))]
+    .sort((left, right) => left - right)
+  const loaded = await loadEmployeeSourceRows(auditStore, sourceRecord, requestedId, sourceRowNumbers)
+  if (!loaded) return null
+  const rows = loaded.rows.filter((row) => row.category === category)
+  const totals = sourceRowTotals(rows)
+  const expected = {
+    componentRows: rows.length,
+    sourceGrossAmount: round(detail.annual.calculated.categories?.[category], 2),
+  }
+  const differences = {
+    componentRows: 0,
+    sourceGrossAmount: round(totals.sourceGrossAmount - expected.sourceGrossAmount, 2),
+  }
+  return {
+    schemaVersion: SOURCE_ROWS_SCHEMA_VERSION,
+    sourceAuditId: sourceRecord.id,
+    sourceName: detail.sourceName,
+    worksheetName: worksheetNameFor(detail.sourceName),
+    employeeId: requestedId,
+    scope: { type: 'annual-category', category, label: category === 'leave' ? 'Paid leave' : `${category[0].toUpperCase()}${category.slice(1)}` },
+    sourcePeriod: detail.sourcePeriod,
+    expected,
+    totals,
+    differences,
+    reconciled: Math.abs(differences.sourceGrossAmount) <= 0.01,
+    verifiedChunks: verifiedChunkSummary(loaded),
+    rows,
   }
 }
 
@@ -535,12 +613,17 @@ export function payrollEmployeeSourceRowsRoute({ auditStore }) {
   return async (req, res) => {
     const requestedId = String(req.params.employeeId || '').toUpperCase()
     const weekStart = String(req.query.weekStart || '')
+    const category = String(req.query.category || '').toLowerCase()
     if (!PUBLIC_EMPLOYEE_ID.test(requestedId)) return res.status(400).json({ error: 'A valid MSS employee reference is required.' })
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return res.status(400).json({ error: 'A valid weekStart date is required.' })
+    if (weekStart && category) return res.status(400).json({ error: 'Choose either a payroll week or an annual category.' })
+    if (!weekStart && !category) return res.status(400).json({ error: 'A payroll week or annual category is required.' })
+    if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return res.status(400).json({ error: 'A valid weekStart date is required.' })
+    if (category && !SOURCE_ROW_CATEGORIES.has(category)) return res.status(400).json({ error: 'A valid annual pay category is required.' })
     const [latest] = await auditStore.list({ kind: 'payroll-import', limit: 1 })
     if (!latest) return res.status(404).json({ error: 'No completed payroll import is available.' })
 
-    const cacheKey = `${latest.id}:${requestedId}:${weekStart}`
+    const scopeKey = weekStart ? `week:${weekStart}` : `category:${category}`
+    const cacheKey = `${latest.id}:${requestedId}:${scopeKey}`
     if (memoryCache.has(cacheKey)) {
       res.set('Cache-Control', 'private, no-store')
       return res.json({ ok: true, sourceRows: memoryCache.get(cacheKey) })
@@ -561,8 +644,10 @@ export function payrollEmployeeSourceRowsRoute({ auditStore }) {
     }
     if (!detail) return res.status(404).json({ error: 'Employee payroll detail was not found in the latest import.' })
 
-    const sourceRows = await buildEmployeeWeekSourceRows(auditStore, latest, requestedId, detail, weekStart)
-    if (!sourceRows) return res.status(404).json({ error: 'The selected payroll week was not found for this employee.' })
+    const sourceRows = weekStart
+      ? await buildEmployeeWeekSourceRows(auditStore, latest, requestedId, detail, weekStart)
+      : await buildEmployeeCategorySourceRows(auditStore, latest, requestedId, detail, category)
+    if (!sourceRows) return res.status(404).json({ error: weekStart ? 'The selected payroll week was not found for this employee.' : 'The selected pay category was not found for this employee.' })
     memoryCache.set(cacheKey, sourceRows)
     if (memoryCache.size > DETAIL_CACHE_LIMIT * 2) memoryCache.delete(memoryCache.keys().next().value)
     res.set('Cache-Control', 'private, no-store')

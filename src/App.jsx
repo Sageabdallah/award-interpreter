@@ -125,6 +125,13 @@ const PARSE_STEPS = [
 
 const audFmt = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' })
 const fmt = (value) => audFmt.format(Number(value) || 0)
+const sourceAudFmt = new Intl.NumberFormat('en-AU', {
+  style: 'currency',
+  currency: 'AUD',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 4,
+})
+const fmtSource = (value) => sourceAudFmt.format(Number(value) || 0)
 const decimal = (value, maximumFractionDigits = 4) => value == null
   ? '-'
   : Number(value).toLocaleString('en-AU', { maximumFractionDigits })
@@ -426,6 +433,100 @@ function addPayrollDays(dateKey, days) {
   return date.toISOString().slice(0, 10)
 }
 
+function ExcelSourceRowsLedger({ sourceRows, loading, error, scopeKey, expandedSourceRow, onToggleSourceRow, className = '' }) {
+  if (loading) {
+    return <div className={`source-row-ledger ${className}`}><div className="source-row-state"><Loader2 className="spin" size={15} strokeWidth={2} /> Reading verified Excel rows...</div></div>
+  }
+  if (error) {
+    return <div className={`source-row-ledger ${className}`}><div className="source-row-state error"><AlertTriangle size={15} strokeWidth={1.9} /> {error}</div></div>
+  }
+  if (!sourceRows) return null
+
+  const subtotalLabel = sourceRows.scope?.type === 'annual-category'
+    ? `${sourceRows.scope.label} subtotal`
+    : 'weekly gross'
+  const exactTotal = sourceRows.totals.sourceGrossAtSourcePrecision
+  const displayedTotal = sourceRows.totals.sourceGrossAmount
+
+  return (
+    <div className={`source-row-ledger ${className}`} aria-label={`Excel source rows for ${sourceRows.scope?.label || 'selected payroll scope'}`}>
+      <div className={`source-row-check${sourceRows.reconciled ? '' : ' mismatch'}`}>
+        {sourceRows.reconciled ? <CheckCircle2 size={16} strokeWidth={2} /> : <AlertTriangle size={16} strokeWidth={1.9} />}
+        <span>
+          SUM of {sourceRows.totals.componentRows} Excel Amount cells = <strong>{fmtSource(exactTotal)}</strong>
+          {Math.abs(exactTotal - displayedTotal) > 0.00005 && <> {' → '}<strong>{fmt(displayedTotal)}</strong> after cent rounding</>}
+          {' · '}{subtotalLabel} = <strong>{fmt(sourceRows.expected.sourceGrossAmount)}</strong>
+          {' · '}difference = <strong>{fmt(sourceRows.differences.sourceGrossAmount)}</strong>
+        </span>
+      </div>
+      <div className="source-row-meta">
+        <span>{sourceRows.sourceName}</span>
+        {sourceRows.worksheetName && <span>Worksheet <strong>{sourceRows.worksheetName}</strong></span>}
+        <span>{sourceRows.verifiedChunks.length} verified audit chunk{sourceRows.verifiedChunks.length === 1 ? '' : 's'}</span>
+        <span className="mono">{sourceRows.verifiedChunks.map((chunk) => chunk.hash.slice(0, 10)).join(' · ')}</span>
+      </div>
+      <div className="source-row-scroll">
+        <div className="source-row-table" role="table" aria-label="Excel pay lines">
+          <div className="source-row-head" role="row">
+            <span>Excel row</span><span>Date</span><span>Earning</span><span>Hours</span><span>Rate</span><span>Amount</span><span />
+          </div>
+          {sourceRows.rows.map((row) => {
+            const rowKey = `${scopeKey}:${row.sourceRowNumber}`
+            const expanded = expandedSourceRow === rowKey
+            const sourceCell = sourceRows.worksheetName && row.cellReferences?.amount
+              ? `${sourceRows.worksheetName}!${row.cellReferences.amount}`
+              : `row ${row.sourceRowNumber}`
+            return (
+              <React.Fragment key={row.sourceRowNumber}>
+                <div className="source-row-line" role="row">
+                  <span className="mono">{row.sourceRowNumber}</span>
+                  <span>{payrollDate(row.date, { day: 'numeric', month: 'short' })}</span>
+                  <span><strong>{row.earningCode || row.category}</strong><small>{row.earningType || row.category}</small></span>
+                  <span className="mono">{decimal(row.hours)}</span>
+                  <span className="mono">{row.rate == null ? '-' : row.amountMethod === 'hours-times-base-rate-times-percentage' ? `${decimal(row.rate)}%` : fmtSource(row.rate)}</span>
+                  <strong className="mono source-row-amount">{fmtSource(row.amount)}<small>{row.cellReferences?.amount || ''}</small></strong>
+                  <button
+                    className="source-row-toggle"
+                    onClick={() => onToggleSourceRow(expanded ? null : rowKey)}
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? 'Hide' : 'More about'} Excel row ${row.sourceRowNumber}`}
+                    title={expanded ? 'Hide row detail' : 'More row detail'}
+                  >
+                    {expanded ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
+                  </button>
+                </div>
+                {expanded && (
+                  <div className="source-row-expanded">
+                    <div>
+                      <span>Amount check</span>
+                      <strong className="mono">
+                        {row.amountMethod === 'hours-times-rate'
+                          ? `${decimal(row.hours)} hrs × ${fmtSource(row.rate)} = ${fmtSource(row.amount)}`
+                          : row.amountMethod === 'hours-times-base-rate-times-percentage'
+                            ? `${decimal(row.hours)} hrs × ${fmtSource(row.baseRate)} base × ${decimal(row.rate)}% = ${fmtSource(row.amount)}`
+                            : `Excel Amount cell = ${fmtSource(row.amount)}`}
+                      </strong>
+                    </div>
+                    <div><span>Excel cells</span><strong className="mono">Hours {row.cellReferences?.hours || '-'} · Rate {row.cellReferences?.rate || '-'} · Amount {row.cellReferences?.amount || '-'}</strong></div>
+                    <div><span>Rate metadata</span><strong>{row.amountMethod === 'hours-times-base-rate-times-percentage' ? 'Percentage loading' : 'Direct rate'}{row.rateType ? ` · source type ${row.rateType}` : ''}</strong></div>
+                    <div><span>Classification</span><strong>{row.classification || 'Not supplied'}</strong></div>
+                    <div><span>Instrument</span><strong>{row.awardCode || 'Not supplied'}</strong></div>
+                    <div><span>Shift reference</span><strong className="mono">{row.shiftReference}</strong></div>
+                    <div><span>Verified source</span><strong>{sourceRows.sourceName} · {sourceCell}</strong></div>
+                  </div>
+                )}
+              </React.Fragment>
+            )
+          })}
+          <div className="source-row-total">
+            <strong>SUM of Excel Amount cells</strong><strong className="mono">{fmtSource(exactTotal)}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function EmployeePayrollDetail({ detail, employeeName = '' }) {
   const weeks = detail?.weeks || []
   const [selectedWeekStart, setSelectedWeekStart] = useState(weeks.at(-1)?.weekStart || '')
@@ -433,12 +534,21 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
   const [sourceRowsByWeek, setSourceRowsByWeek] = useState({})
   const [sourceRowsLoading, setSourceRowsLoading] = useState('')
   const [sourceRowsError, setSourceRowsError] = useState({})
+  const [openAnnualCategory, setOpenAnnualCategory] = useState('')
+  const [annualRowsByCategory, setAnnualRowsByCategory] = useState({})
+  const [annualRowsLoading, setAnnualRowsLoading] = useState('')
+  const [annualRowsError, setAnnualRowsError] = useState({})
   const [expandedSourceRow, setExpandedSourceRow] = useState(null)
   useEffect(() => setSelectedWeekStart(weeks.at(-1)?.weekStart || ''), [detail?.employee?.employeeId])
   useEffect(() => {
     setOpenSourceWeekStart('')
     setSourceRowsByWeek({})
+    setSourceRowsLoading('')
     setSourceRowsError({})
+    setOpenAnnualCategory('')
+    setAnnualRowsByCategory({})
+    setAnnualRowsLoading('')
+    setAnnualRowsError({})
     setExpandedSourceRow(null)
   }, [detail?.employee?.employeeId])
   const selectedWeek = weeks.find((week) => week.weekStart === selectedWeekStart) || weeks.at(-1)
@@ -497,6 +607,30 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
     }
   }
 
+  const toggleAnnualRows = async (category) => {
+    if (category.key === 'rounding') return
+    if (openAnnualCategory === category.key) {
+      setOpenAnnualCategory('')
+      setExpandedSourceRow(null)
+      return
+    }
+    setOpenAnnualCategory(category.key)
+    setExpandedSourceRow(null)
+    if (annualRowsByCategory[category.key] || annualRowsLoading === category.key) return
+    setAnnualRowsLoading(category.key)
+    setAnnualRowsError((current) => ({ ...current, [category.key]: '' }))
+    try {
+      const response = await fetch(`/api/workspaces/mss/employees/${encodeURIComponent(detail.employee.employeeId)}/payroll-detail/source-rows?category=${encodeURIComponent(category.key)}`)
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok || !payload.sourceRows) throw new Error(payload.error || 'The annual Excel source rows could not be loaded.')
+      setAnnualRowsByCategory((current) => ({ ...current, [category.key]: payload.sourceRows }))
+    } catch (error) {
+      setAnnualRowsError((current) => ({ ...current, [category.key]: error.message }))
+    } finally {
+      setAnnualRowsLoading((current) => current === category.key ? '' : current)
+    }
+  }
+
   return (
     <div className="source-payroll-detail">
       <div className="source-identity-check">
@@ -524,12 +658,43 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
           <strong className="source-total-amount mono">{fmt(annual.expected.sourceGrossAmount)}</strong>
         </div>
         <div className="source-breakdown-list" aria-label="Annual source gross components">
-          {annualCategories.map((category) => (
-            <div className="source-breakdown-row" key={category.key}>
-              <div><strong>{category.label}</strong><span>{category.description}</span></div>
-              <span className="mono">{fmt(category.amount)}</span>
-            </div>
-          ))}
+          {annualCategories.map((category) => {
+            const open = openAnnualCategory === category.key
+            return (
+              <React.Fragment key={category.key}>
+                <div className="source-breakdown-row">
+                  <div><strong>{category.label}</strong><span>{category.description}</span></div>
+                  <div className="source-breakdown-actions">
+                    <span className="mono">{fmt(category.amount)}</span>
+                    {category.key !== 'rounding' && (
+                      <button
+                        className="source-breakdown-toggle"
+                        onClick={() => toggleAnnualRows(category)}
+                        aria-expanded={open}
+                        aria-label={`${open ? 'Hide' : 'Show'} Excel rows for ${category.label}`}
+                        title={`${open ? 'Hide' : 'Show'} Excel rows`}
+                      >
+                        {annualRowsLoading === category.key
+                          ? <Loader2 className="spin" size={15} strokeWidth={2} />
+                          : open ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {open && (
+                  <ExcelSourceRowsLedger
+                    sourceRows={annualRowsByCategory[category.key]}
+                    loading={annualRowsLoading === category.key}
+                    error={annualRowsError[category.key]}
+                    scopeKey={`annual:${category.key}`}
+                    expandedSourceRow={expandedSourceRow}
+                    onToggleSourceRow={setExpandedSourceRow}
+                    className="annual-source-row-ledger"
+                  />
+                )}
+              </React.Fragment>
+            )
+          })}
           <div className="source-breakdown-total">
             <strong>Recorded gross</strong>
             <strong className="mono">{fmt(categoryGrossTotal)}</strong>
@@ -611,84 +776,14 @@ function EmployeePayrollDetail({ detail, employeeName = '' }) {
           </div>
 
           {sourceRowsOpen && (
-            <div className="source-row-ledger" aria-label="Excel source rows for selected week">
-              {sourceRowsLoading === selectedWeek.weekStart && (
-                <div className="source-row-state"><Loader2 className="spin" size={15} strokeWidth={2} /> Reading verified Excel rows...</div>
-              )}
-              {!sourceRowsLoading && sourceRowsError[selectedWeek.weekStart] && (
-                <div className="source-row-state error"><AlertTriangle size={15} strokeWidth={1.9} /> {sourceRowsError[selectedWeek.weekStart]}</div>
-              )}
-              {sourceRows && (
-                <>
-                  <div className={`source-row-check${sourceRows.reconciled ? '' : ' mismatch'}`}>
-                    {sourceRows.reconciled ? <CheckCircle2 size={16} strokeWidth={2} /> : <AlertTriangle size={16} strokeWidth={1.9} />}
-                    <span>
-                      SUM of {sourceRows.totals.componentRows} Excel Amount cells = <strong>{fmt(sourceRows.totals.sourceGrossAmount)}</strong>
-                      {' · '}weekly gross = <strong>{fmt(sourceRows.expected.sourceGrossAmount)}</strong>
-                      {' · '}difference = <strong>{fmt(sourceRows.differences.sourceGrossAmount)}</strong>
-                    </span>
-                  </div>
-                  <div className="source-row-meta">
-                    <span>{sourceRows.sourceName}</span>
-                    <span>{sourceRows.verifiedChunks.length} verified audit chunk{sourceRows.verifiedChunks.length === 1 ? '' : 's'}</span>
-                    <span className="mono">{sourceRows.verifiedChunks.map((chunk) => chunk.hash.slice(0, 10)).join(' · ')}</span>
-                  </div>
-                  <div className="source-row-scroll">
-                    <div className="source-row-table" role="table" aria-label="Excel pay lines">
-                      <div className="source-row-head" role="row">
-                        <span>Excel row</span><span>Date</span><span>Earning</span><span>Hours</span><span>Rate</span><span>Amount</span><span />
-                      </div>
-                      {sourceRows.rows.map((row) => {
-                        const expanded = expandedSourceRow === row.sourceRowNumber
-                        return (
-                          <React.Fragment key={row.sourceRowNumber}>
-                            <div className="source-row-line" role="row">
-                              <span className="mono">{row.sourceRowNumber}</span>
-                              <span>{payrollDate(row.date, { day: 'numeric', month: 'short' })}</span>
-                              <span><strong>{row.earningCode || row.category}</strong><small>{row.earningType || row.category}</small></span>
-                              <span className="mono">{decimal(row.hours)}</span>
-                              <span className="mono">{row.rate == null ? '-' : row.amountMethod === 'hours-times-base-rate-times-percentage' ? `${decimal(row.rate)}%` : fmt(row.rate)}</span>
-                              <strong className="mono">{fmt(row.amount)}</strong>
-                              <button
-                                className="source-row-toggle"
-                                onClick={() => setExpandedSourceRow(expanded ? null : row.sourceRowNumber)}
-                                aria-expanded={expanded}
-                                aria-label={`${expanded ? 'Hide' : 'More about'} Excel row ${row.sourceRowNumber}`}
-                                title={expanded ? 'Hide row detail' : 'More row detail'}
-                              >
-                                {expanded ? <ChevronUp size={15} strokeWidth={1.9} /> : <ChevronDown size={15} strokeWidth={1.9} />}
-                              </button>
-                            </div>
-                            {expanded && (
-                              <div className="source-row-expanded">
-                                <div>
-                                  <span>Amount check</span>
-                                  <strong className="mono">
-                                    {row.amountMethod === 'hours-times-rate'
-                                      ? `${decimal(row.hours)} hrs × ${fmt(row.rate)} = ${fmt(row.amount)}`
-                                      : row.amountMethod === 'hours-times-base-rate-times-percentage'
-                                        ? `${decimal(row.hours)} hrs × ${fmt(row.baseRate)} base × ${decimal(row.rate)}% = ${fmt(row.amount)}`
-                                        : `Excel Amount cell = ${fmt(row.amount)}`}
-                                  </strong>
-                                </div>
-                                <div><span>Rate metadata</span><strong>{row.amountMethod === 'hours-times-base-rate-times-percentage' ? 'Percentage loading' : 'Direct rate'}{row.rateType ? ` · source type ${row.rateType}` : ''}</strong></div>
-                                <div><span>Classification</span><strong>{row.classification || 'Not supplied'}</strong></div>
-                                <div><span>Instrument</span><strong>{row.awardCode || 'Not supplied'}</strong></div>
-                                <div><span>Shift reference</span><strong className="mono">{row.shiftReference}</strong></div>
-                                <div><span>Verified source</span><strong>{sourceRows.sourceName} · row {row.sourceRowNumber}</strong></div>
-                              </div>
-                            )}
-                          </React.Fragment>
-                        )
-                      })}
-                      <div className="source-row-total">
-                        <strong>SUM of Amount column</strong><strong className="mono">{fmt(sourceRows.totals.sourceGrossAmount)}</strong>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+            <ExcelSourceRowsLedger
+              sourceRows={sourceRows}
+              loading={sourceRowsLoading === selectedWeek.weekStart}
+              error={sourceRowsError[selectedWeek.weekStart]}
+              scopeKey={`week:${selectedWeek.weekStart}`}
+              expandedSourceRow={expandedSourceRow}
+              onToggleSourceRow={setExpandedSourceRow}
+            />
           )}
         </div>
       ) : (
@@ -1008,6 +1103,12 @@ const GLOBAL_CSS = `
   .source-breakdown-row strong, .source-week-breakdown-row strong { font-size: 12px; white-space: nowrap; }
   .source-breakdown-row > div span, .source-week-breakdown-row > div span { min-width: 0; color: var(--muted); font-size: 11.5px; }
   .source-breakdown-row > .mono, .source-week-breakdown-row > .mono { flex-shrink: 0; font-size: 12.5px; }
+  .source-breakdown-row > .source-breakdown-actions { flex: 0 0 auto; align-items: center; gap: 9px; }
+  .source-breakdown-actions > .mono { color: var(--ink); font-size: 12.5px; }
+  .source-breakdown-toggle { width: 30px; height: 30px; padding: 0; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer; }
+  .source-breakdown-toggle:hover, .source-breakdown-toggle[aria-expanded="true"] { color: var(--ink); background: var(--surface-2); }
+  .source-breakdown-toggle:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
   .source-breakdown-total { border-top: 1px solid var(--line-strong); background: var(--surface-2); font-size: 13px; }
   .source-cross-check { min-height: 38px; padding: 8px 12px; display: flex; align-items: center; gap: 8px;
     border: 1px solid rgba(47,125,87,0.28); border-top: 0; color: var(--sage); background: rgba(47,125,87,0.08); font-size: 11.5px; }
@@ -1045,6 +1146,7 @@ const GLOBAL_CSS = `
   .source-rows-button { min-height: 30px; padding: 6px 9px; font-size: 11.5px; }
   .source-week-breakdown-row { padding: 8px 0; }
   .source-row-ledger { border: 1px solid var(--line); border-top: 0; background: var(--card); }
+  .annual-source-row-ledger { border-right: 0; border-left: 0; border-top: 1px solid var(--line); }
   .source-row-state { min-height: 70px; padding: 18px; display: flex; align-items: center; justify-content: center;
     gap: 8px; color: var(--muted); font-size: 12px; }
   .source-row-state.error { color: var(--red); }
@@ -1063,6 +1165,8 @@ const GLOBAL_CSS = `
   .source-row-line > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .source-row-line > span:nth-child(3) { display: flex; flex-direction: column; }
   .source-row-line small { margin-top: 2px; color: var(--muted); font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; }
+  .source-row-amount { min-width: 0; }
+  .source-row-amount small { display: block; font-weight: 400; }
   .source-row-toggle { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 1px solid var(--line);
     border-radius: var(--r-sm); background: transparent; color: var(--muted); cursor: pointer; }
   .source-row-toggle:hover, .source-row-toggle[aria-expanded="true"] { color: var(--ink); background: var(--surface-2); }
@@ -1120,6 +1224,8 @@ const GLOBAL_CSS = `
     .source-name-status { grid-column: 2; }
     .source-breakdown-row > div, .source-week-breakdown-row > div { display: block; }
     .source-breakdown-row > div span, .source-week-breakdown-row > div span { display: block; margin-top: 2px; }
+    .source-breakdown-row > .source-breakdown-actions { display: flex; }
+    .source-breakdown-actions > .mono { margin-top: 0; }
   }
 
   @media (prefers-reduced-motion: reduce) {
